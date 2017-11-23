@@ -1,0 +1,47 @@
+   1:     -	0000          	switch_lsb 	.equ 0x0 ;port 0 when reading
+   2:     -	0001          	switch_msb	.equ 0x1 ;port 1 when reading
+   3:     -	0000          	leds_lsb	.equ 0x0 ;port 0 when writing
+   4:     -	0001          	leds_msb	.equ 0x1 ;port 1 when writing
+   5:						
+   6:     -	0000          			.org 0x0
+   7:    0+4	0000  F3      			di
+   8:    4+10	0001  11EEDD  	loop: 		lxi d, 0xddee
+   9:   14+10	0004  01CCBB  			lxi b, 0xbbcc
+  10:   24+10	0007  21FFFF  			lxi h, 0xffff
+  11:   34+6	000A  F9      			sphl
+  12:   40+4	000B  79      			mov a, c
+  13:   44+11	000C  D300    			out leds_lsb
+  14:   55+4	000E  78      			mov a, b
+  15:   59+11	000F  D301    			out leds_msb
+  16:   70+4	0011  7B      			mov a, e
+  17:   74+11	0012  D300    			out leds_lsb
+  18:   85+4	0014  7A      			mov a, d
+  19:   89+11	0015  D301    			out leds_msb
+  20:  100+4	0017  7D      			mov a, l
+  21:  104+11	0018  D300    			out leds_lsb
+  22:  115+4	001A  7C      			mov a, h
+  23:  119+11	001B  D301    			out leds_msb
+  24:  130+10	001D  C20100  			jnz loop; dead loop because a is !0
+  25:  140+4	0020  76      			hlt
+  26:				
+  27:				
+
+
+
+Statistics:
+
+     4	passes
+     0	jr promotions
+     5	symbols
+    33	bytes
+
+
+
+Symbol Table:
+
+leds_lsb       =   0     
+leds_msb       =   1     
+loop               1     
+switch_lsb     =   0     
+switch_msb     =   1     
+

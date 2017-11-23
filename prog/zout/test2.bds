@@ -1,0 +1,53 @@
+binary-debuggable-source
+0000 0000 f test2.asm
+0000 0000 s switch_lsb 	.equ 0x0 ;port 0 when reading
+0000 0000 s switch_msb	.equ 0x1 ;port 1 when reading
+0000 0000 s leds_lsb	.equ 0x0 ;port 0 when writing
+0000 0000 s leds_msb	.equ 0x1 ;port 1 when writing
+0000 0000 s 		
+0000 0000 s 		.org 0x0
+0000 0000 d f3
+0000 0000 s 		di
+0001 0001 d 11eedd
+0001 0001 s loop: 		lxi d, 0xddee
+0004 0004 d 01ccbb
+0004 0004 s 		lxi b, 0xbbcc
+0007 0007 d 21ffff
+0007 0007 s 		lxi h, 0xffff
+000a 000a d f9
+000a 000a s 		sphl
+000b 000b d 79
+000b 000b s 		mov a, c
+000c 000c d d300
+000c 000c s 		out leds_lsb
+000e 000e d 78
+000e 000e s 		mov a, b
+000f 000f d d301
+000f 000f s 		out leds_msb
+0011 0011 d 7b
+0011 0011 s 		mov a, e
+0012 0012 d d300
+0012 0012 s 		out leds_lsb
+0014 0014 d 7a
+0014 0014 s 		mov a, d
+0015 0015 d d301
+0015 0015 s 		out leds_msb
+0017 0017 d 7d
+0017 0017 s 		mov a, l
+0018 0018 d d300
+0018 0018 s 		out leds_lsb
+001a 001a d 7c
+001a 001a s 		mov a, h
+001b 001b d d301
+001b 001b s 		out leds_msb
+001d 001d d c20100
+001d 001d s 		jnz loop; dead loop because a is !0
+0020 0020 d 76
+0020 0020 s 		hlt
+0021 0021 s 
+0021 0021 s 
+0001 a loop
+0000 v leds_lsb
+0001 v leds_msb
+0000 v switch_lsb
+0001 v switch_msb

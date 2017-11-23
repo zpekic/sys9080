@@ -1,0 +1,33 @@
+binary-debuggable-source
+0000 0000 f test.asm
+0000 0000 s switch_lsb 	.equ 0x0 ;port 0 when reading
+0000 0000 s switch_msb	.equ 0x1 ;port 1 when reading
+0000 0000 s leds_lsb	.equ 0x0 ;port 0 when writing
+0000 0000 s leds_msb	.equ 0x1 ;port 1 when writing
+0000 0000 s 		
+0000 0000 s 		.org 0x0
+0000 0000 d f3
+0000 0000 s 		di
+0001 0001 d db00
+0001 0001 s loop: 		in switch_lsb
+0003 0003 d 3c
+0003 0003 s 		inr a
+0004 0004 d d300
+0004 0004 s 		out leds_lsb
+0006 0006 d db01
+0006 0006 s 		in switch_msb
+0008 0008 d af
+0008 0008 s 		xra a
+0009 0009 d d301
+0009 0009 s 		out leds_msb
+000b 000b d ca0100
+000b 000b s 		jz loop
+000e 000e d 76
+000e 000e s 		hlt
+000f 000f s 
+000f 000f s 
+0001 a loop
+0000 v leds_lsb
+0001 v leds_msb
+0000 v switch_lsb
+0001 v switch_msb
