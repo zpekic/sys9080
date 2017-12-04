@@ -62,9 +62,6 @@ architecture am2901 of am2901 is
  signal r,s  : std_logic_vector (3 downto 0);
  signal f    : STD_LOGIC_VECTOR (3 downto 0); 
 
-
-
-
 begin
 -----instantiate and connect components
 
@@ -88,10 +85,8 @@ u5: out_mux port map(ad=>ad,f=>f,dest_ctl=>dest_ctl,
 
 ------define f_0 and f3 outputs 
 
-f_0 <= '1' when f="0000" else '0'; -- not that these are "strong" signals, not open collector
-f3  <=f(3);				  
-
-
+f_0 <= '1' when f = "0000" else '0'; -- not that these are "strong" signals, not open collector
+f3  <= f(3);				  
 
 end am2901;
 

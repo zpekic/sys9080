@@ -1,0 +1,8 @@
+INTSTYLE=ise
+INFILE=C:\Users\zoltanp\Documents\HexCalc\Sys9080\sys9080.ncd
+OUTFILE=C:\Users\zoltanp\Documents\HexCalc\Sys9080\sys9080.bit
+FAMILY=Spartan3A and Spartan3AN
+PART=xc3s200a-4vq100
+WORKINGDIR=C:\Users\zoltanp\Documents\HexCalc\Sys9080
+LICENSE=WebPack
+USER_INFO=210994392_0_0_816

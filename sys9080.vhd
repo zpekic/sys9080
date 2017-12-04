@@ -128,15 +128,36 @@ component fourdigitsevensegled is
 			 );
 end component;
 
+component UART_LOOPBACK is
+    Generic (
+        CLK_FREQ   : integer := 50e6;   -- set system clock frequency in Hz
+        BAUD_RATE  : integer := 115200; -- baud rate value
+        PARITY_BIT : string  := "none"  -- legal values: "none", "even", "odd", "mark", "space"
+    );
+    Port (
+        CLK        : in  std_logic; -- system clock
+        RST_N      : in  std_logic; -- low active synchronous reset
+        -- UART INTERFACE
+        UART_TXD   : out std_logic;
+        UART_RXD   : in  std_logic;
+        -- DEBUG INTERFACE
+        BUSY       : out std_logic;
+        FRAME_ERR  : out std_logic
+    );
+end component;
+
 component simpledevice is 
 		Port(
-           --CLK : in STD_LOGIC;
-           --nRESET: in STD_LOGIC;
+           clk : in STD_LOGIC;
+           reset: in STD_LOGIC;
 			  D: inout STD_LOGIC_VECTOR(7 downto 0);
 			  A: in STD_LOGIC_VECTOR(3 downto 0);
            nRead: in STD_LOGIC;
            nWrite: in STD_LOGIC;
 			  nSelect: in STD_LOGIC;
+			  IntReq: out STD_LOGIC;
+			  txd: out STD_LOGIC;
+			  rxd: in STD_LOGIC;			  
 			  ---------------------
 			  direct_in: in STD_LOGIC_VECTOR(15 downto 0);
 			  direct_out: out STD_LOGIC_VECTOR(15 downto 0)
@@ -149,6 +170,7 @@ component simpleram is
 		default_value: STD_LOGIC_VECTOR(7 downto 0)
 	  );
     Port (       
+			  clk: in STD_LOGIC;
 			  D : inout  STD_LOGIC_VECTOR (7 downto 0);
            A : in  STD_LOGIC_VECTOR ((address_size - 1) downto 0);
            nRead : in  STD_LOGIC;
@@ -180,6 +202,7 @@ component Am9080a is
            nMEMR : out  STD_LOGIC;
            nMEMW : out  STD_LOGIC;
            HLDA : out  STD_LOGIC;
+			  INTE : out STD_LOGIC;
            CLK : in  STD_LOGIC;
            nRESET : in  STD_LOGIC;
 			  INT: in STD_LOGIC;
@@ -221,32 +244,33 @@ signal led_bus: std_logic_vector(19 downto 0);
 signal internal_debug_bus, external_debug_bus: std_logic_vector(19 downto 0);
 signal nIoEnable, nRomEnable, nRamEnable: std_logic;
 
-signal reset: std_logic;
+signal Reset, nReset: std_logic;
 signal clock_main: std_logic;
 signal data_bus: std_logic_vector(7 downto 0);
 signal address_bus: std_logic_vector(15 downto 0);
-signal nReset, nIORead, nIOWrite, nMemRead, nMemWrite: std_logic;
-signal nIntAck, HoldAck: std_logic;
+signal nIORead, nIOWrite, nMemRead, nMemWrite, IntReq: std_logic;
+signal nIntAck, HoldAck, IntE: std_logic;
+constant opcode_rst7: std_logic_vector(7 downto 0) := X"FF";
 
-signal readwritesignals: std_logic_vector(3 downto 0);
+signal readwritesignals: std_logic_vector(4 downto 0);
 signal showsegments: std_logic;
 signal freq2k, freq1k, freq512, freq256, freq128, freq64, freq32, freq16, freq8, freq4, freq2, freq1: std_logic;
 
 begin
    
 	 --SWITCH_OEN <= '1'; -- Drive high to disconnect GPIO bus and use it as RAM bus ( http://bit.ly/2mH2OXk )
-    reset <= USR_BTN;
-	 nReset <= '0' when (USR_BTN = '1') or (cnt(15 downto 2) = "00000000000000") else '1'; 
+	 Reset <= USR_BTN;
+	 nReset <= '0' when (Reset = '1') or (cnt(15 downto 2) = "00000000000000") else '1'; 
 	 
 	 led_bus <= internal_debug_bus when (switch(1) = '1') else external_debug_bus;
-	 external_debug_bus <= readwritesignals & address_bus(7 downto 0) & data_bus when (switch(0) = '0') else "0000" & io_output;
+	 external_debug_bus <= readwritesignals(4 downto 1) & address_bus(7 downto 0) & data_bus when (switch(0) = '0') else "0000" & io_output;
 	 
-	 readwritesignals <= (not nIORead) & (not nIOWrite) & (not nMemRead) & (not nMemWrite);
-	 showsegments <= '0' when (switch(1) = '0' and switch(0) = '0' and readwritesignals = "0000") else '1';
+	 readwritesignals <= (not nIORead) & (not nIOWrite) & (not nMemRead) & (not nMemWrite) & (not nIntAck);
+	 showsegments <= '0' when (switch(1) = '0' and switch(0) = '0' and readwritesignals = "00000") else '1';
 
 	 -- DISPLAY
 	 LED(3) <= nIntAck; -- note reverse for easier readability 
-	 LED(2) <= HoldAck; -- note for easier readability 
+	 LED(2) <= IntReq; --IntE; -- note for easier readability 
 	 LED(1) <= nReset;
 	 LED(0) <= clock_main; -- note reverse for easier readability 
     led4x7: fourdigitsevensegled port map ( 
@@ -267,7 +291,7 @@ begin
     one_sec: clock_divider port map 
     (
         clock => CLK,
-        reset => reset,
+        reset => Reset,
         div(11) => freq1, -- 1Hz
         div(10) => freq2, -- 2Hz
         div(9) => freq4, -- 4Hz
@@ -276,39 +300,43 @@ begin
         div(6) => freq32,  -- 32Hz
         div(5) => freq64,  -- 64Hz
         div(4) => freq128,  -- 128Hz
-        div(3) => freq256,  -- 16Hz
-        div(2) => freq512,  -- 32Hz
-        div(1) => freq1k,  -- 64Hz
-        div(0) => freq2k  -- 128Hz
+        div(3) => freq256,  -- 256Hz
+        div(2) => freq512,  -- 512Hz
+        div(1) => freq1k,  -- 1024Hz
+        div(0) => freq2k  -- 2048Hz
     );
 
 	-- SIMPLE COUNTER
 		counter16: counter16bit port map (
-	    reset => RESET,
+	    reset => Reset,
 	    clk => clock_main,
         mode => "01", --button(1 downto 0),
         d => X"0000",
         q => cnt
 	);
 
+	--IntReq <= '1' when (cnt(7 downto 4) = "1111") else '0'; -- interrupt every 32 clock cycles
+	--IntReq <= button(0);
+	data_bus <= opcode_rst7 when nIntAck = '0' else "ZZZZZZZZ"; -- jam RST7 instruction on data bus when interrupt is acknowledged
+	
 	-- DEBOUNCE the 8 switches and 4 buttons
     debouncer_sw: debouncer8channel port map (
         clock => freq128,
-        reset => RESET,
+        reset => Reset,
         signal_raw => SW,
         signal_debounced => switch
     );
 
     debouncer_btn: debouncer8channel port map (
         clock => freq128,
-        reset => RESET,
+        reset => Reset,
         signal_raw(7 downto 4) => "1111",
         signal_raw(3 downto 0) => BTN(3 downto 0),
         signal_debounced => button
     );
 	
 	ss: clocksinglestepper port map (
-        reset => RESET,
+        reset => Reset,
         clock0_in => freq1,
         clock1_in => freq4,
         clocksel => switch(7),
@@ -329,43 +357,66 @@ begin
 --    );
     
 	
-	nIoEnable <= (nIoRead and nIoWrite) when address_bus(15 downto 4) = X"000" else '1';
+	nIoEnable <= (nIoRead and nIoWrite) when address_bus(7 downto 4) = X"0" else '1';
 	nRomEnable <= nMemRead when address_bus(15 downto 8) = X"00" else '1';
 	nRamEnable <= (nMemRead and nMemWrite) when address_bus(15 downto 8) = X"FF" else '1';
 	
-	iodevice: simpledevice port map(
-			  D => data_bus,
-			  A => address_bus(3 downto 0),
-           nRead => nIORead,
-           nWrite => nIOWrite,
-			  nSelect => nIoEnable,
-			  ---------------------
-			  direct_in(7 downto 0) => switch,
-			  direct_in(15 downto 8) => button,
-			  direct_out => io_output
-	);
+--	iodevice: simpledevice port map(
+--			  clk => CLK, -- this is the full 50MHz clock!
+--			  reset => Reset4,
+--			  D => data_bus,
+--			  A => address_bus(3 downto 0),
+--           nRead => nIORead,
+--           nWrite => nIOWrite,
+--			  nSelect => nIoEnable,
+--			  IntReq => IntReq,
+--			  txd => PMOD(0),
+--			  rxd => PMOD(1),					  
+--			  ---------------------
+--			  direct_in(7 downto 0) => switch,
+--			  direct_in(15 downto 8) => button,
+--			  direct_out => io_output
+--	);
+	
+	loopback: UART_LOOPBACK
+----		 Generic (
+----			  CLK_FREQ   : integer := 50e6;   -- set system clock frequency in Hz
+----			  BAUD_RATE  : integer := 115200; -- baud rate value
+----			  PARITY_BIT : string  := "none"  -- legal values: "none", "even", "odd", "mark", "space"
+----		 );
+		 Port map (
+			  CLK        => CLK, -- system clock
+			  RST_N      => nReset, -- low active synchronous reset
+			  -- UART INTERFACE
+			  UART_TXD   => PMOD(0),
+			  UART_RXD   => PMOD(1),
+			  -- DEBUG INTERFACE
+			  BUSY       => open,
+			  FRAME_ERR  => open
+		 );
 	
 	rom: hexfilerom 
 		generic map(
 			filename => "./zout/test2.hex",
-			address_size => 7,
+			address_size => 8,
 			default_value => X"76" -- HLT instruction if uninitialized memory is executed
 			)	
 		port map(
 			  D => data_bus,
-			  A => address_bus(6 downto 0),
+			  A => address_bus(7 downto 0),
            nRead => nMemRead,
 			  nSelect => nRomEnable
 		);
 
 	ram: simpleram 
 		generic map(
-			address_size => 5,
-			default_value => X"00" -- cleared
+			address_size => 8,
+			default_value => X"98" -- to test DAA
 			)	
 		port map(
+			  clk => clock_main,
 			  D => data_bus,
-			  A => address_bus(4 downto 0),
+			  A => address_bus(7 downto 0),
            nRead => nMemRead,
 			  nWrite => nMemWrite,
 			  nSelect => nRamEnable
@@ -381,9 +432,10 @@ begin
            nMEMR => nMemRead,
            nMEMW => nMemWrite,
            HLDA => HoldAck,
+			  INTE => IntE,
            CLK => clock_main,
-           nRESET => nreset,
-			  INT => '0', -- TODO
+           nRESET => nReset,
+			  INT => IntReq,
 			  READY => '1', -- TODO - use to implement single stepping
 			  HOLD => '0', -- TODO
 			  -- debug port, not part of actual processor
@@ -392,5 +444,4 @@ begin
 			  debug_reg => switch(5 downto 2)
 			);
 	 
-   
 end;

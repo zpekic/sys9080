@@ -47,85 +47,99 @@ type bytememory is array(0 to (2 ** address_size) - 1) of std_logic_vector(7 dow
 
 impure function init_bytememory(file_name : in string; depth: in integer; default_value: std_logic_vector(7 downto 0)) return bytememory is
 variable temp_mem : bytememory;
+variable i: integer range 0 to (2 ** address_size) - 1;
+variable location: std_logic_vector(7 downto 0);
  
 begin
 	-- fill with default value
 	for i in 0 to depth - 1 loop	
-		case i is
-			when 0 => 
+		location := std_logic_vector(to_unsigned(i, 8));
+		case location is
+			------- RST0 @ 0x00 --------
+			when X"00" => 
 				temp_mem(i) := X"F3"; -- DI
-			when 1 => 
-				temp_mem(i) := X"11"; -- LXI D, 0xDDEE
-			when 2 => 
-				temp_mem(i) := X"EE";
-			when 3 => 
-				temp_mem(i) := X"DD";
-			when 4 => 
-				temp_mem(i) := X"01"; -- LXI B, 0xBBCC
-			when 5 => 
-				temp_mem(i) := X"CC"; 
-			when 6 => 
-				temp_mem(i) := X"BB";
-			when 7 => 
+			when X"01" => 
 				temp_mem(i) := X"21"; -- LXI H, 0xFFFF
-			when 8 => 
+			when X"02" => 
 				temp_mem(i) := X"FF"; 
-			when 9 => 
+			when X"03" => 
 				temp_mem(i) := X"FF"; 
-			when 10 => 
+			when X"04" => 
 				temp_mem(i) := X"F9"; -- SPHL
-			when 11 => 
-				temp_mem(i) := X"79"; -- MOV A, C
-			when 12 => 
-				temp_mem(i) := X"D3"; -- OUT 0x00
-			when 13 => 
+			when X"05" => 
+				temp_mem(i) := X"2E"; -- MVI L, 0x55
+			when X"06" => 
+				temp_mem(i) := X"55"; 
+			when X"07" => 
+				temp_mem(i) := X"11"; -- LXI D, 0x4445
+			when X"08" => 
+				temp_mem(i) := X"45";
+			when X"09" => 
+				temp_mem(i) := X"44";
+			when X"0A" => 
+				temp_mem(i) := X"FB"; -- EI
+			when X"0B" => 
+				temp_mem(i) := X"01"; -- DeadLoop: LXI B, 0x0020; set C to ASCII space
+			when X"0C" => 
+				temp_mem(i) := X"20"; 
+			when X"0D" => 
+				temp_mem(i) := X"00";
+			when X"0E" => 
+				temp_mem(i) := X"79"; -- SendNextChar: MOV A, C
+			when X"0F" => 
+				temp_mem(i) := X"D3"; -- OUT 0x00; send char
+			when X"10" => 
 				temp_mem(i) := X"00"; 
-			when 14 => 
-				temp_mem(i) := X"78"; -- MOV A, B
-			when 15 => 
-				temp_mem(i) := X"D3"; -- OUT 0x01
-			when 16 => 
+			when X"11" => 
+				temp_mem(i) := X"DB"; -- IN 0x01; read status
+			when X"12" => 
 				temp_mem(i) := X"01"; 
-			when 17 => 
-				temp_mem(i) := X"7B"; -- MOV A, E
-			when 18 => 
-				temp_mem(i) := X"D3"; -- OUT 0x00
-			when 19 => 
+			when X"13" => 
+				temp_mem(i) := X"FE"; -- CPI 0x80; end of printable chars reached?
+			when X"14" => 
+				temp_mem(i) := X"80"; 
+			when X"15" => 
+				temp_mem(i) := X"CA"; -- JZ DeadLoop
+			when X"16" => 
+				temp_mem(i) := X"0B"; 
+			when X"17" => 
 				temp_mem(i) := X"00"; 
-			when 20 => 
-				temp_mem(i) := X"7A"; -- MOV A, D
-			when 21 => 
-				temp_mem(i) := X"D3"; -- OUT 0x01
-			when 22 => 
-				temp_mem(i) := X"01"; 
-			when 23 => 
-				temp_mem(i) := X"2B"; -- LOOP: DCX H
-			when 24 => 
+			when X"18" => 
+				temp_mem(i) := X"0C"; -- INR C
+			when X"19" => 
+				temp_mem(i) := X"C2"; -- JMP SendNextChar
+			when X"1A" => 
+				temp_mem(i) := X"0E"; 
+			when X"1B" => 
+				temp_mem(i) := X"00"; 
+			when X"1C" => 
+				temp_mem(i) := X"00"; -- NOP 
+			------- RST7 @ 0x38 --------
+			when X"38" => 
 				temp_mem(i) := X"00"; -- NOP
-			when 25 => 
-				temp_mem(i) := X"7D"; -- MOV A, L
-			when 26 => 
-				temp_mem(i) := X"D3"; -- OUT 0x00
-			when 27 => 
-				temp_mem(i) := X"00"; 
-			when 28 => 
-				temp_mem(i) := X"7C"; -- MOV A, H
-			when 29 => 
-				temp_mem(i) := X"D3"; -- OUT 0x01
-			when 30 => 
-				temp_mem(i) := X"01"; 
-			when 31 => 
-				temp_mem(i) := X"FA"; -- JM 0x0017
-			when 32 => 
-				temp_mem(i) := X"17";
-			when 33 => 
-				temp_mem(i) := X"00"; 
-			when 34 => 
-				temp_mem(i) := X"F2"; -- JP 0x0017
-			when 35 => 
-				temp_mem(i) := X"17";
-			when 36 => 
-				temp_mem(i) := X"00"; 
+			when X"39" => 
+				temp_mem(i) := X"F5"; -- PUSH PSW
+			when X"40" => 
+				temp_mem(i) := X"E5"; -- PUSH H
+			when X"41" => 
+				temp_mem(i) := X"D5"; -- PUSH D
+			when X"42" => 
+				temp_mem(i) := X"C5"; -- PUSH B
+			when X"43" => 
+				temp_mem(i) := X"C1"; -- POP B
+			when X"44" =>  
+				temp_mem(i) := X"D1"; -- POP D
+			when X"45" => 
+				temp_mem(i) := X"E1"; -- POP H
+			when X"46" => 
+				temp_mem(i) := X"F1"; -- POP PSW
+			when X"47" => 
+				temp_mem(i) := X"FB"; -- EI 
+			when X"48" => 
+				temp_mem(i) := X"C9"; -- RET
+			when X"49" => 
+				temp_mem(i) := X"00"; -- NOP
+			-----------------------------
 		when others =>
 			temp_mem(i) := default_value;
 		end case;

@@ -31,9 +31,10 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity simpleram is
 	 generic (
-		address_size: positive := 8;
-		default_value: STD_LOGIC_VECTOR(7 downto 0) := X"00");
+		address_size: positive := 16;
+		default_value: STD_LOGIC_VECTOR(7 downto 0) := X"99");
     Port (       
+			  clk: in STD_LOGIC;
 			  D : inout  STD_LOGIC_VECTOR (7 downto 0);
            A : in  STD_LOGIC_VECTOR ((address_size - 1) downto 0);
            nRead : in  STD_LOGIC;
@@ -41,29 +42,85 @@ entity simpleram is
            nSelect : in  STD_LOGIC);
 end simpleram;
 
+
+-- Using RAM from Xilinx IPCore library
+--architecture structural of simpleram is
+--
+--component ram4kx8 IS
+--  PORT (
+--    clka : IN STD_LOGIC;
+--    ena : IN STD_LOGIC;
+--    wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
+--    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+--    dina : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+--    douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+--  );
+--end component;
+--
+--signal d_out: std_logic_vector(7 downto 0);
+--signal ena: std_logic;
+--signal wr: std_logic_vector(0 downto 0);
+--
+--begin
+--
+--ena <= not nSelect;
+--wr <= "" & not nWrite;
+--D <= d_out when (nRead = '0' and nSelect = '0') else "ZZZZZZZZ";
+--
+--inner_ram: ram4kx8 port map
+--	(
+--    clka => clk,
+--    ena => ena,
+--    wea => wr,
+--    addra => A,
+--    dina => D,
+--    douta => d_out
+--  );
+--  
+--end structural;
+  
+-- Using standard abstract VHDL  
 architecture Behavioral of simpleram is
 
 type bytememory is array(0 to (2 ** address_size) - 1) of std_logic_vector(7 downto 0);
 signal d_out: std_logic_vector(7 downto 0);
 signal ram: bytememory := (others => default_value);
+signal control: std_logic_vector(2 downto 0);
 
 begin
 
+control <= nSelect & nRead & nWrite;
 D <= d_out when (nRead = '0' and nSelect = '0') else "ZZZZZZZZ";
 
-internal_write: process(nSelect, nWrite, A, D)
+readwrite: process(control, A, D, ram)
 begin
-	if (nSelect = '0' and nWrite = '0') then
-		ram(to_integer(unsigned(A))) <= D;
-	end if;
+	case control is
+		when "010" => -- write 
+			if (rising_edge(clk)) then
+				ram(to_integer(unsigned(A))) <= D;
+			end if;
+		when "001" => -- read
+			d_out <= ram(to_integer(unsigned(A)));
+		when others =>
+			null;
+	end case;
 end process;
 
-internal_read: process(nSelect, nRead, A, ram)
-begin
-	if (nSelect = '0' and nRead = '0') then
-		d_out <= ram(to_integer(unsigned(A)));
-	end if;
-end process;
+--internal_write: process(nSelect, nWrite, A, D)
+--begin
+--	if (nSelect = '0') then
+--		if (falling_edge(nWrite)) then
+--			ram(to_integer(unsigned(A))) <= D;
+--		end if;
+--	end if;
+--end process;
+--
+--internal_read: process(nSelect, nRead, A, ram)
+--begin
+--	if (nSelect = '0' and nRead = '0') then
+--		d_out <= ram(to_integer(unsigned(A)));
+--	end if;
+--end process;
 
 end Behavioral;
 

@@ -21,6 +21,7 @@
 ----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
+use work.mnemonics.all;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -48,8 +49,29 @@ entity Am9080a is
 			  READY: in STD_LOGIC;
 			  HOLD: in STD_LOGIC;
 			  -- debug port, not part of actual processor
+			  -- 0: current microinstruction details appear on debug_out (processor can work!)
+			  -- 1: register contents appears on debug_out (processor CANNOT work!)
            debug_sel : in  STD_LOGIC;
+			  -- data from processor internals
            debug_out : out  STD_LOGIC_VECTOR (19 downto 0);
+			  -- register selection if debug_sel == '1', otherwise ignored
+			  --debug_reg	register value that appears on debug_out
+			  --0				BC
+			  --1				CB
+			  --2				DE
+			  --3				ED
+			  --4				HL
+			  --5				LH
+			  --6				-A
+			  --7				A-
+			  --8				SP (in documentation, this is marked as "not used")
+			  --9				not used (in documentation, this is marked as SP)
+			  --A				scratch pad
+			  --B				scratch pad
+			  --C				X"0038"
+			  --D				X"3800"
+			  --E				not used
+			  --F				PC
 			  debug_reg : in STD_LOGIC_VECTOR(3 downto 0)
 		);
 end Am9080a;
@@ -306,8 +328,8 @@ signal signal_rotate, signal_swap: std_logic;
    
 signal bl: std_logic_vector(7 downto 0);
 
+-- various debug signals
 signal debug_register, debug_microcode: std_logic_vector(19 downto 0);
---signal debug_reg: std_logic_vector(3 downto 0);
 signal debug_alu_destination, debug_alu_function, debug_alu_source: std_logic_vector(2 downto 0);
 signal debug_a_lop, debug_a_hop: std_logic_vector(3 downto 0);
 
@@ -322,6 +344,7 @@ debug_register <= debug_reg & am2901_y;
 debug_microcode <= "0100" & ma(7 downto 0) & u8474_u8475_pin15 & "00" & u_condpolarity & u_condcode;
 
 debug_out <= debug_register when (debug_sel = '1') else debug_microcode; 
+-- if debugging register, feed NOP/OR/ZA to Am2901 instead of one coming from microcode ("pl" fields)
 debug_alu_destination <= "001" when (debug_sel = '1') else pl_alu_destination; -- NOP
 debug_alu_function <= "011" when (debug_sel = '1') else pl_alu_function; -- OR
 debug_alu_source <= "100" when (debug_sel = '1') else pl_alu_source; -- ZA
