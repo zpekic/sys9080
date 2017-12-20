@@ -14,7 +14,7 @@
 000A   0DC   LDAXB:   FF H#0DC       
 000B   06F   DCXB:    FF H#06F       
 000C   0AB   INRC:    FF H#0AB       
-000D   0AA   IICRC:   FF H#0AA       
+000D   0AA   DCRC:   FF H#0AA       
 000E   01B   MVIC:    FF H#01B       
 000F   05D   RRC:     FF H#05D       
 0010   000            FF 12X       
@@ -183,8 +183,8 @@
 00B3   0A1   ORAR:    FF H#0A1     
 00B4   0A1   ORAR:    FF H#0A1     
 00B5   0A1   ORAR:    FF H#0A1     
-00B6   0BF   DRAM:    FF H#0BF     
-00B7   0A1   DRAA:    FF H#0A1     
+00B6   0BF   ORAM:    FF H#0BF     
+00B7   0A1   ORAA:    FF H#0A1     
 00B8   076   CMPR:    FF H#076     
 00B9   076   CMPR:    FF H#076     
 00BA   076   CMPR:    FF H#076     
@@ -210,7 +210,7 @@
 00CE   03F   ACI:     FF H#03F     
 00CF   055   RST1:    FF H#055     
 00D0   11B   RNC:     FF H#11B     
-00D1   0FB   P0PD:    FF H#0FB     
+00D1   0FB   POPD:    FF H#0FB     
 00D2   115   JNC:     FF H#115     
 00D3   08B   OUT.:    FF H#08B     
 00D4   118   CNC:     FF H#118     
@@ -226,7 +226,7 @@
 00DE   0B7   SBI:     FF H#0B7     
 00DF   055   RST3:    FF H#055     
 00E0   129   RPO:     FF H#129     
-00E1   101   P0PH:    FF H#101     
+00E1   101   POPH:    FF H#101     
 00E2   123   JPO:     FF H#123     
 00E3   092   XTHL:    FF H#092     
 00E4   126   CPD:     FF H#126     
