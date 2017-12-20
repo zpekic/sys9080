@@ -192,6 +192,17 @@ component hexfilerom is
 			 );
 end component;
 
+component interrupt_controller is
+    Port ( CLK : in  STD_LOGIC;
+           nRESET : in  STD_LOGIC;
+           INT : out  STD_LOGIC;
+           nINTA : in  STD_LOGIC;
+           INTE : in  STD_LOGIC;
+			  ENCODED: out STD_LOGIC_VECTOR(3 downto 0);
+           D : out  STD_LOGIC_VECTOR (7 downto 0);
+           DEVICEREQ : in  STD_LOGIC_VECTOR (7 downto 0));
+end component;
+
 component Am9080a is
     Port ( DBUS : inout  STD_LOGIC_VECTOR (7 downto 0);
 			  ABUS : out STD_LOGIC_VECTOR (15 downto 0);
@@ -248,12 +259,15 @@ signal Reset, nReset: std_logic;
 signal clock_main: std_logic;
 signal data_bus: std_logic_vector(7 downto 0);
 signal address_bus: std_logic_vector(15 downto 0);
-signal nIORead, nIOWrite, nMemRead, nMemWrite, IntReq: std_logic;
-signal nIntAck, HoldAck, IntE: std_logic;
-constant opcode_rst7: std_logic_vector(7 downto 0) := X"FF";
+signal nIORead, nIOWrite, nMemRead, nMemWrite: std_logic;
+signal IntReq, nIntAck, Hold, HoldAck, IntE: std_logic;
+
+signal encoded: std_logic_vector(3 downto 0);
+
 
 signal readwritesignals: std_logic_vector(4 downto 0);
 signal showsegments: std_logic;
+signal flash: std_logic;
 signal freq2k, freq1k, freq512, freq256, freq128, freq64, freq32, freq16, freq8, freq4, freq2, freq1: std_logic;
 
 begin
@@ -268,17 +282,26 @@ begin
 	 readwritesignals <= (not nIORead) & (not nIOWrite) & (not nMemRead) & (not nMemWrite) & (not nIntAck);
 	 showsegments <= '0' when (switch(1) = '0' and switch(0) = '0' and readwritesignals = "00000") else '1';
 
+	 Hold <= button(2);
+	 flash <= HoldAck or freq2; -- blink in hold bus mode!
 	 -- DISPLAY
+	 --LED <= encoded;
+	 --LED(3) <= HoldAck; -- note reverse for easier readability 
+	 --LED(2) <= Hold; -- note for easier readability 
+	 --LED(1) <= nReset;
 	 LED(3) <= nIntAck; -- note reverse for easier readability 
-	 LED(2) <= IntReq; --IntE; -- note for easier readability 
-	 LED(1) <= nReset;
+	 LED(2) <= IntReq; -- note for easier readability 
+	 LED(1) <= IntE; 
 	 LED(0) <= clock_main; -- note reverse for easier readability 
     led4x7: fourdigitsevensegled port map ( 
 			  -- inputs
 			  data => led_bus(15 downto 0),
            digsel(1) => freq1k,
 			  digsel(0) => freq2k,
-           showdigit => "1111",
+           showdigit(3) => flash,
+           showdigit(2) => flash,
+           showdigit(1) => flash,
+           showdigit(0) => flash,
            showdot => led_bus(19 downto 16),
            showsegments => showsegments,
 			  -- outputs
@@ -315,10 +338,7 @@ begin
         q => cnt
 	);
 
-	--IntReq <= '1' when (cnt(7 downto 4) = "1111") else '0'; -- interrupt every 32 clock cycles
-	--IntReq <= button(0);
-	data_bus <= opcode_rst7 when nIntAck = '0' else "ZZZZZZZZ"; -- jam RST7 instruction on data bus when interrupt is acknowledged
-	
+
 	-- DEBOUNCE the 8 switches and 4 buttons
     debouncer_sw: debouncer8channel port map (
         clock => freq128,
@@ -339,8 +359,8 @@ begin
         reset => Reset,
         clock0_in => freq1,
         clock1_in => freq4,
-        clocksel => switch(7),
-        modesel => switch(6),
+        clocksel => switch(6),
+        modesel => switch(7),
         singlestep => button(3),
         clock_out => clock_main
     );
@@ -379,11 +399,11 @@ begin
 --	);
 	
 	loopback: UART_LOOPBACK
-----		 Generic (
-----			  CLK_FREQ   : integer := 50e6;   -- set system clock frequency in Hz
-----			  BAUD_RATE  : integer := 115200; -- baud rate value
-----			  PARITY_BIT : string  := "none"  -- legal values: "none", "even", "odd", "mark", "space"
-----		 );
+		 Generic map (
+			  CLK_FREQ   => 50e6,   -- set system clock frequency in Hz
+			  BAUD_RATE  => 19200, --115200; -- baud rate value
+			  PARITY_BIT => "none"  -- legal values: "none", "even", "odd", "mark", "space"
+		 )
 		 Port map (
 			  CLK        => CLK, -- system clock
 			  RST_N      => nReset, -- low active synchronous reset
@@ -422,6 +442,26 @@ begin
 			  nSelect => nRamEnable
 		);
 	
+	-- Interrupt request
+	
+	ic: interrupt_controller Port map ( 
+			CLK => clock_main,
+			nRESET => nReset,
+			INT => IntReq,
+		   nINTA => nIntAck,
+		   INTE => IntE,
+			D => data_bus,
+			ENCODED => encoded,
+		   DEVICEREQ(7) => button(0),
+		   DEVICEREQ(6) => button(1),
+		   DEVICEREQ(5) => '0',
+		   DEVICEREQ(4) => '0',
+		   DEVICEREQ(3) => '0',
+		   DEVICEREQ(2) => '0',
+		   DEVICEREQ(1) => '0',
+		   DEVICEREQ(0) => '0'
+		);
+		
 	cpu: Am9080a port map (
 			  DBUS => data_bus,
 			  ABUS => address_bus,
@@ -437,7 +477,7 @@ begin
            nRESET => nReset,
 			  INT => IntReq,
 			  READY => '1', -- TODO - use to implement single stepping
-			  HOLD => '0', -- TODO
+			  HOLD => Hold, 
 			  -- debug port, not part of actual processor
            debug_sel => switch(0),
            debug_out => internal_debug_bus,
