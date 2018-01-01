@@ -53,9 +53,10 @@ type t_string8x5 is array(0 to 7) of string(1 to 5);
 type t_string8x6 is array(0 to 7) of string(1 to 6);
 type t_string4x4 is array(0 to 3) of string(1 to 4);
 type t_string4x2 is array(0 to 3) of string(1 to 2);
+type t_string2x2 is array(0 to 1) of string(1 to 2);
 type t_string2x1 is array(0 to 1) of string(1 to 1);
 constant cond_decode: t_string16x4 := ("Z   ", "CY  ", "P   ", "S   ", "AC  ", "?(5)", "?(6)", "?(7)", "INT ", "RDY ", "HOLD", "?(B)", "F3  ", "F=0 ", "CN4 ", "TRUE");
-constant reg_decode: t_string16x4 :=  ("R_BC", "R_CB", "R_DE", "R_ED", "R_HL", "R_LH", "R_?A", "R_A?", "R_SP", "R9??", "RAS1", "RBT2", "RZ38", "R38Z", "R_E?", "R_PC");
+constant reg_decode: t_string16x4 :=  ("R_BC", "R_CB", "R_DE", "R_ED", "R_HL", "R_LH", "R_?A", "R_A?", "R_SP", "R_9?", "RAS1", "RBS2", "RZ38", "R38Z", "RES3", "R_PC");
 constant src_decode: t_string8x3 :=  ("AQ ", "AB ", "ZQ ", "ZB ", "ZA ", "DA ", "DQ ", "DZ ");
 constant fct_decode: t_string8x5 :=  ("ADD  ", "SUBR ", "SUBS ", "OR   ", "AND  ", "NOTRS", "EXOR ", "EXNOR");
 constant dst_decode: t_string8x5 :=  ("QREG ", "NOP  ", "RAMA ", "RAMF ", "RAMQD", "RAMD ", "RAMQU", "RAMU ");
@@ -63,6 +64,7 @@ constant next_decode: t_string8x6 := ("C/R   ", "D/R   ", "C/SBR ", "R/RTN ", "F
 constant databusenable_decode: t_string4x2 := ("--", "YL", "YH", "FL");
 constant outputsteer_decode: t_string4x4 := ("----", "DATA", "ADDR", "INTE");
 constant immediatedatabus_decode: t_string2x1 := ("m", "-");
+constant size_decode: t_string2x2 := ("8 ", "16");
 constant instregenable_decode: t_string2x1 := ("i", "-");
 constant condpolarity_decode: t_string2x1 := ("-", "!");
 
@@ -83,6 +85,21 @@ begin
 	end case;
 	return 0;
 end char2hex;
+
+impure function decode_buscontrol(buscontrol: in std_logic_vector(5 downto 0)) return string is
+begin
+	case buscontrol is
+		when "111110" => return "NOC   ";
+		when "111100" => return "MEMW  ";
+		when "111010" => return "MEMR  ";
+		when "110110" => return "IOW   ";
+		when "101110" => return "IOR   ";
+		when "011110" => return "INTA  ";
+		when "111111" => return "HLDA  ";
+	when others => 
+		return "??????";
+	end case;
+end decode_buscontrol;
 
 impure function decode_reg(reg: in std_logic_vector(3 downto 0)) return string is
 begin
@@ -129,6 +146,11 @@ begin
 	return immediatedatabus_decode(to_integer(unsigned'("" & immediatedatabus)));
 end decode_immediatedatabus;
 
+impure function decode_size(size: in std_logic) return string is
+begin
+	return size_decode(to_integer(unsigned'("" & size)));
+end decode_size;
+
 impure function decode_instregenable(instregenable: in std_logic) return string is
 begin
 	return instregenable_decode(to_integer(unsigned'("" & instregenable)));
@@ -149,7 +171,7 @@ begin
 
 		  if ((i mod 32 = 0) and not ((base = 8) or (base = 16))) then
 				write(out_line, string'("-----------------------------------------------------------------------------------------"));writeline(out_file, out_line);
-				write(out_line, string'("     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W AADR BADR DST   FCT   SRC"));writeline(out_file, out_line);
+				write(out_line, string'("     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC"));writeline(out_file, out_line);
 				write(out_line, string'("-----------------------------------------------------------------------------------------"));writeline(out_file, out_line);
 		  end if;
 
@@ -174,7 +196,7 @@ begin
 						 write(out_line, temp_mem(i)(21 downto 20));write(out_line, string'(" "));
 						 write(out_line, temp_mem(i)(19));write(out_line, string'(" "));
 						 write(out_line, temp_mem(i)(18));write(out_line, string'(" "));
-						 write(out_line, temp_mem(i)(17));write(out_line, string'(" "));
+						 write(out_line, temp_mem(i)(17));write(out_line, string'("  "));
 						 write(out_line, temp_mem(i)(16 downto 13));write(out_line, string'(" "));
 						 write(out_line, temp_mem(i)(12 downto 9));write(out_line, string'(" "));
 						 write(out_line, temp_mem(i)(8 downto 6));write(out_line, string'("   "));
@@ -187,19 +209,23 @@ begin
 					when others => -- any other value will dump microcode "mnemonics"
 						 write(out_line, decode_instregenable(temp_mem(i)(55)));write(out_line, string'(" "));
 						 write(out_line, decode_immediatedatabus(temp_mem(i)(54)));write(out_line, string'(" "));
-						 write(out_line, temp_mem(i)(53 downto 42));write(out_line, string'(" "));
+						 if (unsigned(temp_mem(i)(53 downto 42)) = i) then
+							write(out_line, string'("= location = "));
+						 else
+							write(out_line, temp_mem(i)(53 downto 42));write(out_line, string'(" "));
+						 end if;
 						 write(out_line, decode_next(temp_mem(i)(41 downto 39)));write(out_line, string'(" "));
 						 write(out_line, decode_condpolarity(temp_mem(i)(38)));write(out_line, string'(" "));
 						 write(out_line, decode_cond(temp_mem(i)(37 downto 34)));write(out_line, string'(" "));
 						 write(out_line, temp_mem(i)(33));write(out_line, string'(" "));
-						 write(out_line, temp_mem(i)(32 downto 27));write(out_line, string'(" "));
+						 write(out_line, decode_buscontrol(temp_mem(i)(32 downto 27)));write(out_line, string'(" "));
 						 write(out_line, decode_databusenable(temp_mem(i)(26 downto 25)));write(out_line, string'(" "));
 						 write(out_line, decode_outputsteer(temp_mem(i)(24 downto 23)));write(out_line, string'(" "));
 						 write(out_line, temp_mem(i)(22));write(out_line, string'(" "));
 						 write(out_line, temp_mem(i)(21 downto 20));write(out_line, string'(" "));
 						 write(out_line, temp_mem(i)(19));write(out_line, string'(" "));
 						 write(out_line, temp_mem(i)(18));write(out_line, string'(" "));
-						 write(out_line, temp_mem(i)(17));write(out_line, string'(" "));
+						 write(out_line, decode_size(temp_mem(i)(17)));write(out_line, string'(" "));
 						 write(out_line, decode_reg(temp_mem(i)(16 downto 13)));write(out_line, string'(" "));
 						 write(out_line, decode_reg(temp_mem(i)(12 downto 9)));write(out_line, string'(" "));
 						 write(out_line, decode_dst(temp_mem(i)(8 downto 6)));write(out_line, string'(" "));

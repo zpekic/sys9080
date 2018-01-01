@@ -202,9 +202,9 @@ component Am2909 is
 end component;
 
 -- http://www.cselettronica.com/datasheet/AM2901.pdf
-component am2901 is
+component am2901c is
     Port ( clk : in  STD_LOGIC; 
-           rst : in  STD_LOGIC;---------------------note: not present on real device
+           --rst : in  STD_LOGIC;---------------------note: not present on real device
            a : in  std_logic_vector (3 downto 0);---address  inputs
            b : in  STD_LOGIC_VECTOR (3 downto 0);---address inputs
            d : in  STD_LOGIC_VECTOR (3 downto 0);---direct data
@@ -341,7 +341,8 @@ debug_register <= debug_reg & am2901_y;
 --debug_microcode <= "0100" & ma(7 downto 0) & '0' & u(5 downto 3) & '0' & u(2 downto 0);
 --debug_microcode <= "0100" & ma(7 downto 0) & u8474_u8475_pin15 & "00" & u_condpolarity & u_condcode(3 downto 0);
 --debug_microcode <= "0100" & ma(7 downto 0) & am2901_a & am2901_b;
-debug_microcode <= "0100" & ma(7 downto 0) & u8474_u8475_pin15 & "00" & u_condpolarity & u_condcode;
+--debug_microcode <= "0100" & ma(7 downto 0) & u8474_u8475_pin15 & "00" & u_condpolarity & u_condcode;
+debug_microcode <= ma(11 downto 0) & current_instruction;
 
 debug_out <= debug_register when (debug_sel = '1') else debug_microcode; 
 -- if debugging register, feed NOP/OR/ZA to Am2901 instead of one coming from microcode ("pl" fields)
@@ -671,9 +672,9 @@ debug_a_lop <= debug_reg when (debug_sel = '1') else am2901_a(3 downto 1) & u63_
 			);
 		  
 -- LOP slices ---
-	u43: Am2901 port map (
+	u43: Am2901c port map (
 				  clk => CLK, 
-				  rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
+				  --rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
 				  a(3 downto 1) => debug_a_lop(3 downto 1), --am2901_a(3 downto 1), 
 				  a(0) => debug_a_lop(0), --u63_pin7,
 				  b(3 downto 1) => am2901_b(3 downto 1), 
@@ -697,9 +698,9 @@ debug_a_lop <= debug_reg when (debug_sel = '1') else am2901_a(3 downto 1) & u63_
 				  f3 => open
 	);		  
 
-	u44: Am2901 port map (
+	u44: Am2901c port map (
 				  clk => CLK, 
-				  rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
+				  --rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
 				  a(3 downto 1) => debug_a_lop(3 downto 1), --am2901_a(3 downto 1), 
 				  a(0) => debug_a_lop(0), --u63_pin7,
 				  b(3 downto 1) => am2901_b(3 downto 1), 
@@ -724,9 +725,9 @@ debug_a_lop <= debug_reg when (debug_sel = '1') else am2901_a(3 downto 1) & u63_
 	);		  
 
 -- HOP slices ---
-	u33: Am2901 port map (
+	u33: Am2901c port map (
 				  clk => CLK, 
-				  rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
+				  --rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
 				  a => debug_a_hop, --am2901_a,
 				  b => am2901_b,
 				  d => am2901_data(11 downto 8),
@@ -748,9 +749,9 @@ debug_a_lop <= debug_reg when (debug_sel = '1') else am2901_a(3 downto 1) & u63_
 				  f3 => open
 	);		  
 
-	u34: Am2901 port map (
+	u34: Am2901c port map (
 				  clk => CLK, 
-				  rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
+				  --rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
 				  a => debug_a_hop, --am2901_a,
 				  b => am2901_b,
 				  d => am2901_data(15 downto 12),
