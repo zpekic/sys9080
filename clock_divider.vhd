@@ -32,14 +32,16 @@ use IEEE.NUMERIC_STD.ALL;
 entity clock_divider is
     Port ( reset : in  STD_LOGIC;
            clock : in  STD_LOGIC;
-           div : out  STD_LOGIC_VECTOR (11 downto 0)
+           slow : out  STD_LOGIC_VECTOR (11 downto 0);
+			  fast : out STD_LOGIC_VECTOR(3 downto 0)
 			 );
 end clock_divider;
 
 architecture rtl of clock_divider is
 	constant max_count: integer := (100000000 / 4096); -- prescale 
 	signal count: integer range 0 to max_count := 0; 
-	signal cnt: unsigned(11 downto 0);
+	signal slow_cnt: unsigned(11 downto 0);
+	signal fast_cnt: unsigned(3 downto 0);
 	
 begin
 		
@@ -47,12 +49,14 @@ begin
 		begin
 		if reset = '1' then
 			count <= 0;
-			cnt <= "000000000000";
+			slow_cnt <= "000000000000";
+			fast_cnt <= "0000";
 		else
-			if clock'event and clock = '1' then
+			if rising_edge(clock) then
+				fast_cnt <= fast_cnt + 1;
 				if count = max_count then
 					count <= 0;
-					cnt <= cnt + 1;
+					slow_cnt <= slow_cnt + 1;
 				else
 					count <= count + 1;
 				end if;
@@ -60,6 +64,7 @@ begin
 		end if;
 	end process;
    -- connect divider output with internal counter
-	div <= std_logic_vector(cnt);
+	slow <= std_logic_vector(slow_cnt);
+	fast <= std_logic_vector(fast_cnt);
 end rtl;
 

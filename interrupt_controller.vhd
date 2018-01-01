@@ -35,9 +35,9 @@ entity interrupt_controller is
            INT : out  STD_LOGIC;
            nINTA : in  STD_LOGIC;
            INTE : in  STD_LOGIC;
-			  ENCODED: out STD_LOGIC_VECTOR(3 downto 0);
            D : out  STD_LOGIC_VECTOR (7 downto 0);
-           DEVICEREQ : in  STD_LOGIC_VECTOR (7 downto 0));
+           DEVICEREQ : in  STD_LOGIC_VECTOR (7 downto 0);
+           DEVICEACK : out  STD_LOGIC_VECTOR (7 downto 0));
 end interrupt_controller;
 
 architecture Behavioral of interrupt_controller is
@@ -61,7 +61,6 @@ begin
 D <= vector when (nINTA = '0') else "ZZZZZZZZ";
 --intclk <= CLK when (intreq = '0') else nINTA;
 INT <= intreq;
-ENCODED <= level;
 
 level <= "1111" when DEVICEREQ(7) = '1' else -- highest level 7 == RST 7
 			"1110" when DEVICEREQ(6) = '1' else
@@ -73,6 +72,34 @@ level <= "1111" when DEVICEREQ(7) = '1' else -- highest level 7 == RST 7
 			"1000" when DEVICEREQ(0) = '1' else -- lowest level 0 == RST 0
 			"0000";										-- no interrupt
 
+generate_ack: process(nINTA, vector)
+begin
+    if (nINTA = '0') then
+        case vector(5 downto 3) is
+            when "000" =>
+					DEVICEACK <= "00000001";
+            when "001" =>
+					DEVICEACK <= "00000010";
+            when "010" =>
+					DEVICEACK <= "00000100";
+            when "011" =>
+					DEVICEACK <= "00001000";
+            when "100" =>
+					DEVICEACK <= "00010000";
+            when "101" =>
+					DEVICEACK <= "00100000";
+            when "110" =>
+					DEVICEACK <= "01000000";
+            when "111" =>
+					DEVICEACK <= "10000000";
+            when others =>
+					null;
+        end case;
+    else
+        DEVICEACK <= "00000000";
+    end if;
+end process;
+
 loadvector: process(nRESET, CLK, level, INTE, nINTA)
 begin
 	if (nRESET = '0') then
@@ -82,7 +109,6 @@ begin
 		if (rising_edge(CLK)) then
 			if (intreq = '0') then
 				if (level(3) = '1' and INTE = '1') then
-				--if (INTE = '1' and DEVICEREQ(7) = '1') then
 					intreq <= '1';
 					vector <= "11" & level(2 downto 0) & "111";
 				end if;
@@ -92,7 +118,6 @@ begin
 		end if;
 	end if;
 end process;
-
 
 end Behavioral;
 

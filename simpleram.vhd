@@ -32,7 +32,7 @@ use IEEE.NUMERIC_STD.ALL;
 entity simpleram is
 	 generic (
 		address_size: positive := 16;
-		default_value: STD_LOGIC_VECTOR(7 downto 0) := X"99");
+		default_value: STD_LOGIC_VECTOR(7 downto 0) := X"FF");
     Port (       
 			  clk: in STD_LOGIC;
 			  D : inout  STD_LOGIC_VECTOR (7 downto 0);
@@ -42,7 +42,6 @@ entity simpleram is
            nSelect : in  STD_LOGIC);
 end simpleram;
 
-
 -- Using RAM from Xilinx IPCore library
 --architecture structural of simpleram is
 --
@@ -51,7 +50,7 @@ end simpleram;
 --    clka : IN STD_LOGIC;
 --    ena : IN STD_LOGIC;
 --    wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
---    addra : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
+--    addra : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
 --    dina : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
 --    douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
 --  );
@@ -84,15 +83,18 @@ architecture Behavioral of simpleram is
 
 type bytememory is array(0 to (2 ** address_size) - 1) of std_logic_vector(7 downto 0);
 signal d_out: std_logic_vector(7 downto 0);
-signal ram: bytememory := (others => default_value);
 signal control: std_logic_vector(2 downto 0);
+
+signal ram: bytememory := (others => default_value);
+attribute ram_style: string;
+attribute ram_style of ram: signal is "block";
 
 begin
 
 control <= nSelect & nRead & nWrite;
 D <= d_out when (nRead = '0' and nSelect = '0') else "ZZZZZZZZ";
 
-readwrite: process(control, A, D, ram)
+readwrite: process(clk, control, A, D, ram)
 begin
 	case control is
 		when "010" => -- write 
@@ -105,22 +107,6 @@ begin
 			null;
 	end case;
 end process;
-
---internal_write: process(nSelect, nWrite, A, D)
---begin
---	if (nSelect = '0') then
---		if (falling_edge(nWrite)) then
---			ram(to_integer(unsigned(A))) <= D;
---		end if;
---	end if;
---end process;
---
---internal_read: process(nSelect, nRead, A, ram)
---begin
---	if (nSelect = '0' and nRead = '0') then
---		d_out <= ram(to_integer(unsigned(A)));
---	end if;
---end process;
 
 end Behavioral;
 

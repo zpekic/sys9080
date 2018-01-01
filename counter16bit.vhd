@@ -35,13 +35,13 @@ entity counter16bit is
     Port ( reset : in STD_LOGIC;
            clk : in STD_LOGIC;
            mode : in STD_LOGIC_VECTOR (1 downto 0);
-           d : in STD_LOGIC_VECTOR (15 downto 0);
-           q : out STD_LOGIC_VECTOR (15 downto 0));
+           d : in STD_LOGIC_VECTOR (31 downto 0);
+           q : out STD_LOGIC_VECTOR (31 downto 0));
 end counter16bit;
 
 architecture Behavioral of counter16bit is
 
-signal count: std_logic_vector(15 downto 0);
+signal count: std_logic_vector(31 downto 0);
 
 begin
 
@@ -50,7 +50,7 @@ q <= count;
 update: process (reset, clk, mode, d)
 begin
  if (reset = '1') then -- async reset
-	count <= X"0000";
+	count <= X"00000000";
  else
 	if (rising_edge(clk)) then
 		case (mode) is
