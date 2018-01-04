@@ -1,19 +1,19 @@
 ----------------------------------------------------------------------------------
--- Company: 
--- Engineer: 
+-- Company: @Home
+-- Engineer: zpekic@hotmail.com
 -- 
 -- Create Date: 08/24/2017 11:13:02 PM
 -- Design Name: 
 -- Module Name: sys9080 - Behavioral
--- Project Name: 
--- Target Devices: 
--- Tool Versions: 
+-- Project Name: Simple 8-bit system around microcode implemented Am9080 CPU
+-- Target Devices: https://www.micro-nova.com/mercury/ + Baseboard
+-- Tool Versions: ISE 14.7 (nt)
 -- Description: 
 -- 
 -- Dependencies: 
 -- 
 -- Revision:
--- Revision 0.01 - File Created
+-- Revision 0.99 - Kinda works...
 -- Additional Comments:
 -- https://en.wikichip.org/w/images/7/76/An_Emulation_of_the_Am9080A.pdf
 ----------------------------------------------------------------------------------
@@ -38,8 +38,26 @@ entity sys9080 is
 				-- Master reset button on Mercury board
 				USR_BTN: in std_logic; 
 				-- Switches on baseboard
+				-- SW(1 downto 0) -- LED display selection
+				--   0	0  Sys9080 - A(7:0) & D(7:0) & io and memory r/w on dots
+				--   0   1  Sys9080 - OUT port 1 & port 0
+				--   1   0  Am9080 - microinstruction counter & instruction register
+				--   1   1  Am9080 - content of register as defined by SW5:2
+				-- SW(5 downto 2) -- 4 bit Am9080 register selector when inspecting register states in SS mode
+				-- SW(6 downto 5) -- system clock speed 
+				--   0   0	1Hz	(can be used with SS mode)
+				--   0   1	1024Hz (can be used with SS mode)
+				--   1   0  6.125MHz
+				--   1   1  25MHz
+				-- SW7
+				--   0   single step mode off (BTN3 should be pressed once to start the system)
+				--   1   single step mode on (use with BTN3)
 				SW: in std_logic_vector(7 downto 0); 
 				-- Push buttons on baseboard
+				-- BTN0 - generate RST 7 interrupt which will dump processor regs and memory they are pointing to over ACIA0
+				-- BTN1 - bypass ACIA Rx char input processing and dump received bytes and status to ACIA0
+				-- BTN2 - put processor into HOLD mode
+				-- BTN3 - single step clock cycle forward if in SS mode (NOTE: single press on this button is needed after reset to unlock SS circuit)
 				BTN: in std_logic_vector(3 downto 0); 
 				-- Stereo audio output on baseboard
 				--AUDIO_OUT_L, AUDIO_OUT_R: out std_logic;
@@ -56,9 +74,7 @@ entity sys9080 is
 				--ADC_CSN: out std_logic;
 				--PMOD interface (for hex keypad)
 				PMOD: inout std_logic_vector(7 downto 0)
-				--SWITCH_OEN: out std_logic;
-				--MEMORY_OEN: out std_logic;
-				--IO: inout std_logic_vector(29 downto 0)
+
           );
 end sys9080;
 
@@ -92,31 +108,12 @@ component counter16bit is
            q : out STD_LOGIC_VECTOR (31 downto 0));
 end component;
 
---component PmodSSD is
---    Port ( sel : in STD_LOGIC;
---           blank : in STD_LOGIC;
---           d : in STD_LOGIC_VECTOR (7 downto 0);
---           cathode: out std_logic;
---           anode: out std_logic_vector(6 downto 0)
---          );
---end component;
-
 component debouncer8channel is
     Port ( clock : in  STD_LOGIC;
            reset : in  STD_LOGIC;
            signal_raw : in  STD_LOGIC_VECTOR(7 downto 0);
            signal_debounced : out  STD_LOGIC_VECTOR(7 downto 0));
 end component;
-
---component rgbledpwm is
---    Port ( reset : in STD_LOGIC;
---           freq_pwm : in STD_LOGIC;
---           rgb : in STD_LOGIC_VECTOR (23 downto 0);
---           pwm_red : out STD_LOGIC;
---           pwm_green : out STD_LOGIC;
---           pwm_blue : out STD_LOGIC;
---           debug_out: out STD_LOGIC_VECTOR(23 downto 0));
---end component;
 
 component fourdigitsevensegled is
     Port ( -- inputs
@@ -219,6 +216,7 @@ component Am9080a is
 			  READY: in STD_LOGIC;
 			  HOLD: in STD_LOGIC;
 			  -- debug port, not part of actual processor
+           debug_ena : in  STD_LOGIC;
            debug_sel : in  STD_LOGIC;
            debug_out : out  STD_LOGIC_VECTOR (19 downto 0);
 			  debug_reg : in STD_LOGIC_VECTOR(3 downto 0)
@@ -255,15 +253,16 @@ signal nIORead, nIOWrite, nMemRead, nMemWrite: std_logic;
 signal IntReq, nIntAck, Hold, HoldAck, IntE: std_logic;
 
 -- other signals
+signal reset_delay: std_logic_vector(3 downto 0);
 signal DeviceReq: std_logic_vector(7 downto 0);
 signal DeviceAck: std_logic_vector(7 downto 0);
 signal switch: std_logic_vector(7 downto 0);
 signal button: std_logic_vector(7 downto 0);
-signal cnt: std_logic_vector(31 downto 0);
+--signal cnt: std_logic_vector(31 downto 0);
 signal io_output: std_logic_vector(15 downto 0);
 signal led_bus: std_logic_vector(19 downto 0);
-signal internal_debug_bus, external_debug_bus: std_logic_vector(19 downto 0);
-signal nIoEnable, nACIA0Enable, nACIA1Enable, nRomEnable, nRamEnable: std_logic;
+signal cpu_debug_bus, sys_debug_bus: std_logic_vector(19 downto 0);
+signal nIoEnable, nACIA0Enable, nACIA1Enable, nBootRomEnable, nMonRomEnable, nRamEnable: std_logic;
 signal readwritesignals: std_logic_vector(4 downto 0);
 signal showsegments: std_logic;
 signal flash: std_logic;
@@ -272,27 +271,22 @@ signal freq25M, freq12M5, freq6M25, freq3M125: std_logic;
 
 begin
    
-	 --SWITCH_OEN <= '1'; -- Drive high to disconnect GPIO bus and use it as RAM bus ( http://bit.ly/2mH2OXk )
 	 Reset <= USR_BTN;
-	 nReset <= '0' when (Reset = '1') or (cnt(31 downto 2) = "000000000000000000000000000000") else '1'; 
+	 nReset <= '0' when (Reset = '1') or (reset_delay /= "0000") else '1'; 
 	 
-	 led_bus <= internal_debug_bus when (switch(1) = '1') else external_debug_bus;
-	 external_debug_bus <= readwritesignals(4 downto 1) & address_bus(7 downto 0) & data_bus when (switch(0) = '0') else "0000" & io_output;
+	 led_bus <= cpu_debug_bus when (switch(1) = '1') else sys_debug_bus;
+	 sys_debug_bus <= readwritesignals(4 downto 1) & address_bus(7 downto 0) & data_bus when (switch(0) = '0') else "0000" & io_output;
 	 
 	 readwritesignals <= (not nIORead) & (not nIOWrite) & (not nMemRead) & (not nMemWrite) & (not nIntAck);
-	 showsegments <= '0' when (switch(1) = '0' and switch(0) = '0' and readwritesignals = "00000") else '1';
+	 showsegments <= '0' when (switch(1 downto 0) = "00" and readwritesignals = "00000") else '1';
 
 	 Hold <= button(2);
 	 flash <= HoldAck or freq2; -- blink in hold bus mode!
 	 -- DISPLAY
-	 --LED <= encoded;
-	 --LED(3) <= HoldAck; -- note reverse for easier readability 
-	 --LED(2) <= Hold; -- note for easier readability 
-	 --LED(1) <= nReset;
-	 LED(3) <= DeviceAck(5); --nIntAck; -- note reverse for easier readability 
-	 LED(2) <= DeviceReq(5); --IntReq; -- note for easier readability 
-	 LED(1) <= IntE; 
-	 LED(0) <= clock_main; -- note reverse for easier readability 
+	 LED(3) <= nIntAck;  
+	 LED(2) <= IntReq;  
+	 LED(1) <= HoldAck; 
+	 LED(0) <= clock_main;  
     led4x7: fourdigitsevensegled port map ( 
 			  -- inputs
 			  data => led_bus(15 downto 0),
@@ -333,16 +327,6 @@ begin
 		  fast(0) => freq25M
     );
 
-	-- SIMPLE COUNTER
-		counter16: counter16bit port map (
-	    reset => Reset,
-	    clk => clock_main,
-        mode => "01", --button(1 downto 0),
-        d => X"00000000",
-        q => cnt
-	);
-
-
 	-- DEBOUNCE the 8 switches and 4 buttons
     debouncer_sw: debouncer8channel port map (
         clock => freq128,
@@ -359,7 +343,7 @@ begin
         signal_debounced => button
     );
 	
-	-- Hook up 2 buttons to generate interrupts
+	-- Hook up buttons to generate interrupts
 	irq7: process(nReset, button(0), deviceack(7))
 	begin
 		if (nReset = '0' or deviceack(7) = '1') then
@@ -381,6 +365,18 @@ begin
 			end if;
 		end if;
 	end process;	
+	
+	-- delay to generate nReset 4 cycles after reset
+	generate_nReset: process (clock_main, Reset)
+	begin
+		if (Reset = '1') then
+			reset_delay <= "1111";
+		else
+			if (rising_edge(clock_main)) then
+				reset_delay <= reset_delay(2 downto 0) & Reset;
+			end if;
+		end if;
+	end process;
 	
 	-- Single step by each clock cycle, slow or fast
 	ss: clocksinglestepper port map (
@@ -409,8 +405,9 @@ begin
 	nIoEnable <= (nIoRead and nIoWrite) when address_bus(7 downto 4) = "0000" else '1'; 		-- 0x00 - 0x0F
 	nACIA0Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 1) = "0001000" else '1'; -- 0x10 - 0x11
 	nACIA1Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 1) = "0001001" else '1'; -- 0x12 - 0x13
-	nRomEnable <= nMemRead when address_bus(15 downto 11) = "00000" else '1'; -- 2k ROM (0000 - 07FF)
-	nRamEnable <= (nMemRead and nMemWrite) when address_bus(15 downto 9) = "1111111" else '1'; -- 256 bytes RAM (FE00 - FFFF)
+	nBootRomEnable <= nMemRead when address_bus(15 downto 10) = "000000" else '1'; -- 1k ROM (0000 - 03FF)
+	nMonRomEnable <= nMemRead when address_bus(15 downto 10)  = "000001" else '1'; -- 1k ROM (0400 - 07FF)
+	nRamEnable <= (nMemRead and nMemWrite) when address_bus(15 downto 8) = "11111111" else '1'; -- 256b RAM (FF00 - FFFF)
 	
 	iodevice: simpledevice port map(
 			  clk => CLK, -- this is the full 50MHz clock!
@@ -455,36 +452,47 @@ begin
 			  rxd => PMOD(3)				  
 	);
 	
-	rom: hexfilerom 
+	bootrom: hexfilerom 
 		generic map(
-			filename => "./prog/zout/test1.hex",
-			--filename => "./prog/zout/bootwithmonitor.hex",
-			address_size => 11,
+			filename => "./prog/zout/boot.hex",
+			address_size => 10,
 			default_value => X"FF" -- if executed, will be RST 7
 			)	
 		port map(
 			  D => data_bus,
-			  A => address_bus(10 downto 0),
+			  A => address_bus(9 downto 0),
            nRead => nMemRead,
-			  nSelect => nRomEnable
+			  nSelect => nBootRomEnable
+		);
+
+	monrom: hexfilerom 
+		generic map(
+			filename => "./prog/zout/altmon.hex",
+			address_size => 10,
+			default_value => X"FF" -- if executed, will be RST 7
+			)	
+		port map(
+			  D => data_bus,
+			  A => address_bus(9 downto 0),
+           nRead => nMemRead,
+			  nSelect => nMonRomEnable
 		);
 
 	ram: simpleram 
 		generic map(
-			address_size => 9,
+			address_size => 8,
 			default_value => X"FF" -- if executed, will be RST 7
 			)	
 		port map(
 			  clk => clock_main,
 			  D => data_bus,
-			  A => address_bus(8 downto 0),
+			  A => address_bus(7 downto 0),
            nRead => nMemRead,
 			  nWrite => nMemWrite,
 			  nSelect => nRamEnable
 		);
 	
 	ic: interrupt_controller Port map ( 
-			--CLK => clock_main,
 			CLK => CLK, -- this is the full 50MHz clock!
 			nRESET => nReset,
 			INT => IntReq,
@@ -493,8 +501,8 @@ begin
 			D => data_bus,
 		   DEVICEREQ(7) => devicereq(7), -- button 0
 		   DEVICEREQ(6) => devicereq(6), -- button 1
-		   DEVICEREQ(5) => devicereq(5), -- from IO device
-		   DEVICEREQ(4) => '0',
+		   DEVICEREQ(5) => devicereq(5), -- ACIA 0
+		   DEVICEREQ(4) => '0', --devicereq(4), -- ACIA 1 $BUGBUG - interrupt req stuck for ACIA1?
 		   DEVICEREQ(3) => '0',
 		   DEVICEREQ(2) => '0',
 		   DEVICEREQ(1) => '0',
@@ -516,11 +524,12 @@ begin
            CLK => clock_main,
            nRESET => nReset,
 			  INT => IntReq,
-			  READY => '1', -- TODO - use to implement single stepping
+			  READY => '1', -- TODO - use to implement single stepping per instruction, not cycle
 			  HOLD => Hold, 
 			  -- debug port, not part of actual processor
+			  debug_ena => switch(1),
            debug_sel => switch(0),
-           debug_out => internal_debug_bus,
+           debug_out => cpu_debug_bus,
 			  debug_reg => switch(5 downto 2)
 			);
 	 

@@ -73,10 +73,9 @@ component UART is
 end component;
 
 signal d_out, rxd_data: std_logic_vector(7 downto 0);
-signal wr_data, wr_data0, wr_data1, rd_status, data_send: std_logic;
+signal rd_data, wr_data, wr_data0, wr_data1, rd_status, data_send: std_logic;
 signal readSelect, writeSelect: std_logic;
-signal data_addr, status_addr: std_logic;
-signal valid, busy, error, char_received: std_logic;
+signal valid, busy, error, char_received, ready: std_logic;
 signal status_valid, status_error: std_logic;
 
 begin
@@ -84,15 +83,13 @@ begin
 readSelect <= nSelect nor nRead;
 writeSelect <= nSelect nor nWrite;
 
-status_addr <= '1' when (A = '0') else '0';
-data_addr <= '1' when (A = '1') else '0';
-
-wr_data <= writeSelect and data_addr; 
-rd_status <= readSelect and status_addr;
+wr_data <= writeSelect and A; 
+rd_data <= readSelect and A ;
+rd_status <= readSelect and not(A);
 
 D <= d_out when (readSelect = '1') else "ZZZZZZZZ";
 d_out <= rxd_data when (A = '1') else 
-			(IntReq & status_error & "0000" & busy & status_valid);
+			(IntReq & status_error & "0000" & ready & status_valid);
 
 sio: UART 
 	 generic map 
@@ -118,6 +115,7 @@ sio: UART
         FRAME_ERROR => error
     );
 
+ready <= not busy;
 data_send <= wr_data and not (wr_data1);
 generate_sendpulse: process(reset, clk, busy, wr_data)
 begin
@@ -133,10 +131,12 @@ begin
 end process;
 
 char_received <= valid or error;
-generate_intreq: process(reset, IntAck, char_received)
+generate_intreq: process(reset, IntAck, rd_data, char_received)
 begin
-	if (reset = '1' or IntAck = '1') then
+	if (reset = '1' or IntAck = '1' or rd_data = '1') then
 		IntReq <= '0';
+		status_error <= not(reset or rd_data);
+		status_valid <= not(reset or rd_data);
 	else
 		if rising_edge(char_received) then
 			IntReq <= '1';
