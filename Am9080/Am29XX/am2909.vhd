@@ -43,7 +43,6 @@ case S(1 downto 0) is
 	end case;
 end process;
 
-
 stos: process (CLK)
 variable STK0, STK1, STK2, STK3: std_logic_vector(3 downto 0); 
 begin
