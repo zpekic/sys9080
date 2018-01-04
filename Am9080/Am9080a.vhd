@@ -49,6 +49,9 @@ entity Am9080a is
 			  READY: in STD_LOGIC;
 			  HOLD: in STD_LOGIC;
 			  -- debug port, not part of actual processor
+			  -- 0: debug bus not used
+			  -- 1: debug bus used
+			  debug_ena: in STD_LOGIC;
 			  -- 0: current microinstruction details appear on debug_out (processor can work!)
 			  -- 1: register contents appears on debug_out (processor CANNOT work!)
            debug_sel : in  STD_LOGIC;
@@ -290,7 +293,6 @@ signal u97_pin9: std_logic;
 signal u112_pin6: std_logic;
 signal u113_pin1: std_logic;
 signal u115_pin12, u115_pin9, u115_pin7, u115_pin4: std_logic;
---signal u121_pin2, u121_pin5, u121_pin6, u121_pin12, u121_pin15, u121_pin16: std_logic;
 signal u125_pin4: std_logic;
 signal u126_pin6: std_logic;
 signal u131_pin10: std_logic;
@@ -332,25 +334,24 @@ signal bl: std_logic_vector(7 downto 0);
 signal debug_register, debug_microcode: std_logic_vector(19 downto 0);
 signal debug_alu_destination, debug_alu_function, debug_alu_source: std_logic_vector(2 downto 0);
 signal debug_a_lop, debug_a_hop: std_logic_vector(3 downto 0);
+signal is_debug_register_mode: std_logic;
 
 begin
 
 -----       debug port     --------
---debug_instruction <= "1100" & instruction_startaddress(7 downto 0) & current_instruction;
+is_debug_register_mode <= debug_ena and debug_sel;
+
 debug_register <= debug_reg & am2901_y;
---debug_microcode <= "0100" & ma(7 downto 0) & '0' & u(5 downto 3) & '0' & u(2 downto 0);
---debug_microcode <= "0100" & ma(7 downto 0) & u8474_u8475_pin15 & "00" & u_condpolarity & u_condcode(3 downto 0);
---debug_microcode <= "0100" & ma(7 downto 0) & am2901_a & am2901_b;
---debug_microcode <= "0100" & ma(7 downto 0) & u8474_u8475_pin15 & "00" & u_condpolarity & u_condcode;
 debug_microcode <= ma(11 downto 0) & current_instruction;
 
-debug_out <= debug_register when (debug_sel = '1') else debug_microcode; 
+debug_out <= debug_register when (is_debug_register_mode = '1') else debug_microcode; 
 -- if debugging register, feed NOP/OR/ZA to Am2901 instead of one coming from microcode ("pl" fields)
-debug_alu_destination <= "001" when (debug_sel = '1') else pl_alu_destination; -- NOP
-debug_alu_function <= "011" when (debug_sel = '1') else pl_alu_function; -- OR
-debug_alu_source <= "100" when (debug_sel = '1') else pl_alu_source; -- ZA
-debug_a_hop <= debug_reg when (debug_sel = '1') else am2901_a;
-debug_a_lop <= debug_reg when (debug_sel = '1') else am2901_a(3 downto 1) & u63_pin7;
+-- note that this interferes with the CPU operation, so the debug_ena must be explicitly enabled!
+debug_alu_destination <= "001" when (is_debug_register_mode = '1') else pl_alu_destination; -- NOP
+debug_alu_function <= "011" when (is_debug_register_mode = '1') else pl_alu_function; -- OR
+debug_alu_source <= "100" when (is_debug_register_mode = '1') else pl_alu_source; -- ZA
+debug_a_hop <= debug_reg when (is_debug_register_mode = '1') else am2901_a;
+debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 downto 1) & u63_pin7;
 
 -----------------------------------
 ---     START OF FIGURE 3       ---
