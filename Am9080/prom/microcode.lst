@@ -376,12 +376,12 @@
 0156 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_DE RAS1 NOP   OR    ZA 
 0157 - - = location = C/R    - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
 0158 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_A? RAMF  OR    DZ 
-0159 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 1 1 16 R_DE R_A? RAMA  OR    DZ 
+0159 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 1 1 16 R_DE R_LH RAMA  OR    DZ 
 015A - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 R_HL R_DE RAMA  OR    ZA 
 015B - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 1 1 16 R_LH R_HL RAMA  OR    DZ 
 015C - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 1 1 16 R_DE R_ED RAMA  OR    DZ 
 015D - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
-015E - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 0 8  R_A? R_A? RAMF  SUBR  DZ 
+015E - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 0 8  R_A? R_A? RAMF  SUBR  DA 
 015F - - 000000000000 R/RTN  ! TRUE 0 NOC    -- ---- 0 01 0 0 8  RZ38 RAS1 NOP   SUBR  ZA 
 -----------------------------------------------------------------------------------------
      I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
