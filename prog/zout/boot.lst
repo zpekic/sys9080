@@ -1,0 +1,387 @@
+   1:				;--------------------------------------------------------------------------
+   2:				; Simple test program for Sys9080 project https://github.com/zpekic/sys9080
+   3:				; 		(c) zpekic@hotmail.com - 2017, 2018
+   4:				;--------------------------------------------------------------------------
+   5:     -	0010          	ACIA0_STATUS	EQU 0x10; status read-only
+   6:     -	0011          	ACIA0_DATA	EQU 0x11; data send/receive
+   7:     -	0012          	ACIA1_STATUS	EQU 0x12; status read-only
+   8:     -	0013          	ACIA1_DATA	EQU 0x13; data send/receive
+   9:     -	0000          	PORT_0		EQU 0x00;
+  10:     -	0001          	PORT_1		EQU 0x01;
+  11:     -	0001          	MASK_VALID	EQU 0x01; fields in UART status register
+  12:     -	0002          	MASK_READY	EQU 0x02;
+  13:     -	0040          	MASK_ERROR	EQU 0x40;
+  14:     -	0080          	MASK_INTREQ	EQU 0x80;
+  15:     -	000D          	CR		EQU 0x0D; ASCII newline
+  16:     -	000A          	LF		EQU 0x0A; ASCII line feed
+  17:     -	0002          	MASK_BUTTON1	EQU 0x02;
+  18:     -	FF00          	Temp_PC		EQU 0xFF00; can't use DW because the hex file maps to ROM only
+  19:     -	0400          	AltMon		EQU 0x0400; Altmon is org'd to this location
+  20:				
+  21:				
+  22:     -	0000          			ORG 0x0000	;-----RST0 == RESET
+  23:    0+4	0000  F3      			DI
+  24:    4+10	0001  C3ED00  			JMP Boot
+  25:				
+  26:     -	0008          			ORG 0x0008	;-----RST1 (not used)
+  27:   14+4	0008  F3      			DI
+  28:   18+10	0009  C33900  			JMP DumpState
+  29:				
+  30:     -	0010          			ORG 0x0010	;-----RST2 (not used)
+  31:   28+4	0010  F3      			DI
+  32:   32+10	0011  C33900  			JMP DumpState
+  33:				
+  34:     -	0018          			ORG 0x0018	;-----RST3 (not used)
+  35:   42+4	0018  F3      			DI
+  36:   46+10	0019  C33900  			JMP DumpState
+  37:				
+  38:     -	0020          			ORG 0x0020	;-----RST4 (ACIA1)
+  39:   56+4	0020  F3      			DI
+  40:   60+10	0021  C3BA00  			JMP OnByteReceived
+  41:				
+  42:     -	0028          			ORG 0x0028	;-----RST5 (ACIA0)
+  43:   70+4	0028  F3      			DI
+  44:   74+10	0029  C3BA00  			JMP OnByteReceived
+  45:				
+  46:     -	0030          			ORG 0x0030	;-----RST6 (BTN1)
+  47:   84+4	0030  FB      			EI		;no interrupt servicing (used to control ACIA status)
+  48:   88+10	0031  C9      			RET
+  49:				
+  50:     -	0038          			ORG 0x0038	;-----RST7 (BTN0)
+  51:   98+4	0038  F3      			DI		
+  52:  102+18	0039  E3      	DumpState:	XTHL			;PC from stack is now in HL
+  53:  120+16	003A  2200FF  			SHLD Temp_PC		;store away (making this code non re-entrant)
+  54:  136+18	003D  E3      			XTHL			;restore PC to stack
+  55:  154+11	003E  E5      			PUSH H
+  56:  165+11	003F  D5      			PUSH D
+  57:  176+11	0040  C5      			PUSH B
+  58:  187+11	0041  F5      			PUSH PSW
+  59:				
+  60:  198+11	0042  E5      			PUSH H
+  61:  209+11	0043  D5      			PUSH D
+  62:  220+11	0044  C5      			PUSH B
+  63:  231+11	0045  F5      			PUSH PSW
+  64:				
+  65:  242+10	0046  219901  			LXI H, TextAF
+  66:  252+17	0049  CD3A01  			CALL TxStringAtHL
+  67:  269+18	004C  E3      			XTHL
+  68:  287+17	004D  CD5501  			CALL TxValueOfHL
+  69:  304+10	0050  E1      			POP H
+  70:						
+  71:  314+10	0051  21A001  			LXI H, TextBC
+  72:  324+17	0054  CD3A01  			CALL TxStringAtHL
+  73:  341+18	0057  E3      			XTHL
+  74:  359+17	0058  CD5501  			CALL TxValueOfHL
+  75:  376+17	005B  CD4401  			CALL BytesAtHL
+  76:  393+10	005E  E1      			POP H
+  77:				
+  78:  403+10	005F  21A701  			LXI H, TextDE
+  79:  413+17	0062  CD3A01  			CALL TxStringAtHL
+  80:  430+18	0065  E3      			XTHL
+  81:  448+17	0066  CD5501  			CALL TxValueOfHL
+  82:  465+17	0069  CD4401  			CALL BytesAtHL
+  83:  482+10	006C  E1      			POP H
+  84:				
+  85:  492+10	006D  21AE01  			LXI H, TextHL
+  86:  502+17	0070  CD3A01  			CALL TxStringAtHL
+  87:  519+18	0073  E3      			XTHL
+  88:  537+17	0074  CD5501  			CALL TxValueOfHL
+  89:  554+17	0077  CD4401  			CALL BytesAtHL
+  90:  571+10	007A  E1      			POP H
+  91:				
+  92:  581+10	007B  21B501  			LXI H, TextPC
+  93:  591+17	007E  CD3A01  			CALL TxStringAtHL
+  94:  608+16	0081  2A00FF  			LHLD Temp_PC
+  95:  624+17	0084  CD5501  			CALL TxValueOfHL
+  96:  641+17	0087  CD4401  			CALL BytesAtHL
+  97:				
+  98:  658+10	008A  21BC01  			LXI H, TextSP
+  99:  668+17	008D  CD3A01  			CALL TxStringAtHL
+ 100:  685+10	0090  11FFFF  			LXI D, 0xFFFF		;start searching for stack position from top of memory down
+ 101:  695+16	0093  2A00FF  			LHLD Temp_PC
+ 102:  711+5	0096  EB      			XCHG			;HL = 0xFFFF, DE = PC to search for
+ 103:  716+5	0097  7A      	SearchForPC:	MOV A, D
+ 104:  721+7	0098  BE      			CMP M
+ 105:  728+10	0099  C2B000  			JNZ NotFound
+ 106:  738+5	009C  2B      			DCX H
+ 107:  743+5	009D  7B      			MOV A, E
+ 108:  748+7	009E  BE      			CMP M
+ 109:  755+10	009F  C29700  			JNZ SearchForPC
+ 110:  765+17	00A2  CD5501  			CALL TxValueOfHL
+ 111:  782+17	00A5  CD4401  			CALL BytesAtHL
+ 112:  799+7	00A8  3E0D    			MVI A, CR
+ 113:  806+17	00AA  CD7401  			CALL SendChar
+ 114:  823+10	00AD  C3B400  			JMP RestoreRegs
+ 115:  833+5	00B0  2B      	NotFound:	DCX H
+ 116:  838+10	00B1  C39700  			JMP SearchForPC
+ 117:				
+ 118:  848+10	00B4  F1      	RestoreRegs:	POP PSW
+ 119:  858+10	00B5  C1      			POP B
+ 120:  868+10	00B6  D1      			POP D
+ 121:  878+10	00B7  E1      			POP H
+ 122:  888+4	00B8  FB      			EI
+ 123:  892+10	00B9  C9      			RET
+ 124:				
+ 125:				;-------------------------------------------
+ 126:  902+11	00BA  F5      	OnByteReceived:	PUSH PSW
+ 127:  913+10	00BB  DB01    			IN PORT_1		;hooked up to 4 push buttons
+ 128:  923+7	00BD  E602    			ANI MASK_BUTTON1
+ 129:  930+10	00BF  CAEA00  			JZ ProcessByte	
+ 130:  940+11	00C2  E5      			PUSH H
+ 131:  951+11	00C3  D5      			PUSH D
+ 132:  962+11	00C4  C5      			PUSH B
+ 133:				
+ 134:  973+10	00C5  DB12    			IN ACIA1_STATUS		
+ 135:  983+5	00C7  67      			MOV H, A
+ 136:  988+10	00C8  DB13    			IN ACIA1_DATA
+ 137:  998+5	00CA  6F      			MOV L, A
+ 138: 1003+11	00CB  E5      			PUSH H
+ 139:				
+ 140: 1014+10	00CC  DB10    			IN ACIA0_STATUS		
+ 141: 1024+5	00CE  67      			MOV H, A
+ 142: 1029+10	00CF  DB11    			IN ACIA0_DATA
+ 143: 1039+5	00D1  6F      			MOV L, A
+ 144: 1044+11	00D2  E5      			PUSH H
+ 145:				
+ 146: 1055+10	00D3  213702  			LXI H, TextACIA0
+ 147: 1065+17	00D6  CD3A01  			CALL TxStringAtHL
+ 148: 1082+10	00D9  E1      			POP H
+ 149: 1092+17	00DA  CD5501  			CALL TxValueOfHL
+ 150:				
+ 151: 1109+10	00DD  215402  			LXI H, TextACIA1
+ 152: 1119+17	00E0  CD3A01  			CALL TxStringAtHL
+ 153: 1136+10	00E3  E1      			POP H
+ 154: 1146+17	00E4  CD5501  			CALL TxValueOfHL
+ 155:				
+ 156: 1163+10	00E7  C1      			POP B
+ 157: 1173+10	00E8  D1      			POP D
+ 158: 1183+10	00E9  E1      			POP H
+ 159: 1193+10	00EA  F1      	ProcessByte:	POP PSW
+ 160: 1203+4	00EB  FB      			EI
+ 161: 1207+10	00EC  C9      			RET
+ 162:				;-------------------------------------------
+ 163: 1217+10	00ED  210000  	Boot:		LXI H, 0000H
+ 164: 1227+5	00F0  2B      			DCX H
+ 165: 1232+5	00F1  F9      			SPHL
+ 166: 1237+10	00F2  21C301  			LXI H, TextGreet1
+ 167: 1247+17	00F5  CD3A01  			CALL TxStringAtHL
+ 168: 1264+17	00F8  CD8001  			CALL GetLowestRam
+ 169: 1281+5	00FB  7D      			MOV A, L
+ 170: 1286+10	00FC  D300    			OUT PORT_0
+ 171: 1296+5	00FE  7C      			MOV A, H
+ 172: 1301+10	00FF  D301    			OUT PORT_1		;display on LEDs
+ 173: 1311+17	0101  CD5501  			CALL TxValueOfHL	;display on console
+ 174: 1328+10	0104  21E901  			LXI H, TextPort
+ 175: 1338+17	0107  CD3A01  			CALL TxStringAtHL
+ 176: 1355+10	010A  DB00    			IN PORT_0
+ 177: 1365+5	010C  6F      			MOV L, A
+ 178: 1370+10	010D  DB01    			IN PORT_1
+ 179: 1380+5	010F  67      			MOV H, A
+ 180: 1385+17	0110  CD5501  			CALL TxValueOfHL
+ 181: 1402+10	0113  21F801  			LXI H, TextGreet2
+ 182: 1412+17	0116  CD3A01  			CALL TxStringAtHL
+ 183: 1429+17	0119  CD2001  			CALL PrintAsciiSet
+ 184: 1446+4	011C  FB      			EI
+ 185:				;		HLT			;interrupt is needed to go further
+ 186:				;-------------------------------------------------------------------------
+ 187: 1450+10	011D  C30004  			JMP AltMon		;enter monitor program
+ 188:				;-------------------------------------------------------------------------
+ 189: 1460+10	0120  01200D  	PrintAsciiSet: 	LXI B, 0D20H		;set C to ASCII space
+ 190: 1470+5	0123  79      	SendNextChar: 	MOV A, C
+ 191: 1475+17	0124  CD7401  			CALL SendChar		;send char
+ 192: 1492+7	0127  FE7E    			CPI "~"			;end of printable chars reached?
+ 193: 1499+10	0129  CA3001  			JZ NextLine
+ 194: 1509+5	012C  0C      			INR C
+ 195: 1514+10	012D  C32301  			JMP SendNextChar
+ 196: 1524+5	0130  78      	NextLine:	MOV A, B
+ 197: 1529+17	0131  CD7401  			CALL SendChar		;send char
+ 198: 1546+7	0134  EE06    			XRI 00000110B		;cheap trick to convert newline to linefeed 
+ 199: 1553+17	0136  CD7401  			CALL SendChar		;send char
+ 200: 1570+10	0139  C9      			RET
+ 201:				
+ 202: 1580+7	013A  7E      	TxStringAtHL:	MOV A, M
+ 203: 1587+4	013B  A7      			ANA A
+ 204: 1591+5+6	013C  C8      			RZ
+ 205: 1596+17	013D  CD7401  			CALL SendChar
+ 206: 1613+5	0140  23      			INX H
+ 207: 1618+10	0141  F23A01  			JP TxStringAtHL
+ 208:				
+ 209: 1628+7	0144  0E10    	BytesAtHL:	MVI C, 0x10		;dump 16 bytes at (HL)
+ 210: 1635+7	0146  3E20    	NextByteAtHL:	MVI A, " "
+ 211: 1642+17	0148  CD7401  			CALL SendChar
+ 212: 1659+7	014B  7E      			MOV A, M
+ 213: 1666+17	014C  CD5A01  			CALL TxValueOfA
+ 214: 1683+5	014F  0D      			DCR C
+ 215: 1688+5+6	0150  C8      			RZ			;return if reached 0
+ 216: 1693+5	0151  23      			INX H
+ 217: 1698+10	0152  C34601  			JMP NextByteAtHL
+ 218:				
+ 219: 1708+5	0155  7C      	TxValueOfHL:	MOV A, H
+ 220: 1713+17	0156  CD5A01  			CALL TxValueOfA
+ 221: 1730+5	0159  7D      			MOV A, L
+ 222: 1735+11	015A  F5      	TxValueOfA:	PUSH PSW
+ 223: 1746+4	015B  0F      			RRC
+ 224: 1750+4	015C  0F      			RRC
+ 225: 1754+4	015D  0F      			RRC
+ 226: 1758+4	015E  0F      			RRC
+ 227: 1762+7	015F  E60F    			ANI 0x0F
+ 228: 1769+17	0161  CD6701  			CALL TxHexDig
+ 229: 1786+10	0164  F1      			POP PSW
+ 230: 1796+7	0165  E60F    			ANI 0x0F
+ 231: 1803+7	0167  C630    	TxHexDig:	ADI '0'
+ 232: 1810+7	0169  FE3A    			CPI '9' + 1
+ 233: 1817+10	016B  FA7001  			JM TxHexDigOut
+ 234: 1827+7	016E  C607    			ADI 0x07
+ 235: 1834+17	0170  CD7401  	TxHexDigOut:	CALL SendChar
+ 236: 1851+10	0173  C9      			RET
+ 237:					
+ 238: 1861+11	0174  F5      	SendChar:	PUSH PSW
+ 239: 1872+10	0175  DB10    	CheckIfReady:	IN ACIA0_STATUS
+ 240: 1882+7	0177  E602    			ANI MASK_READY
+ 241: 1889+10	0179  CA7501  			JZ CheckIfReady
+ 242: 1899+10	017C  F1      			POP PSW
+ 243: 1909+10	017D  D311    			OUT ACIA0_DATA
+ 244: 1919+10	017F  C9      			RET
+ 245:						
+ 246: 1929+10	0180  21FFFF  	GetLowestRam:	LXI H, 0xFFFF	;assume RAM is located near top of address space
+ 247: 1939+7	0183  7E      	NextAddress:	MOV A, M
+ 248: 1946+7	0184  BE      			CMP M
+ 249: 1953+10	0185  C29701  			JNZ LowestFound
+ 250: 1963+4	0188  2F      			CMA		;flip all bits
+ 251: 1967+7	0189  77      			MOV M, A
+ 252: 1974+7	018A  BE      			CMP M
+ 253: 1981+10	018B  C29701  			JNZ LowestFound
+ 254: 1991+4	018E  2F      			CMA
+ 255: 1995+7	018F  77      			MOV M, A
+ 256: 2002+5	0190  7C      			MOV A, H
+ 257: 2007+4	0191  B5      			ORA L
+ 258: 2011+5+6	0192  C8      			RZ		;Bail if HL = 0
+ 259: 2016+5	0193  2B      			DCX H
+ 260: 2021+10	0194  C38301  			JMP NextAddress
+ 261: 2031+5	0197  23      	LowestFound:	INX H
+ 262: 2036+10	0198  C9      			RET
+ 263:						
+ 264:						
+ 265:     -	0199  0D414620	TextAF:		DB CR, "AF = ", 0x00
+	      3D2000
+ 266:     -	01A0  0D424320	TextBC:		DB CR, "BC = ", 0x00
+	      3D2000
+ 267:     -	01A7  0D444520	TextDE:		DB CR, "DE = ", 0x00
+	      3D2000
+ 268:     -	01AE  0D484C20	TextHL:		DB CR, "HL = ", 0x00
+	      3D2000
+ 269:     -	01B5  0D504320	TextPC:		DB CR, "PC = ", 0x00
+	      3D2000
+ 270:     -	01BC  0D535020	TextSP:		DB CR, "SP = ", 0x00
+	      3D2000
+ 271:     -	01C3  0D0D2A2A	TextGreet1:	DB CR, CR, "** Sys9080 is ready. RAM starts at ", 0x00
+	      20537973
+	      39303830
+	      20697320
+	      72656164
+	      792E2052
+	      414D2073
+	      74617274
+	      73206174
+	      2000
+ 272:     -	01E9  20496E70	TextPort	DB " Input port = ", 0x00
+	      75742070
+	      6F727420
+	      3D2000
+ 273:     -	01F8  202A2A0D	TextGreet2:	DB " **", CR, "  (Press BTN0 to show processor state, or BTN1 for ACIAs)", CR, 0x00 
+	      20202850
+	      72657373
+	      2042544E
+	      3020746F
+	      2073686F
+	      77207072
+	      6F636573
+	      736F7220
+	      73746174
+	      652C206F
+	      72204254
+	      4E312066
+	      6F722041
+	      43494173
+	      290D00
+ 274:     -	0237  0D414349	TextACIA0:	DB CR, "ACIA0 Rx status and data = ", 0x00
+	      41302052
+	      78207374
+	      61747573
+	      20616E64
+	      20646174
+	      61203D20
+	      00
+ 275:     -	0254  0D414349	TextACIA1:	DB CR, "ACIA1 Rx status and data = ", 0x00
+	      41312052
+	      78207374
+	      61747573
+	      20616E64
+	      20646174
+	      61203D20
+	      00
+ 276:     -	0271  00      	End:		DB 0x00		;Cheap trick to see last used address
+
+
+
+Statistics:
+
+     4	passes
+     0	jr promotions
+    49	symbols
+   596	bytes
+
+
+
+Symbol Table:
+
+acia0_data     =  11     
+acia0_status   =  10     
+acia1_data     =  13     
+acia1_status   =  12     
+altmon         = 400     
+boot              ed     
+bytesathl        144     
+checkifready     175     
+cr             =   d     
+dumpstate         39     
+end              271     
+getlowestram     180     
+lf             =   a     
+lowestfound      197     
+mask_button1   =   2     
+mask_error     =  40     
+mask_intreq    =  80     
+mask_ready     =   2     
+mask_valid     =   1     
+nextaddress      183     
+nextbyteathl     146     
+nextline         130     
+notfound          b0     
+onbytereceived    ba     
+port_0         =   0     
+port_1         =   1     
+printasciiset    120     
+processbyte       ea     
+restoreregs       b4     
+searchforpc       97     
+sendchar         174     
+sendnextchar     123     
+temp_pc        =ff00     
+textacia0        237     
+textacia1        254     
+textaf           199     
+textbc           1a0     
+textde           1a7     
+textgreet1       1c3     
+textgreet2       1f8     
+texthl           1ae     
+textpc           1b5     
+textport         1e9     
+textsp           1bc     
+txhexdig         167     
+txhexdigout      170     
+txstringathl     13a     
+txvalueofa       15a     
+txvalueofhl      155     
+

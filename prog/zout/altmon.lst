@@ -1,0 +1,1016 @@
+   1:				;-------------------------------------------------------------------------
+   2:				;  ALTMON.ASM - 1K ROM monitor for the Altair 8800.
+   3:				; 
+   4:				;     This monitor is based on the 2.0C monitor from Vector Graphic. The
+   5:				;     original version has been updated to use Altair 2SIO serial ports
+   6:				;     for I/O and several commands have been added and/or modified. 
+   7:				;
+   8:				;     A typical location for this PROM in an Altair is at F800, though
+   9:				;     it can be assembled at most any address. The stack is typically
+  10:				;     placed at the top of the minimum RAM you expect to have in your
+  11:				;     system.
+  12:				;
+  13:				;  Version     Date	Author
+  14:				;  -------  ----------	---------------------------------------
+  15:				;    1.0    01/10/2016  Mike Douglas  (Original)
+  16:				;
+  17:				;    1.1    02/29/2016  Mike Douglas
+  18:				;		Fix bug in DUMP code that caused improper range of bytes
+  19:				;		to display. Also in DUMP, display '.' for all characters
+  20:				;		7Fh or above.
+  21:				;
+  22:				;		Initialize 2nd 2SIO port so that loading of Intel HEX
+  23:				;		files works over the 2nd port. Only flush hex file
+  24:				;		input on the console serial port to free up code space
+  25:				;		and because it's not really required for the 2nd port.
+  26:				;
+  27:				;-------------------------------------------------------------------------
+  28:				;
+  29:				;   Following is a summary of changes from the original VG 2.0c monitor:
+  30:				;
+  31:				;	All commands immediately echo a full command name as soon as the 
+  32:				;	first command letter is typed (e.g., typing "M" immediately
+  33:				;	displays "MOVE"). This makes it easier to identify commands 
+  34:				;	without a list of commands present.
+  35:				;
+  36:				;	The ESC key can be pressed to abort input or commands as in
+  37:				;	the later 4.x monitors from VG. The original ctrl-c abort is
+  38:				;	still present as well.
+  39:				;
+  40:				;	The B (boot) command jumps to the Altair disk boot loader PROM
+  41:				;	at FF00 instead of the North Star boot ROM.
+  42:				;
+  43:				;	A (ASCII dump) command removed and D (hex dump) updated to display
+  44:				;	both hex and ASCII.
+  45:				;
+  46:				;	X (exchange) command changed to the E command.
+  47:				;
+  48:				;	H command added to load Intel hex file via either serial port
+  49:				;	on a 2SIO. The L (load and go from tape) does a hex file load
+  50:				;	as well (all tape commands eliminated).
+  51:				;
+  52:				;	J treated as jump (i.e., go to) command instead of jump to North
+  53:				;	Star DOS.
+  54:				;
+  55:				;	K treated as fill memory with "K"onstant instead of jump to zero
+  56:				;	(was the Z command which has been removed).
+  57:				;
+  58:				;	R command sizes RAM (i.e., runs the N non-destructive memory test)
+  59:				;	Was previously a read from cassette command. All cassette commands
+  60:				;	have been removed.
+  61:				;
+  62:				;	The Y command (Vector Graphic relocating loader) command has been
+  63:				;	removed.
+  64:				;
+  65:				;	The T test memory command skips the 256 byte page the stack is on
+  66:				;	to prevent crashing the program. A "." pacifier is displayed 
+  67:				;	after each cycle through the memory test range is completed
+  68:				;
+  69:				;-------------------------------------------------------------------------
+  70:				;
+  71:				;  Command Summary:
+  72:				;
+  73:				;	B jump to Altair disk boot loader (FF00)
+  74:				;	C SSSS FFFF CCCC compare blocks
+  75:				;	D SSSS FFFF dump in hex and ASCII
+  76:				;	E SSSS FFFF DDDD exchange block
+  77:				;	F SSSS FFFF DD DD find two byte sequence
+  78:				;	G SSSS go to and execute
+  79:				;	H P load Intel hex file from 2SIO port 0 or 1
+  80:				;	I PP input from I/O port
+  81:				;	J SSSS go to and execute (G)
+  82:				;	K SSSS FFFF DD fill with "K"onstant
+  83:				;	L P load Intel hex file from 2SIO port 0 or 1
+  84:				;	M SSSS FFFF DDDD move block
+  85:				;	N non destructive memory test (size RAM)
+  86:				;	O PP DD output to port
+  87:				;	P LLLL program memory
+  88:				;	Q SSSS FFFF compute checksum
+  89:				;	R non destructive memory test (size RAM)
+  90:				;	S SSSS FFFF DD search for single byte sequence
+  91:				;	T SSSS FFFF test memory
+  92:				;
+  93:				;-------------------------------------------------------------------------
+  94:				;
+  95:				; Memory location equates
+  96:				
+  97:     -	0400          		org	00400h		;ROM location
+  98:				
+  99:     -	FFFF          	SPTR	equ	0ffffh		;stack pointer (use 256 byte boundary)
+ 100:     -	FFDF          	SIOPORT	equ	SPTR-32		;2SIO port used for hex load
+ 101:     -	FF00          	BOOT	equ	0ff00h		;Altair disk boot loader ROM
+ 102:				
+ 103:				; 88-2SIO equates
+ 104:				
+ 105:     -	0010          	CONS	equ	10h		;console status port
+ 106:     -	0011          	COND	equ	11h		;console data port
+ 107:     -	0002          	TBE	equ	2		;transmit buffer entry
+ 108:     -	0001          	RDA	equ	1		;receive data available
+ 109:				
+ 110:				; Misc Equates
+ 111:				
+ 112:     -	000D          	CR	equ	13		;ASCII carriage return
+ 113:     -	000A          	LF	equ	10		;ASCII line feed
+ 114:     -	0003          	CTRLC	equ	3		;ASCII control-c
+ 115:     -	001B          	ESC	equ	27		;ASCII ESCAPE
+ 116:				
+ 117:				;---------------------------------------------------------
+ 118:				;  monit - monitor entry point
+ 119:				;---------------------------------------------------------
+ 120:    0+7	0400  3E03    	monit	mvi	a,3		;reset 6850 uart
+ 121:    7+10	0402  D310    		out	CONS
+ 122:   17+10	0404  D312    		out	CONS+2		;2nd 2SIO port as well
+ 123:   27+7	0406  3E11    		mvi	a,11h		;8N2
+ 124:   34+10	0408  D310    		out	CONS
+ 125:   44+10	040A  D312    		out	CONS+2		;2nd 2SIO port as well
+ 126:				
+ 127:   54+10	040C  31FFFF  		lxi	sp,SPTR
+ 128:   64+17	040F  CDA507  		call	dspMsg		;display welcome banner
+ 129:     -	0412  0D0A0A41		db	CR,LF,LF,'ALTMON 1.','1'+80h
+	      4C544D4F
+	      4E20312E
+	      B1
+ 130:				
+ 131:				; start - command processing loop
+ 132:				
+ 133:   81+10	041F  31FFFF  	start	lxi	sp,SPTR		;re-init stack pointer
+ 134:   91+10	0422  211F04  		lxi	h,start		;RET's go back to start
+ 135:  101+11	0425  E5      		push	h
+ 136:				
+ 137:  112+17	0426  CD6307  		call	crlf		;display '*' prompt after CR/LF
+ 138:  129+7	0429  3E2A    		mvi	a,'*'
+ 139:  136+17	042B  CD4807  		call	ptcn
+ 140:				
+ 141:  153+17	042E  CDBC07  		call	getCon		;read command from keyboard
+ 142:  170+7	0431  E65F    		ani	05FH		;lower case to upper case
+ 143:  177+7	0433  FE42    		cpi	'B'
+ 144:  184+5+6	0435  D8      		rc			;too small
+ 145:  189+7	0436  FE55    		cpi	'U'
+ 146:  196+5+6	0438  D0      		rnc			;too large
+ 147:				
+ 148:  201+10	0439  21C004  		lxi	h,cmdTbl+100h-2*'B'	;'B' indexes to start of cmdtbl
+ 149:  211+4	043C  87      		add	a		;2 bytes per entry
+ 150:  215+4	043D  85      		add	l
+ 151:  219+5	043E  6F      		mov	l,a
+ 152:				
+ 153:  224+7	043F  5E      		mov	e,m		;e=lsb of jump address
+ 154:  231+5	0440  23      		inx	h
+ 155:  236+7	0441  56      		mov	d,m		;d=high byte of jump address
+ 156:  243+5	0442  EB      		xchg
+ 157:  248+5	0443  E9      		pchl			;away we go
+ 158:				
+ 159:				; Command Table
+ 160:				
+ 161:     -	0444  7604    	cmdTbl	dw	doboot		;B jump to Altair disk boot loader
+ 162:     -	0446  CF05    		dw	compr		;C SSSS FFFF CCCC compare blocks
+ 163:     -	0448  F104    		dw	disp		;D SSSS FFFF dump in hex
+ 164:     -	044A  8F05    		dw	exchg		;E SSSS FFFF DDDD exchange block
+ 165:     -	044C  FB05    		dw	srch2		;F SSSS FFFF DD DD two byte search
+ 166:     -	044E  6A04    		dw	exec		;G SSSS go to and execute
+ 167:     -	0450  7606    		dw	hexLoad		;H P load Intel hex file from port
+ 168:     -	0452  5C06    		dw	pinpt		;I PP input from I/O port
+ 169:     -	0454  6A04    		dw	exec		;J SSSS jump to and execute (G)
+ 170:     -	0456  6905    		dw	fill		;K SSSS FFFF DD fill RAM with "k"onstant
+ 171:     -	0458  7606    		dw	hexLoad		;L P load Intel hex file from port
+ 172:     -	045A  8405    		dw	moveb		;M SSSS FFFF DDDD move block
+ 173:     -	045C  B605    		dw	ndmt		;N non destructive memory test (RAM size)
+ 174:     -	045E  3F06    		dw	poutp		;O PP DD output to port
+ 175:     -	0460  3205    		dw	pgm		;P LLLL program memory
+ 176:     -	0462  8004    		dw	chksum		;Q SSSS FFFF compute checksum
+ 177:     -	0464  B605    		dw	ndmt		;R non destructive memory test (RAM size)
+ 178:     -	0466  EF05    		dw	srch1		;S SSSS FFFF DD search for single byte
+ 179:     -	0468  9904    		dw	tmem		;T SSSS FFFF test memory
+ 180:				
+ 181:				;--------------------------------------------------------------------------
+ 182:				; exec (G or J) - execute the program at the address
+ 183:				;--------------------------------------------------------------------------
+ 184:  253+17	046A  CDA507  	exec	call	dspMsg
+ 185:     -	046D  474F54CF		db	'GOT','O'+80h
+ 186:				
+ 187:  270+17	0471  CD2007  		call	ahex		;read address from keyboard
+ 188:  287+5	0474  EB      		xchg
+ 189:  292+5	0475  E9      		pchl
+ 190:				
+ 191:				;--------------------------------------------------------------------------
+ 192:				; doBoot (B) - boot floppy disk by jumping to DBL PROM at FF00
+ 193:				;--------------------------------------------------------------------------
+ 194:  297+17	0476  CDA507  	doBoot	call	dspMsg
+ 195:     -	0479  424F4FD4		db	'BOO','T'+80h
+ 196:				
+ 197:  314+10	047D  C300FF  		jmp	BOOT
+ 198:				
+ 199:				;--------------------------------------------------------------------------
+ 200:				; chksum (Q) - compute checksum
+ 201:				;--------------------------------------------------------------------------
+ 202:  324+17	0480  CDA507  	chksum	call	dspMsg
+ 203:     -	0483  435355CD		db	'CSU','M'+80h
+ 204:				
+ 205:  341+17	0487  CD1D07  		call	tahex
+ 206:  358+7	048A  0600    		mvi	b,0		;start checksum = 0
+ 207:				
+ 208:  365+7	048C  7E      	csloop	mov	a,m		;get data from memory
+ 209:  372+4	048D  80      		add	b		;add to checksum
+ 210:  376+5	048E  47      		mov	b,a
+ 211:  381+17	048F  CDEA07  		call	bmp
+ 212:  398+10	0492  C28C04  		jnz	csloop		;repeat loop
+ 213:				
+ 214:  408+5	0495  78      		mov	a,b		;a=checksum
+ 215:  413+10	0496  C37907  		jmp	pt2		;print checksum and exit
+ 216:				
+ 217:				;--------------------------------------------------------------------------
+ 218:				; tmem (T) - memory test routine
+ 219:				;--------------------------------------------------------------------------
+ 220:  423+17	0499  CDA507  	tmem	call	dspMsg
+ 221:     -	049C  544553D4		db	'TES','T'+80h
+ 222:				
+ 223:  440+17	04A0  CD1D07  		call	tahex		;read addresses
+ 224:  457+10	04A3  015A5A  		lxi	b,05a5ah	;init b,c
+ 225:				
+ 226:  467+7	04A6  3E2E    	cycl	mvi	a,'.'		;display '.' before each cycle
+ 227:  474+17	04A8  CD4807  		call	ptcn
+ 228:  491+17	04AB  CDE204  		call	rndm
+ 229:  508+11	04AE  C5      		push	b		;keep all registers
+ 230:  519+11	04AF  E5      		push	h
+ 231:  530+11	04B0  D5      		push	d
+ 232:				
+ 233:  541+5	04B1  7C      	tlop	mov	a,h		;on stack page?
+ 234:  546+7	04B2  FEFE    		cpi	(SPTR shr 8)-1	;compare to msb of stack
+ 235:  553+10	04B4  CABB04  		jz	skipWr		;in stack, skip write
+ 236:  563+17	04B7  CDE204  		call	rndm
+ 237:  580+7	04BA  70      		mov	m,b		;write in memory
+ 238:  587+17	04BB  CDEA07  	skipWr	call	bmp
+ 239:  604+10	04BE  C2B104  		jnz	tlop		;repeat loop
+ 240:				
+ 241:  614+10	04C1  D1      		pop	d		
+ 242:  624+10	04C2  E1      		pop	h		;restore original
+ 243:  634+10	04C3  C1      		pop	b		;values
+ 244:  644+11	04C4  E5      		push	h
+ 245:  655+11	04C5  D5      		push	d
+ 246:				
+ 247:  666+5	04C6  7C      	rlop	mov	a,h		;on stack page?
+ 248:  671+7	04C7  FEFE    		cpi	(SPTR shr 8)-1	;compare to msb of stack
+ 249:  678+10	04C9  CAD404  		jz	skipRd		;in stack, skip the read
+ 250:  688+17	04CC  CDE204  		call	rndm		;generate new sequence
+ 251:  705+7	04CF  7E      		mov	a,m		;read memory
+ 252:  712+4	04D0  B8      		cmp	b		;compare memory
+ 253:  716+11+6	04D1  C46D07  		cnz	err		;call error routine
+ 254:  727+17	04D4  CDEA07  	skipRd	call	bmp
+ 255:  744+10	04D7  C2C604  		jnz	rlop
+ 256:				
+ 257:  754+10	04DA  D1      		pop	d
+ 258:  764+10	04DB  E1      		pop	h
+ 259:  774+17	04DC  CDC707  		call	pause
+ 260:  791+10	04DF  C3A604  		jmp	cycl
+ 261:				
+ 262:				; rndm - this routine generates random numbers
+ 263:				
+ 264:  801+5	04E2  78      	rndm	mov	a,b		;look at b
+ 265:  806+7	04E3  E6B4    		ani	0b4h		;mask bits
+ 266:  813+4	04E5  A7      		ana	a		;clear carry
+ 267:  817+10	04E6  EAEA04  		jpe	peve		;jump if even
+ 268:  827+4	04E9  37      		stc
+ 269:  831+5	04EA  79      	peve	mov	a,c		;look at c
+ 270:  836+4	04EB  17      		ral			;rotate carry in
+ 271:  840+5	04EC  4F      		mov	c,a		;restore c
+ 272:  845+5	04ED  78      		mov	a,b		;look at b
+ 273:  850+4	04EE  17      		ral			;rotate carry in
+ 274:  854+5	04EF  47      		mov	b,a		;restore b
+ 275:  859+10	04F0  C9      		ret			;return with new b,c
+ 276:				
+ 277:				;--------------------------------------------------------------------------
+ 278:				; disp (D) - display memory contents
+ 279:				;--------------------------------------------------------------------------
+ 280:  869+17	04F1  CDA507  	disp	call	dspMsg
+ 281:     -	04F4  44554DD0		db	'DUM','P'+80h
+ 282:				
+ 283:  886+17	04F8  CD1D07  		call	tahex		;read addresses
+ 284:				
+ 285:  903+11	04FB  E5      	dmpLine	push	h		;save address at start of line
+ 286:  914+7	04FC  0E10    		mvi	c,16		;16 locations per line
+ 287:  921+17	04FE  CD8107  		call	ptad		;print current address
+ 288:				
+ 289:				; dump line in hex
+ 290:				
+ 291:  938+7	0501  7E      	dmpHex	mov	a,m		;a=byte to display
+ 292:  945+17	0502  CD7907  		call	pt2		;display it
+ 293:  962+17	0505  CD4607  		call	spce
+ 294:  979+5	0508  23      		inx	h	
+ 295:  984+5	0509  0D      		dcr	c		;decrement line byte count
+ 296:  989+10	050A  C20105  		jnz	dmpHex		;loop until 16 bytes done
+ 297:				
+ 298:				; dump line in ASCII
+ 299:				
+ 300:  999+17	050D  CD4607  		call	spce
+ 301: 1016+10	0510  E1      		pop	h		;hl->start of line
+ 302: 1026+7	0511  0E10    		mvi	c,16		;16 locations per line
+ 303:				
+ 304: 1033+7	0513  7E      	dmpAsc	mov	a,m		;a=byte to display
+ 305: 1040+7	0514  FE7F    		cpi	7Fh		;test if >= 7Fh
+ 306: 1047+10	0516  D21E05  		jnc	dspDot		;non printable, show '.'
+ 307:				
+ 308: 1057+7	0519  FE20    		cpi	' '		;displayable character?
+ 309: 1064+10	051B  D22005  		jnc	dspAsc		;yes, go display it
+ 310:				
+ 311: 1074+7	051E  3E2E    	dspDot	mvi	a,'.'		;display '.' instead
+ 312:				
+ 313: 1081+17	0520  CD4807  	dspAsc	call	ptcn		;display the character
+ 314: 1098+17	0523  CDEA07  		call	bmp		;increment hl, possibly de
+ 315: 1115+5	0526  0D      		dcr	c		;decrement line byte count
+ 316: 1120+10	0527  C21305  		jnz	dmpAsc		;loop until 16 bytes done
+ 317:				
+ 318: 1130+17	052A  CDEA07  		call	bmp		;done?
+ 319: 1147+5+6	052D  C8      		rz			;yes
+ 320: 1152+5	052E  2B      		dcx	h		;undo extra bump of hl
+ 321: 1157+10	052F  C3FB04  		jmp	dmpLine		;do another line	
+ 322:				
+ 323:				;--------------------------------------------------------------------------
+ 324:				; pgm (P) - program memory
+ 325:				;--------------------------------------------------------------------------
+ 326: 1167+17	0532  CDA507  	pgm	call	dspMsg
+ 327:     -	0535  5047CD  		db	'PG','M'+80h
+ 328:				
+ 329: 1184+17	0538  CD2007  		call	ahex		;read address
+ 330: 1201+5	053B  EB      		xchg
+ 331: 1206+17	053C  CD6307  		call	crlf
+ 332:						
+ 333: 1223+7	053F  7E      	pglp	mov	a,m		;read memory
+ 334: 1230+17	0540  CD7907  		call	pt2		;print 2 digits
+ 335: 1247+7	0543  3E2D    		mvi	a,'-'		;load dash
+ 336: 1254+17	0545  CD4807  		call	ptcn		;print dash
+ 337:				
+ 338: 1271+17	0548  CDB307  	crig	call	rdcn		;get user input
+ 339: 1288+7	054B  FE20    		cpi	' '		;space
+ 340: 1295+10	054D  CA6505  		jz	con2		;skip if space
+ 341: 1305+7	0550  FE0D    		cpi	CR		;skip if CR
+ 342: 1312+10	0552  C25B05  		jnz	con1
+ 343: 1322+17	0555  CD6307  		call	crlf		;print CR,LF
+ 344: 1339+10	0558  C34805  		jmp	crig		;back for more
+ 345:				
+ 346: 1349+5	055B  EB      	con1	xchg			;HL->DE
+ 347: 1354+10	055C  210000  		lxi	h,0		;get 16 bit zero
+ 348: 1364+7	055F  0E02    		mvi	c,2		;count 2 digits
+ 349: 1371+17	0561  CD2807  		call	ahexNr		;convert to hex (no read)
+ 350: 1388+7	0564  73      		mov	m,e
+ 351: 1395+5	0565  23      	con2	inx	h
+ 352: 1400+10	0566  C33F05  		jmp	pglp
+ 353:				
+ 354:				;--------------------------------------------------------------------------
+ 355:				; fill (K) - fill memory with a constant
+ 356:				;--------------------------------------------------------------------------
+ 357: 1410+17	0569  CDA507  	fill	call	dspMsg
+ 358:     -	056C  46494CCC		db	'FIL','L'+80h
+ 359:				
+ 360: 1427+17	0570  CD1D07  		call	tahex		;read addresses
+ 361: 1444+11	0573  E5      		push	h		;start addr on stack
+ 362: 1455+7	0574  0E02    		mvi	c,2		;reading 2 digits
+ 363: 1462+17	0576  CD2207  		call	ahe0		;input fill byte
+ 364: 1479+5	0579  EB      		xchg			;byte to write from e to l
+ 365: 1484+18	057A  E3      		xthl			;hl=start addr, stack=fill byte
+ 366: 1502+10	057B  C1      		pop	b		;c=fill byte from stack
+ 367:						
+ 368: 1512+7	057C  71      	zloop	mov	m,c		;write into memory
+ 369: 1519+17	057D  CDEA07  		call	bmp		;compare address, increment h
+ 370: 1536+5+6	0580  C8      		rz
+ 371: 1541+10	0581  C37C05  		jmp	zloop
+ 372:				
+ 373:				;--------------------------------------------------------------------------
+ 374:				; moveb (M) - move a block of memory
+ 375:				; exchg (E) - exhange block of memory
+ 376:				;--------------------------------------------------------------------------
+ 377: 1551+17	0584  CDA507  	moveb	call	dspMsg
+ 378:     -	0587  4D4F56C5		db	'MOV','E'+80h
+ 379: 1568+4	058B  AF      		xra	a		;a=0 means "move" command
+ 380: 1572+10	058C  C39605  		jmp	doMove
+ 381:				
+ 382: 1582+17	058F  CDA507  	exchg	call	dspMsg
+ 383:     -	0592  455843C8		db	'EXC','H'+80h
+ 384:								;a returned <> 0 means "exchange" command
+ 385:						
+ 386: 1599+5	0596  47      	doMove	mov	b,a		;save move/exchange flag in b
+ 387: 1604+17	0597  CD1D07  		call	tahex		;read addresses
+ 388: 1621+11	059A  E5      		push	h
+ 389: 1632+17	059B  CD2007  		call	ahex
+ 390: 1649+5	059E  EB      		xchg
+ 391: 1654+18	059F  E3      		xthl			;HL->start, DE->end, stack has dest
+ 392:				
+ 393: 1672+7	05A0  4E      	mloop	mov	c,m		;c=byte from source
+ 394: 1679+18	05A1  E3      		xthl			;hl->destination
+ 395:				
+ 396: 1697+5	05A2  78      		mov	a,b		;move or exchange?
+ 397: 1702+4	05A3  B7      		ora	a
+ 398: 1706+10	05A4  CAAB05  		jz	nexch		;0 means move only
+ 399:				
+ 400: 1716+7	05A7  7E      		mov	a,m		;a=from destination
+ 401: 1723+18	05A8  E3      		xthl			;hl->source
+ 402: 1741+7	05A9  77      		mov	m,a		;move destination to source
+ 403: 1748+18	05AA  E3      		xthl			;hl->destination
+ 404:				
+ 405: 1766+7	05AB  71      	nexch	mov	m,c		;move source to destination
+ 406: 1773+5	05AC  23      		inx	h		;increment destination
+ 407: 1778+18	05AD  E3      		xthl			;hl->source
+ 408: 1796+17	05AE  CDEA07  		call	bmp		;increment source and compare to end
+ 409: 1813+10	05B1  C2A005  		jnz	mloop
+ 410:				
+ 411: 1823+10	05B4  E1      		pop	h		;remove temp pointer from stack
+ 412: 1833+10	05B5  C9      		ret			;and exit
+ 413:				
+ 414:				;--------------------------------------------------------------------------
+ 415:				; ndmt (N or R) - non destructive memory test (size RAM)
+ 416:				;--------------------------------------------------------------------------
+ 417: 1843+17	05B6  CDA507  	ndmt	call	dspMsg
+ 418:     -	05B9  52414D54		db	'RAMTO','P'+80h
+	      4FD0
+ 419:				
+ 420: 1860+10	05BF  21FFFF  		lxi	h,0ffffh	;start at zero
+ 421:				
+ 422: 1870+5	05C2  23      	ndlop	inx	h
+ 423: 1875+7	05C3  7E      		mov	a,m		;read from address in hl
+ 424: 1882+5	05C4  47      		mov	b,a		;save original value in b
+ 425: 1887+4	05C5  2F      		cma			;form and write inverted value
+ 426: 1891+7	05C6  77      		mov	m,a
+ 427: 1898+7	05C7  BE      		cmp	m		;read and compare
+ 428: 1905+7	05C8  70      		mov	m,b		;restore original value
+ 429: 1912+10	05C9  CAC205  		jz	ndlop		;keep going if still RAM
+ 430:				
+ 431: 1922+10	05CC  C36D07  		jmp	err		;display end of RAM
+ 432:				
+ 433:				;--------------------------------------------------------------------------
+ 434:				; compr (C) - compare two blocks of memory
+ 435:				;--------------------------------------------------------------------------
+ 436: 1932+17	05CF  CDA507  	compr	call	dspMsg
+ 437:     -	05D2  434F4DD0		db	'COM','P'+80h
+ 438:				
+ 439: 1949+17	05D6  CD1D07  		call	tahex		;read addresses
+ 440: 1966+11	05D9  E5      		push	h		;source start on stack
+ 441: 1977+17	05DA  CD2007  		call	ahex
+ 442: 1994+5	05DD  EB      		xchg			;de=source end, hl=compare start
+ 443:				
+ 444: 1999+7	05DE  7E      	vmlop	mov	a,m		;a=compare byte
+ 445: 2006+5	05DF  23      		inx	h
+ 446: 2011+18	05E0  E3      		xthl			;hl->source byte
+ 447: 2029+7	05E1  BE      		cmp	m		;same?
+ 448: 2036+7	05E2  46      		mov	b,m		;b=source byte
+ 449: 2043+11+6	05E3  C46D07  		cnz	err		;display the error
+ 450: 2054+17	05E6  CDEA07  		call	bmp		;increment pointers
+ 451: 2071+18	05E9  E3      		xthl			;hl->compare byte
+ 452: 2089+10	05EA  C2DE05  		jnz	vmlop
+ 453:				
+ 454: 2099+10	05ED  E1      		pop	h		;remove temp pointer from stack
+ 455: 2109+10	05EE  C9      		ret			;and exit
+ 456:				
+ 457:				;--------------------------------------------------------------------------
+ 458:				; srch1 (S) - search for one byte
+ 459:				; srch2 (F) - search for two bytes
+ 460:				;--------------------------------------------------------------------------
+ 461: 2119+17	05EF  CDA507  	srch1	call	dspMsg
+ 462:     -	05F2  46494E44		db	'FIND','1'+80h
+	      B1
+ 463: 2136+4	05F7  AF      		xra	a		;zero flag means one byte search
+ 464: 2140+10	05F8  C30306  		jmp	doSrch
+ 465:				
+ 466: 2150+17	05FB  CDA507  	srch2	call	dspMsg
+ 467:     -	05FE  46494E44		db	'FIND','2'+80h
+	      B2
+ 468:								;a returned <> 0 means two byte search
+ 469:				
+ 470: 2167+11	0603  F5      	doSrch	push	psw		;save 1/2 byte flag on stack
+ 471: 2178+17	0604  CD1D07  		call	tahex
+ 472:				
+ 473: 2195+11	0607  E5      		push	h		;save h, getting 1st byte to find
+ 474: 2206+7	0608  0E02    		mvi	c,2		;reading 2 hex digits
+ 475: 2213+17	060A  CD2207  		call	ahe0		;
+ 476: 2230+5	060D  EB      		xchg			;h=code, d=f
+ 477: 2235+5	060E  45      		mov	b,l		;put code in b
+ 478: 2240+10	060F  E1      		pop	h		;restore h
+ 479:				
+ 480: 2250+10	0610  F1      		pop	psw		;a=one/two byte flag
+ 481: 2260+4	0611  B7      		ora	a		;zero true if one byte search
+ 482: 2264+11	0612  F5      		push	psw
+ 483: 2275+10	0613  CA1F06  		jz	cont
+ 484:				
+ 485: 2285+11	0616  E5      		push	h		;save h, getting 2nd byte to find
+ 486: 2296+7	0617  0E02    		mvi	c,2
+ 487: 2303+17	0619  CD2207  		call	ahe0
+ 488: 2320+5	061C  EB      		xchg
+ 489: 2325+5	061D  4D      		mov	c,l
+ 490: 2330+10	061E  E1      		pop	h
+ 491:				
+ 492: 2340+7	061F  7E      	cont	mov	a,m		;read memory
+ 493: 2347+4	0620  B8      		cmp	b		;compare to code
+ 494: 2351+10	0621  C23706  		jnz	skp		;skip if no compare
+ 495:				
+ 496: 2361+10	0624  F1      		pop	psw		;a=one/two byte flag
+ 497: 2371+4	0625  B7      		ora	a		;zero true if one byte serach
+ 498: 2375+11	0626  F5      		push	psw
+ 499: 2386+10	0627  CA3106  		jz	obcp
+ 500:				
+ 501: 2396+5	062A  23      		inx	h		;two byte search
+ 502: 2401+7	062B  7E      		mov	a,m
+ 503: 2408+5	062C  2B      		dcx	h
+ 504: 2413+4	062D  B9      		cmp	c
+ 505: 2417+10	062E  C23706  		jnz	skp
+ 506:				
+ 507: 2427+5	0631  23      	obcp	inx	h
+ 508: 2432+7	0632  7E      		mov	a,m		;read next byte
+ 509: 2439+5	0633  2B      		dcx	h		;decr address
+ 510: 2444+17	0634  CD6D07  		call	err		;print data found
+ 511:				
+ 512: 2461+17	0637  CDEA07  	skp	call	bmp		;check if done
+ 513: 2478+10	063A  C21F06  		jnz	cont		;back for more
+ 514: 2488+10	063D  F1      		pop	psw		;remove flag saved on stack
+ 515: 2498+10	063E  C9      		ret
+ 516:				
+ 517:				;--------------------------------------------------------------------------
+ 518:				; poutp (O) - output data to a port
+ 519:				;--------------------------------------------------------------------------
+ 520: 2508+17	063F  CDA507  	poutp	call	dspMsg
+ 521:     -	0642  4F55D4  		db	'OU','T'+80h
+ 522:				
+ 523: 2525+7	0645  0E02    		mvi	c,2
+ 524: 2532+17	0647  CD2207  		call	ahe0		;port number in e
+ 525:				
+ 526: 2549+7	064A  0E02    		mvi	c,2
+ 527: 2556+17	064C  CD2207  		call	ahe0		;port to l, data in e
+ 528:				
+ 529: 2573+5	064F  55      		mov	d,l		;d=port
+ 530: 2578+10	0650  21CFFF  		lxi	h,SPTR-30h	;form OUT nn, RET in memory at h
+ 531: 2588+10	0653  36C9    		mvi	m,0c9h		;RET opcode
+ 532: 2598+5	0655  2B      		dcx	h
+ 533: 2603+7	0656  72      		mov	m,d		;output port for OUT instruction
+ 534: 2610+5	0657  2B      		dcx	h
+ 535: 2615+10	0658  36D3    		mvi	m,0D3H		;OUT opcode
+ 536: 2625+5	065A  7B      		mov	a,e
+ 537: 2630+5	065B  E9      		pchl			;call OUT, RET
+ 538:				
+ 539:				;--------------------------------------------------------------------------
+ 540:				; pinpt (I) - input data from a port
+ 541:				;--------------------------------------------------------------------------
+ 542: 2635+17	065C  CDA507  	pinpt	call	dspMsg
+ 543:     -	065F  49CE    		db	'I','N'+80h
+ 544:				
+ 545: 2652+7	0661  0E02    		mvi	c,2
+ 546: 2659+17	0663  CD2207  		call	ahe0		;port number to e
+ 547:				
+ 548: 2676+10	0666  21CFFF  		lxi	h,SPTR-30H	;form IN nn, RET in memory at h
+ 549: 2686+10	0669  36C9    		mvi	m,0C9H		;RET opcode
+ 550: 2696+5	066B  2B      		dcx	h
+ 551: 2701+7	066C  73      		mov	m,e		;input port of IN instruction
+ 552: 2708+5	066D  2B      		dcx	h
+ 553: 2713+10	066E  36DB    		mvi	m,0DBH		;IN opcode
+ 554: 2723+17	0670  CDCDFF  		call	SPTR-32H
+ 555: 2740+10	0673  C37907  		jmp	pt2
+ 556:				
+ 557:				;---------------------------------------------------------------------
+ 558:				; hexLoad (H or L) - load intel hex through 2SIO serial port 0 or 1
+ 559:				;---------------------------------------------------------------------
+ 560: 2750+17	0676  CDA507  	hexload	call	dspMsg
+ 561:     -	0679  4845584C		db	'HEXLOA','D'+80h
+	      4F41C4
+ 562:				
+ 563: 2767+7	0680  0E01    		mvi	c,1		;read one hex digit
+ 564: 2774+17	0682  CD2207  		call	ahe0		;digit is in e
+ 565: 2791+10	0685  21DFFF  		lxi	h,SIOPORT	;hl->location on stack to save port
+ 566: 2801+7	0688  73      		mov	m,e		;SIOPORT = 0 or 1
+ 567:				
+ 568:				; rcvLine - receive a hex file line
+ 569:				
+ 570: 2808+17	0689  CD6307  	rcvLine	call	crlf
+ 571: 2825+7	068C  0E00    		mvi	c,0		;clear echo character flag
+ 572:				
+ 573: 2832+17	068E  CDF306  	wtMark	call	getChar		;read next character
+ 574: 2849+7	0691  D63A    		sui	':'		;record marker?
+ 575: 2856+10	0693  C28E06  		jnz	wtMark		;no, keep looking
+ 576:				
+ 577:				; Have start of new record. Save the byte count and load address.
+ 578:				;   The load address is echoed to the screen so the user can
+ 579:				;   see the file load progress.
+ 580:				
+ 581: 2866+5	0696  57      		mov	d,a		;init checksum in D to zero
+ 582:				
+ 583: 2871+17	0697  CDD506  		call	iByte		;input two hex digits (byte count)
+ 584: 2888+5	069A  7B      		mov	a,e		;test for zero byte count
+ 585: 2893+4	069B  B7      		ora	a
+ 586: 2897+10	069C  CAC306  		jz	flush		;count of 0 means end
+ 587:				
+ 588: 2907+5	069F  43      		mov	b,e		;B = byte count on line
+ 589:				
+ 590: 2912+5	06A0  0C      		inr	c		;set echo flag for address bytes
+ 591: 2917+17	06A1  CDD506  		call	iByte		;get MSB of address
+ 592: 2934+5	06A4  63      		mov	h,e		;H = address MSB
+ 593: 2939+17	06A5  CDD506  		call	iByte		;get LSB of address
+ 594: 2956+5	06A8  6B      		mov	l,e		;L = address LSB
+ 595: 2961+5	06A9  0D      		dcr	c		;clear echo flag
+ 596:				
+ 597: 2966+17	06AA  CDD506  		call	iByte		;ignore/discard record type
+ 598:				
+ 599:				; Receive the data bytes of the record and move to memory
+ 600:				
+ 601: 2983+17	06AD  CDD506  	data	call	iByte		;read a data byte (2 hex digits)
+ 602: 3000+7	06B0  73      		mov	m,e		;store in memory
+ 603: 3007+5	06B1  23      		inx	h
+ 604: 3012+5	06B2  05      		dcr	b
+ 605: 3017+10	06B3  C2AD06  		jnz	data
+ 606:				
+ 607:				; Validate checksum
+ 608:				
+ 609: 3027+17	06B6  CDD506  		call	iByte		;read and add checksum
+ 610: 3044+10	06B9  CA8906  		jz	rcvLine		;checksum good, receive next line
+ 611:				
+ 612: 3054+17	06BC  CDA507  		call	dspMsg		;display error message
+ 613:     -	06BF  204552D2		db	' ER','R'+80h
+ 614:								;fall into flush
+ 615:				
+ 616:				; flush - flush rest of file as it comes in until no characters
+ 617:				;    received for about 1/4 second to prevent incoming file
+ 618:				;    data looking like typed monitor commands. Only the console
+ 619:				;    port needs to be flushed. 
+ 620:				
+ 621: 3071+10	06C3  DB11    	flush	in	COND		;clear possible received char
+ 622: 3081+10	06C5  11B128  		lxi	d,10417		;.25s timeout for 48 cycle loop
+ 623:				
+ 624: 3091+10	06C8  DB10    	flshLp	in	CONS		;(10) look for character on console
+ 625: 3101+4	06CA  0F      		rrc			;(4) data flag in carry
+ 626: 3105+10	06CB  DAC306  		jc	flush		;(10) data received, restart
+ 627:				
+ 628: 3115+5	06CE  1B      		dcx	d		;(5) decrement timeout
+ 629: 3120+5	06CF  7A      		mov	a,d		;(5)
+ 630: 3125+4	06D0  B3      		ora	e		;(4)
+ 631: 3129+10	06D1  C2C806  		jnz	flshLp		;(10) loop until zero
+ 632: 3139+10	06D4  C9      		ret			;done
+ 633:				
+ 634:				;-----------------------------------------------------------
+ 635:				; iByte	- read two ascii hex bytes and return binary
+ 636:				;    value in e. 
+ 637:				;-----------------------------------------------------------
+ 638: 3149+17	06D5  CDF306  	iByte	call	getChar		;get a character
+ 639: 3166+17	06D8  CDEB06  		call	asc2Bin		;ascii hex digit to binary
+ 640: 3183+4	06DB  87      		add	a		;put in msn, zero lsn
+ 641: 3187+4	06DC  87      		add	a
+ 642: 3191+4	06DD  87      		add	a
+ 643: 3195+4	06DE  87      		add	a
+ 644: 3199+5	06DF  5F      		mov	e,a		;save byte with MSN in E
+ 645:				
+ 646:				; 2nd byte (LSN)
+ 647:				
+ 648: 3204+17	06E0  CDF306  		call	getChar		;get a character
+ 649: 3221+17	06E3  CDEB06  		call	asc2Bin		;ascii hex digit to binary
+ 650: 3238+4	06E6  83      		add	e		;combine msn and lsn
+ 651: 3242+5	06E7  5F      		mov	e,a		;save in EH
+ 652: 3247+4	06E8  82      		add	d		;add character to checksum
+ 653: 3251+5	06E9  57      		mov	d,a
+ 654: 3256+10	06EA  C9      		ret		
+ 655:				
+ 656:				;-------------------------------------------------------------
+ 657:				; asc2Bin - ASCII hex digit to binary conversion. Digit
+ 658:				;    passed in a, returned in a. Errors ignored as checksum
+ 659:				;    will eventually kick this out.
+ 660:				;-------------------------------------------------------------
+ 661: 3266+7	06EB  D630    	asc2Bin	sui	'0'		;'0' to 0
+ 662: 3273+7	06ED  FE0A    		cpi	10		;0-9 ?
+ 663: 3280+5+6	06EF  D8      		rc
+ 664:				
+ 665: 3285+7	06F0  D607    		sui	7		;'A-F' to A-F
+ 666: 3292+10	06F2  C9      		ret
+ 667:				
+ 668:				;-------------------------------------------------------------
+ 669:				; getChar - read a character from the 2SIO port specified in
+ 670:				;    SIOPORT. The character is also echoed to the console port
+ 671:				;    if the echo flag (c) is set (non-zero)
+ 672:				;-------------------------------------------------------------
+ 673: 3302+11	06F3  C5      	getChar	push	b		;save b,c
+ 674: 3313+13	06F4  3ADFFF  		lda	SIOPORT		;a=pseudo port to use
+ 675: 3326+4	06F7  B7      		ora	a		;port zero?
+ 676: 3330+10	06F8  C20407  		jnz	inWait1		;no, use port 1
+ 677:				
+ 678:				; in through 1st port (0) on 2SIO
+ 679:				
+ 680: 3340+17	06FB  CDD607  	inWait0	call	cntlc		;test for character from console
+ 681: 3357+10	06FE  CAFB06  		jz	inWait0
+ 682: 3367+10	0701  C30F07  		jmp	haveChr
+ 683:				
+ 684:				; in through 2nd port (1) on 2SIO, check for ctrl-c on console
+ 685:				;    while waiting
+ 686:				
+ 687: 3377+17	0704  CDD607  	inWait1	call	cntlc		;look for ctrl-c on console
+ 688: 3394+10	0707  DB12    		in	CONS+2		;wait for character on 2nd 2SIO
+ 689: 3404+4	0709  0F      		rrc			;data flag in carry
+ 690: 3408+10	070A  D20407  		jnc	inWait1
+ 691: 3418+10	070D  DB13    		in	COND+2		;a=character read
+ 692:				
+ 693:				; process new character in a. Echo to console if c is non-zero
+ 694:				
+ 695: 3428+5	070F  47      	haveChr	mov	b,a		;save character in b
+ 696: 3433+5	0710  79      		mov	a,c		;echo flag (c) set?
+ 697: 3438+4	0711  B7      		ora	a
+ 698: 3442+10	0712  CA1A07  		jz	noEcho		;no echo
+ 699:				
+ 700: 3452+5	0715  78      		mov	a,b		;a=character to send
+ 701: 3457+10	0716  C1      		pop	b		;restore b,c
+ 702: 3467+10	0717  C34807  		jmp	ptcn		;display character and exit
+ 703:				
+ 704: 3477+5	071A  78      	noEcho	mov	a,b		;a=byte read
+ 705: 3482+10	071B  C1      		pop	b		;restore b,c
+ 706: 3492+10	071C  C9      		ret
+ 707:				
+ 708:				;********************************************************************
+ 709:				;
+ 710:				;  Type conversion, input, output subroutines
+ 711:				;
+ 712:				;********************************************************************
+ 713:				
+ 714:				;------------------------------------------------------------
+ 715:				; tahex - read two 16 bit addresses. 1st returned in HL, 2nd in DE
+ 716:				;------------------------------------------------------------
+ 717: 3502+17	071D  CD2007  	tahex	call	ahex		;get first address param
+ 718:								;fall into ahex to get 2nd param
+ 719:				
+ 720:				;------------------------------------------------------------
+ 721:				; ahex - read up to 4 hex digits to binary, return in de
+ 722:				;------------------------------------------------------------
+ 723: 3519+7	0720  0E04    	ahex	mvi	c,4		;count of 4 digits
+ 724: 3526+10	0722  210000  	ahe0	lxi	h,0		;16 bit zero
+ 725: 3536+17	0725  CDB307  	ahe1	call	rdcn		;read a byte
+ 726: 3553+7	0728  FE30    	ahexNr	cpi	'0'
+ 727: 3560+10	072A  DA1F04  		jc	start		;below '0', abort
+ 728: 3570+7	072D  FE3A    		cpi	':'
+ 729: 3577+11+6	072F  D45607  		cnc	alph
+ 730: 3588+10	0732  29      		dad	h
+ 731: 3598+10	0733  29      		dad	h
+ 732: 3608+10	0734  29      		dad	h
+ 733: 3618+10	0735  29      		dad	h
+ 734: 3628+7	0736  D630    		sui	'0'		;ascii bias
+ 735: 3635+7	0738  FE0A    		cpi	10		;digit 0-10
+ 736: 3642+10	073A  DA3F07  		jc	alf
+ 737: 3652+7	073D  D607    		sui	7		;alpha bias
+ 738: 3659+4	073F  85      	alf	add	l
+ 739: 3663+5	0740  6F      		mov	l,a
+ 740: 3668+5	0741  0D      		dcr	c
+ 741: 3673+10	0742  C22507  		jnz	ahe1		;keep reading
+ 742: 3683+5	0745  EB      		xchg			;result in de
+ 743:								;fall through to print a space
+ 744:				;------------------------------------------------------------
+ 745:				; spce - print a space
+ 746:				; ptcn - print character passed in a
+ 747:				;------------------------------------------------------------
+ 748: 3688+7	0746  3E20    	spce	mvi	a,' '		;print space
+ 749: 3695+11	0748  F5      	ptcn	push	psw
+ 750:				
+ 751: 3706+10	0749  DB10    	ptlop	in	CONS		;wait for OK to transmit
+ 752: 3716+7	074B  E602    		ani	TBE
+ 753: 3723+10	074D  CA4907  		jz	ptlop
+ 754:				
+ 755: 3733+10	0750  F1      		pop	psw		;recover a
+ 756: 3743+7	0751  E67F    		ani	07fh		;get rid of msbit
+ 757: 3750+10	0753  D311    		out	COND		;and print it
+ 758: 3760+10	0755  C9      		ret			;return from ptcn
+ 759:				
+ 760:				;------------------------------------------------------------
+ 761:				; alph - verify valid hex digit, abort to command loop if not
+ 762:				;------------------------------------------------------------
+ 763: 3770+7	0756  FE41    	alph	cpi	'A'
+ 764: 3777+10	0758  DA1F04  		jc	start
+ 765: 3787+7	075B  E65F    		ani	05fh
+ 766: 3794+7	075D  FE47    		cpi	'G'
+ 767: 3801+10	075F  D21F04  		jnc	start
+ 768: 3811+10	0762  C9      		ret
+ 769:				
+ 770:				;------------------------------------------------------------
+ 771:				; crlf - print CR/LF
+ 772:				;------------------------------------------------------------
+ 773: 3821+7	0763  3E0D    	crlf	mvi	a,CR
+ 774: 3828+17	0765  CD4807  		call	ptcn
+ 775: 3845+7	0768  3E0A    		mvi	a,LF	
+ 776: 3852+10	076A  C34807  		jmp	ptcn
+ 777:				
+ 778:				;------------------------------------------------------------
+ 779:				; err - display the address in hl followed by the value
+ 780:				;    in b, then the value in a.
+ 781:				;------------------------------------------------------------
+ 782: 3862+11	076D  F5      	err	push	psw		;save A
+ 783: 3873+17	076E  CD8107  		call	ptad		;print address
+ 784: 3890+5	0771  78      		mov	a,b		;print B
+ 785: 3895+17	0772  CD7907  		call	pt2
+ 786: 3912+17	0775  CD4607  		call	spce
+ 787: 3929+10	0778  F1      		pop	psw		;print A
+ 788: 3939+11	0779  F5      	pt2	push	psw
+ 789: 3950+17	077A  CD9307  		call	binh
+ 790: 3967+10	077D  F1      		pop	psw
+ 791: 3977+10	077E  C39707  		jmp	binl
+ 792:				
+ 793:				;------------------------------------------------------------
+ 794:				; ptad - display the address in h
+ 795:				;------------------------------------------------------------
+ 796: 3987+17	0781  CD6307  	ptad	call	crlf		;print cr,lf
+ 797: 4004+17	0784  CDC707  		call	pause
+ 798: 4021+5	0787  7C      		mov	a,h		;print
+ 799: 4026+17	0788  CD7907  		call	pt2		;ascii
+ 800: 4043+5	078B  7D      		mov	a,l		;codes
+ 801: 4048+17	078C  CD7907  		call	pt2		;for
+ 802: 4065+17	078F  CD4607  		call	spce		;address
+ 803: 4082+10	0792  C9      		ret
+ 804:				
+ 805:				;------------------------------------------------------------
+ 806:				; binh - print MSN of byte passed in A
+ 807:				; binl - print LSN of byte passed in A
+ 808:				;------------------------------------------------------------
+ 809: 4092+4	0793  1F      	binh	rar
+ 810: 4096+4	0794  1F      		rar
+ 811: 4100+4	0795  1F      		rar
+ 812: 4104+4	0796  1F      		rar
+ 813: 4108+7	0797  E60F    	binl	ani	0fh		;low 4 bits
+ 814: 4115+7	0799  C630    		adi	'0'		;ascii bias
+ 815: 4122+7	079B  FE3A    		cpi	03ah		;digit 0-9
+ 816: 4129+10	079D  DA4807  		jc	ptcn
+ 817: 4139+7	07A0  C607    		adi	7		;digit A-F
+ 818: 4146+10	07A2  C34807  		jmp	ptcn
+ 819:				
+ 820:				;------------------------------------------------------------
+ 821:				; dspMsg - display in-line message. String terminated by byte
+ 822:				;      with msbit set.
+ 823:				;------------------------------------------------------------
+ 824: 4156+10	07A5  E1      	dspMsg	pop	h		;hl->string to display
+ 825:				
+ 826: 4166+7	07A6  7E      	dspLoop	mov	a,m		;a=next character to display
+ 827: 4173+17	07A7  CD4807  		call	ptcn		;display character
+ 828: 4190+7	07AA  B6      		ora	m		;MSB set? (last byte)
+ 829: 4197+5	07AB  23      		inx	h		;point to next character
+ 830: 4202+10	07AC  F2A607  		jp	dspLoop		;no, keep looping
+ 831:				
+ 832: 4212+17	07AF  CD4607  		call	spce		;display a trailing space
+ 833: 4229+5	07B2  E9      		pchl			;return past the string
+ 834:				
+ 835:				;------------------------------------------------------------
+ 836:				; rdcn - read from console to A with echo to screen
+ 837:				; getCon - read from console to A without echo
+ 838:				;------------------------------------------------------------
+ 839: 4234+17	07B3  CDBC07  	rdcn	call	getCon		;get character from console
+ 840: 4251+7	07B6  FE1B    		cpi	ESC		;ESC confuses smart terminals
+ 841: 4258+5+6	07B8  C8      		rz			;    so don't echo escape
+ 842: 4263+10	07B9  C34807  		jmp	ptcn		;echo onto printer
+ 843:				
+ 844: 4273+10	07BC  DB10    	getCon	in	CONS		;read keyboard status
+ 845: 4283+4	07BE  0F      		rrc			;data available flag in carry
+ 846: 4287+10	07BF  D2BC07  		jnc	getCon
+ 847:				
+ 848: 4297+10	07C2  DB11    		in	COND		;read from keyboard
+ 849: 4307+7	07C4  E67F    		ani	07fh		;strip off msb
+ 850: 4314+10	07C6  C9      		ret
+ 851:				
+ 852:				;------------------------------------------------------------
+ 853:				; pause - pause/resume with spacebar. Also look for a ctrl-c
+ 854:				;    or ESC to abort.
+ 855:				;------------------------------------------------------------
+ 856: 4324+17	07C7  CDD607  	pause	call	cntlc		;look for abort or other character
+ 857: 4341+7	07CA  FE20    		cpi	' '
+ 858: 4348+5+6	07CC  C0      		rnz			;return if not space or abort
+ 859:				
+ 860: 4353+17	07CD  CDD607  	ploop	call	cntlc		;loop here until space or abort pressed
+ 861: 4370+7	07D0  FE20    		cpi	' '
+ 862: 4377+10	07D2  C2CD07  		jnz	ploop
+ 863: 4387+10	07D5  C9      		ret
+ 864:				
+ 865:				;------------------------------------------------------------
+ 866:				; cntlc - see if a character has been typed. If not, return
+ 867:				;   zero true. If ctrl-c or ESC typed, abort and return to 
+ 868:				;   the command loop. Otherwise, return the character typed.
+ 869:				;------------------------------------------------------------
+ 870: 4397+10	07D6  DB10    	cntlc	in	CONS		;anything typed?
+ 871: 4407+7	07D8  E601    		ani	RDA
+ 872: 4414+5+6	07DA  C8      		rz			;no, exit with zero true
+ 873:				
+ 874: 4419+10	07DB  DB11    		in	COND		;get the typed character
+ 875: 4429+7	07DD  E67F    		ani	07fh
+ 876: 4436+7	07DF  FE03    		cpi	CTRLC		;abort with ctrl-c (2.0 style)
+ 877: 4443+10	07E1  CA1F04  		jz	start
+ 878: 4453+7	07E4  FE1B    		cpi	ESC		;or ESC (4.x style)
+ 879: 4460+10	07E6  CA1F04  		jz	start
+ 880: 4470+10	07E9  C9      		ret
+ 881:				
+ 882:				;------------------------------------------------------------
+ 883:				; bmp - compare address and increment h. Return zero true
+ 884:				;   if hl=de. Once hl=de, then de is incremented each time
+ 885:				;   so the comparison remains true for subsequent calls.
+ 886:				;------------------------------------------------------------
+ 887: 4480+5	07EA  7B      	bmp	mov	a,e		;compare lsb's of hl,de
+ 888: 4485+4	07EB  95      		sub	l
+ 889: 4489+10	07EC  C2F107  		jnz	goon		;not equal
+ 890:				
+ 891: 4499+5	07EF  7A      		mov	a,d		;compare msb's of hl,de
+ 892: 4504+4	07F0  9C      		sbb	h		;gives zero true if equal
+ 893:				
+ 894: 4508+5	07F1  23      	goon	inx	h		;increment hl
+ 895: 4513+5+6	07F2  C0      		rnz			;exit if hl <> de yet
+ 896:				
+ 897: 4518+5	07F3  13      		inx	d		;increase de as well so it will
+ 898: 4523+10	07F4  C9      		ret			;    still be equal next time
+ 899:				
+ 900:     -	07F5          		end
+
+
+
+Statistics:
+
+     4	passes
+     0	jr promotions
+    94	symbols
+  1013	bytes
+
+
+
+Symbol Table:
+
+ahe0             722     
+ahe1             725     
+ahex             720     
+ahexnr           728     
+alf              73f     
+alph             756     
+asc2bin          6eb     
+binh             793     
+binl             797     
+bmp              7ea     
+boot           =ff00     
+chksum           480     
+cmdtbl           444     
+cntlc            7d6     
+compr            5cf     
+con1             55b     
+con2             565     
+cond           =  11     
+cons           =  10     
+cont             61f     
+cr             =   d     
+crig             548     
+crlf             763     
+csloop           48c     
+ctrlc          =   3     
+cycl             4a6     
+data             6ad     
+disp             4f1     
+dmpasc           513     
+dmphex           501     
+dmpline          4fb     
+doboot           476     
+domove           596     
+dosrch           603     
+dspasc           520     
+dspdot           51e     
+dsploop          7a6     
+dspmsg           7a5     
+err              76d     
+esc            =  1b     
+exchg            58f     
+exec             46a     
+fill             569     
+flshlp           6c8     
+flush            6c3     
+getchar          6f3     
+getcon           7bc     
+goon             7f1     
+havechr          70f     
+hexload          676     
+ibyte            6d5     
+inwait0          6fb     
+inwait1          704     
+lf             =   a     
+mloop            5a0     
+monit            400     
+moveb            584     
+ndlop            5c2     
+ndmt             5b6     
+nexch            5ab     
+noecho           71a     
+obcp             631     
+pause            7c7     
+peve             4ea     
+pglp             53f     
+pgm              532     
+pinpt            65c     
+ploop            7cd     
+poutp            63f     
+pt2              779     
+ptad             781     
+ptcn             748     
+ptlop            749     
+rcvline          689     
+rda            =   1     
+rdcn             7b3     
+rlop             4c6     
+rndm             4e2     
+sioport        =ffdf     
+skiprd           4d4     
+skipwr           4bb     
+skp              637     
+spce             746     
+sptr           =ffff     
+srch1            5ef     
+srch2            5fb     
+start            41f     
+tahex            71d     
+tbe            =   2     
+tlop             4b1     
+tmem             499     
+vmlop            5de     
+wtmark           68e     
+zloop            57c     
+
