@@ -48,7 +48,11 @@ entity Am2901c is
            ovr : out  STD_LOGIC;
            c_n4 : out  STD_LOGIC;
            f_0 : out  STD_LOGIC;
-           f3 : out  STD_LOGIC);
+           f3 : out  STD_LOGIC;
+			  --- DEBUG PORT ---
+			  debug_regsel: in STD_LOGIC_VECTOR(3 downto 0);
+			  debug_regval: out STD_LOGIC_VECTOR(3 downto 0)
+			);
 end Am2901c;
 
 architecture Behavioral of Am2901c is
@@ -160,17 +164,21 @@ f <= f1(4 downto 1);
 y_int <= a_latch when (dst = rama) else f;
 
 --- INPUTS & OUTPUTS ---
-with dst select
-	ram0 <= f(0) when ramqd | ramd, 'Z' when others;
+with dst select ram0 <= 
+	f(0) when ramqd | ramd,
+	'Z' when others;
 
-with dst select
-	ram3 <= f(3) when ramqu | ramu, 'Z' when others;
+with dst select ram3 <= 
+	f(3) when ramqu | ramu, 
+	'Z' when others;
 
-with dst select
-	qs0 <= q(0) when ramqd, 'Z' when others;
+with dst select qs0 <= 
+	q(0) when ramqd, 
+	'Z' when others;
 
-with dst select
-	qs3 <= q(3) when ramqu, 'Z' when others;
+with dst select qs3 <= 
+	q(3) when ramqu, 
+	'Z' when others;
 	
 --- OUTPUTS ---
 c_n4 <= f1(5);
@@ -192,6 +200,9 @@ p_bar <= not(
 ovr <= f1(5) xor f1(4); --'1' when (f1(5) /= f1(4)) else '0';
 
 y <= y_int when (oe = '0') else "ZZZZ";	 
+
+-- DEBUG PORT --
+debug_regval <= ram(to_integer(unsigned(debug_regsel)));
 
 end Behavioral;
 

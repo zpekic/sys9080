@@ -1,0 +1,179 @@
+binary-debuggable-source
+0000 0000 f timplot.asm
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ; "fast" plot for TIM-011 (with "clear screen" test routine)
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2020
+0000 0000 s ;--------------------------------------------------------------------------
+0800 0800 s 	org 0x0800	; some place in ROM or RAM
+0800 0800 s 
+0800 0800 s ; ------------------------------------------------------------	
+0800 0800 s ; test routine - fill screen with all 4 colors and then return
+0800 0800 s ; ------------------------------------------------------------
+0800 0800 d 110300
+0800 0800 s testplot	ld de, 3	;colors from 3 downto 0
+0803 0803 d 01ff00
+0803 0803 s c_loop		ld bc, 255	;Y from 255 downto 0
+0806 0806 d 21ff01
+0806 0806 s y_loop		ld hl, 511	;X from 511 downto 0
+0809 0809 s 
+0809 0809 d cd2508
+0809 0809 s x_loop		call fastplot
+080c 080c s 
+080c 080c d 7c
+080c 080c s 		ld a, h		;X == 0?
+080d 080d d b5
+080d 080d s 		or l
+080e 080e d ca1508
+080e 080e s 		jz y_next
+0811 0811 d 2b
+0811 0811 s 		dec hl		;X--
+0812 0812 d c30908
+0812 0812 s 		jmp x_loop	
+0815 0815 s 
+0815 0815 d 78
+0815 0815 s y_next		ld a, b		;Y == 0?
+0816 0816 d b1
+0816 0816 s 		or c
+0817 0817 d ca1e08
+0817 0817 s 		jz c_next
+081a 081a d 0b
+081a 081a s 		dec bc		;Y--
+081b 081b d c30608
+081b 081b s 		jmp y_loop
+081e 081e s 
+081e 081e d 7a
+081e 081e s c_next		ld a, d		;color == 0?
+081f 081f d b3
+081f 081f s 		or e
+0820 0820 d c8
+0820 0820 s 		rz		;yes, all colors drawn, return
+0821 0821 d 1b
+0821 0821 s 		dec de
+0822 0822 d c30308
+0822 0822 s 		jmp c_loop
+0825 0825 s 
+0825 0825 s ; -------------------------------------------------------
+0825 0825 s ; Set pixel on TIM-011 screen, call with:
+0825 0825 s ; HL = X (normalize to 0..511) 
+0825 0825 s ; BC = Y (normalize to 0..255), 
+0825 0825 s ; DE = color (normalize to 0..3)
+0825 0825 s ; Note: byte address is 1yyyyyyy yxxxxxxx in 64k I/O space
+0825 0825 s ; -------------------------------------------------------
+0825 0825 d f5
+0825 0825 s fastplot	push af		;save regs
+0826 0826 d c5
+0826 0826 s 		push bc		;????????yyyyyyyy
+0827 0827 d d5
+0827 0827 s 		push de		;??????????????cc
+0828 0828 d e5
+0828 0828 s 		push hl		;???????xxxxxxxxx
+0829 0829 s 
+0829 0829 s ;--- handle Y
+0829 0829 d 41
+0829 0829 s 		ld b, c		;BC = yyyyyyyyyyyyyyyy 
+082a 082a d 0e00
+082a 082a s 		ld c, 0x00	;BC = yyyyyyyy00000000 (sanitize Y)
+082c 082c d 37
+082c 082c s 		scf	
+082d 082d d cb18
+082d 082d s 		rr b		;BC = 1yyyyyyy00000000, CY = y0
+082f 082f d cb19
+082f 082f s 		rr c		;BC = 1yyyyyyyy0000000
+0831 0831 s 				
+0831 0831 s ;--- handle X and color
+0831 0831 d 7c
+0831 0831 s 		ld a, h
+0832 0832 d e601
+0832 0832 s 		and a, 0x01	
+0834 0834 d 67
+0834 0834 s 		ld h, a		;HL = 0000000xxxxxxxxx (sanitize X)	
+0835 0835 s 
+0835 0835 d 1600
+0835 0835 s 		ld d, 0x00
+0837 0837 d 7b
+0837 0837 s 		ld a, e
+0838 0838 d e603
+0838 0838 s 		and a, 0x03
+083a 083a d 5f
+083a 083a s 		ld e, a		;DE = 00000000000000cc (sanitize color)
+083b 083b s 
+083b 083b d cb2c
+083b 083b s 		sra h		;HL = 00000000xxxxxxxx, CY = x8
+083d 083d d cb1d
+083d 083d s 		rr l		;HL = 00000000xxxxxxxx, CY = x0
+083f 083f d cb12
+083f 083f s 		rl d		;DE = 0000000000000ccx
+0841 0841 d cb2d
+0841 0841 s 		sra l		;HL = 000000000xxxxxxx, CY = x1
+0843 0843 d cb12
+0843 0843 s 		rl d		;DE = 000000000000ccxx, note C1 C0 X0 X1 (lower 2 x-bits reversed!)
+0845 0845 s 					
+0845 0845 s ;--- create video RAM base address
+0845 0845 d 09
+0845 0845 s 		add hl, bc	;HL = 1yyyyyyyyxxxxxxx
+0846 0846 d 4d
+0846 0846 s 		ld c, l
+0847 0847 d 44
+0847 0847 s 		ld b, h		;BC = 1yyyyyyyyxxxxxxx (video RAM address for indirect I/O)
+0848 0848 s 
+0848 0848 s ;--- apply to video RAM
+0848 0848 d ed78
+0848 0848 s 		in a, (c)	;load byte from video RAM
+084a 084a s 		
+084a 084a d 215b08
+084a 084a s 		ld hl, mask_clr
+084d 084d d 19
+084d 084d s 		add hl, de
+084e 084e d a6
+084e 084e s 		and (hl)	;clear appropriate 2 bits
+084f 084f s 
+084f 084f d 216b08
+084f 084f s 		ld hl, mask_set
+0852 0852 d 19
+0852 0852 s 		add hl, de
+0853 0853 d b6
+0853 0853 s 		or (hl)		;set same 2 bits with right color
+0854 0854 s 
+0854 0854 d ed79
+0854 0854 s 		out (c), a	;write back to video RAM
+0856 0856 s 
+0856 0856 s ;--- 
+0856 0856 d e1
+0856 0856 s 		pop hl		;restore and return
+0857 0857 d d1
+0857 0857 s 		pop de
+0858 0858 d c1
+0858 0858 s 		pop bc
+0859 0859 d f1
+0859 0859 s 		pop af
+085a 085a d c9
+085a 085a s 		ret
+085b 085b s 
+085b 085b s ;masks for clearing bits for x mod 3 (color is not important)
+085b 085b d cffc3ff3
+085b 085b s mask_clr	db 11001111b, 11111100b, 00111111b, 11110011b;	color 0: pix 0, 2, 1, 3 
+085f 085f d cffc3ff3
+085f 085f s 		db 11001111b, 11111100b, 00111111b, 11110011b;	color 1: pix 0, 2, 1, 3 
+0863 0863 d cffc3ff3
+0863 0863 s 		db 11001111b, 11111100b, 00111111b, 11110011b;	color 2: pix 0, 2, 1, 3 
+0867 0867 d cffc3ff3
+0867 0867 s 		db 11001111b, 11111100b, 00111111b, 11110011b;	color 3: pix 0, 2, 1, 3 
+086b 086b s 
+086b 086b s ;masks for setting bits for x mod 3 (color is taken into account)
+086b 086b d 00000000
+086b 086b s mask_set	db 00000000b, 00000000b, 00000000b, 00000000b; 	color 0: pix 0, 2, 1, 3 
+086f 086f d 10014004
+086f 086f s 		db 00010000b, 00000001b, 01000000b, 00000100b; 	color 1: pix 0, 2, 1, 3 
+0873 0873 d 20028008
+0873 0873 s 		db 00100000b, 00000010b, 10000000b, 00001000b; 	color 2: pix 0, 2, 1, 3 
+0877 0877 d 3003c00c
+0877 0877 s 		db 00110000b, 00000011b, 11000000b, 00001100b; 	color 3: pix 0, 2, 1, 3 
+0803 a c_loop
+081e a c_next
+0809 a x_loop
+0806 a y_loop
+0815 a y_next
+085b a mask_clr
+086b a mask_set
+0825 a fastplot
+0800 a testplot

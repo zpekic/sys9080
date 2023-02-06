@@ -1,0 +1,170 @@
+binary-debuggable-source
+0000 0000 f sys9080.asm
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ; Common definitions for  Sys9080 project https://github.com/zpekic/sys9080
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2017, 2018
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ACIA0_STATUS	EQU 0x10; status read-only
+0000 0000 s ACIA0_DATA		EQU 0x11; data send/receive
+0000 0000 s 
+0000 0000 s ACIA1_STATUS	EQU 0x12; status read-only
+0000 0000 s ACIA1_DATA		EQU 0x13; data send/receive
+0000 0000 s 
+0000 0000 s MASK_VALID	EQU 0x01; fields in UART status register
+0000 0000 s MASK_READY	EQU 0x02;
+0000 0000 s MASK_ERROR	EQU 0x40;
+0000 0000 s MASK_INTREQ	EQU 0x80;
+0000 0000 s 
+0000 0000 s PORT0		EQU 0x00; switches when reading, LEDs when writing
+0000 0000 s PORT1		EQU 0x01; buttons (3..0) when reading, LEDs when writing
+0000 0000 s PORT2		EQU 0x02; slider switches when reading, LEDs when writing
+0000 0000 s PORT_COL	EQU 0x03; hex key colums 3..0 when writing
+0000 0000 s PORT_ROW	EQU 0x03; hex key rows 3..0 when reading
+0000 0000 s PORT_VGATRACE	EQU 0xFF; write only port for VGA tracing (only ASCII char!)
+0000 0000 s ; writing to following ports will set / reset flip flops
+0000 0000 s CPUTRACEOFF	EQU 0x04; OUT CPUTRACEOFF to turn off CPU tracing
+0000 0000 s CPUTRACEON	EQU 0x05; OUT CPUTRACEON to turn on CPU tracing
+0000 0000 s BUSTRACEOFF	EQU 0x06; OUT BUSTRACEOFF to turn off bus tracing
+0000 0000 s BUSTRACEON	EQU 0x07; OUT BUSTRACEON to turn on bus tracing
+0000 0000 s 
+0000 0000 s MASK_BUTTON0	EQU 0x01;
+0000 0000 s MASK_BUTTON1	EQU 0x02;
+0000 0000 s MASK_BUTTON2	EQU 0x04;
+0000 0000 s MASK_BUTTON3	EQU 0x08;
+0000 0000 s MASK_SW0	EQU 0x01;
+0000 0000 s MASK_SW1	EQU 0x02;
+0000 0000 s MASK_SW2	EQU 0x04;
+0000 0000 s MASK_SW3	EQU 0x08;
+0000 0000 s MASK_SW4	EQU 0x10;
+0000 0000 s MASK_SW5	EQU 0x20;
+0000 0000 s MASK_SW6	EQU 0x40;
+0000 0000 s MASK_SW7	EQU 0x80;
+0000 0000 s 
+0000 0000 s ;-------------------------------------------------------------
+0000 0000 s AltMon		EQU 0x0400; Altmon is org'd to this location
+0000 0000 s 
+0000 0000 s ;-------------------------------------------------------------
+0000 0000 s VdpRam		EQU 0x0C00; text video memory, 512b
+0000 0000 s VdpFgColor	EQU VdpRam + 0x1FE	;write only, RRRGGGBB
+0000 0000 s VdpBkColor	EQU VdpRam + 0x1FF	;write only, RRRGGGBB
+0000 0000 s VdpCols		EQU VdpRam + 0x1FE	;read only, should be 30
+0000 0000 s VdpRows		EQU VdpRam + 0x1FF	;read only, should be 17
+0000 0000 s RamBottom	EQU 0xFE00
+0000 0000 s Heap		EQU RamBottom + 0x0180
+0000 0000 s Temp_PC		EQU Heap; can't use DW because the hex file maps to ROM only
+0000 0000 s CursorCol	EQU Heap + 2
+0000 0000 s CursorRow	EQU Heap + 3
+0000 0000 s 
+0000 0000 s ;Some ASCII codes with special handling during PrintCharText
+0000 0000 s CS 	EQU 1   ;CS: Clear Screen      
+0000 0000 s HM 	EQU 2   ;HM: HoMe cursor       
+0000 0000 s NL 	EQU 13  ;NL: New Line
+0000 0000 s CR 	EQU 13  ;CR: Carriage return == NL       
+0000 0000 s LF 	EQU 10  ;LF: Line Feed       
+0000 0000 s ML 	EQU  3  ;ML: Move cursor Left          
+0000 0000 s MR 	EQU  4  ;MR: Move cursor Right         
+0000 0000 s MU 	EQU  5  ;MU: Move cursor Up          
+0000 0000 s MD 	EQU  6  ;MD: Move cursor Down
+0000 0000 s TB 	EQU  9  ;TB: TaB        
+0000 0000 s BS 	EQU  8  ;BS: BackSpace  
+0000 0000 s 
+0000 0000 s ;--------------------------------------
+0000 0000 s fpuBase	EQU 0xF0	; I/O Mapped version
+0000 0000 s ;fpuBase		EQU 0x0E00	; Mem Mapped version
+0000 0000 s ;-- write access ----------------------
+0000 0000 s fpuId		EQU fpuBase + 0
+0000 0000 s fpuOperation	EQU fpuBase + 2
+0000 0000 s fpuOperand1Lo	EQU fpuBase + 4
+0000 0000 s fpuOperand1Hi	EQU fpuBase + 6
+0000 0000 s fpuOperand2Lo	EQU fpuBase + 8
+0000 0000 s fpuOperand2Hi	EQU fpuBase + 10
+0000 0000 s ;-- read access -----------------------
+0000 0000 s fpuDone		EQU fpuBase + 0
+0000 0000 s fpuStatus	EQU fpuBase + 2
+0000 0000 s fpuResultLo	EQU fpuBase + 4
+0000 0000 s fpuResultHi	EQU fpuBase + 6
+0000 0000 s fpuCycles	EQU fpuBase + 8
+0000 0000 s 
+0000 0000 s ;---------------------------------------
+0000 0000 s ; bus tracer "registers"
+0000 0000 s ;---------------------------------------
+0000 0000 s busTracer	EQU 0x03c0;
+0000 0000 s btMemRead	EQU busTracer + 0
+0000 0000 s btMemWrite	EQU busTracer + 4
+0000 0000 s btIoRead	EQU busTracer + 8
+0000 0000 s btIoWrite	EQU busTracer + 12
+0000 0000 s btFetch		EQU	busTracer + 16
+0000 0000 s btIntAck	EQU busTracer + 20
+0000 0000 s 
+0000 0000 s 
+0006 v md
+000a v lf
+0002 v hm
+0001 v cs
+000d v cr
+0009 v tb
+0003 v ml
+000d v nl
+0008 v bs
+0004 v mr
+0005 v mu
+ff80 v heap
+0000 v port0
+0001 v port1
+0002 v port2
+00f0 v fpuid
+0c00 v vdpram
+0400 v altmon
+03d0 v btfetch
+00f0 v fpubase
+ff80 v temp_pc
+00f0 v fpudone
+0dfe v vdpcols
+0dff v vdprows
+0001 v mask_sw0
+0002 v mask_sw1
+0004 v mask_sw2
+0008 v mask_sw3
+0010 v mask_sw4
+0020 v mask_sw5
+0040 v mask_sw6
+0080 v mask_sw7
+03c8 v btioread
+03d4 v btintack
+0003 v port_col
+0003 v port_row
+03c0 v btmemread
+0011 v acia0_data
+0013 v acia1_data
+03c0 v bustracer
+00f8 v fpucycles
+fe00 v rambottom
+03cc v btiowrite
+ff82 v cursorcol
+00f2 v fpustatus
+ff83 v cursorrow
+0001 v mask_valid
+0002 v mask_ready
+0005 v cputraceon
+0040 v mask_error
+0007 v bustraceon
+0dfe v vdpfgcolor
+0dff v vdpbkcolor
+03c4 v btmemwrite
+0004 v cputraceoff
+0006 v bustraceoff
+0080 v mask_intreq
+00f6 v fpuresulthi
+0010 v acia0_status
+0012 v acia1_status
+00f4 v fpuresultlo
+0001 v mask_button0
+0002 v mask_button1
+0004 v mask_button2
+0008 v mask_button3
+00f2 v fpuoperation
+00f6 v fpuoperand1hi
+00fa v fpuoperand2hi
+00f4 v fpuoperand1lo
+00f8 v fpuoperand2lo
+00ff v port_vgatrace

@@ -1,0 +1,49 @@
+DumpTrace:	XTHL			;PC from stack is now in HL
+			SHLD Temp_PC	;store away (making this code non re-entrant)
+			XTHL			;restore PC to stack
+			PUSH H
+			PUSH D
+			PUSH B
+			PUSH PSW
+
+			PUSH H
+			PUSH D
+			PUSH B
+			PUSH PSW
+
+			CALL TxInlineString
+			DB CR, LF, "PC=", 0x00
+			LHLD Temp_PC
+			CALL TxValueOfHL
+
+			CALL TxInlineString
+			DB " AF=", 0x00
+			POP H
+			CALL TxValueOfHL
+			
+			CALL TxInlineString
+			DB " BC=", 0x00
+			POP H
+			CALL TxValueOfHL
+
+			CALL TxInlineString
+			DB " DE=", 0x00
+			POP H
+			CALL TxValueOfHL
+
+			CALL TxInlineString
+			DB " HL=", 0x00
+			POP H
+			CALL TxValueOfHL
+
+			;CALL TxInlineString
+			;DB CR, LF, 0x00
+			
+			POP PSW
+			POP B
+			POP D
+			POP H
+			
+			;OUT CPUTRACEON
+			EI
+			RET

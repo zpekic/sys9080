@@ -1,0 +1,914 @@
+binary-debuggable-source
+0000 0000 f boot.asm
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ; Simple test program for Sys9080 project https://github.com/zpekic/sys9080
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2017, 2018
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s 
+0000 0000 s include ./sys9080.asm
+0000 0000 f ./sys9080.asm
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ; Common definitions for  Sys9080 project https://github.com/zpekic/sys9080
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2017, 2018
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ACIA0_STATUS	EQU 0x10; status read-only
+0000 0000 s ACIA0_DATA		EQU 0x11; data send/receive
+0000 0000 s 
+0000 0000 s ACIA1_STATUS	EQU 0x12; status read-only
+0000 0000 s ACIA1_DATA		EQU 0x13; data send/receive
+0000 0000 s 
+0000 0000 s MASK_VALID	EQU 0x01; fields in UART status register
+0000 0000 s MASK_READY	EQU 0x02;
+0000 0000 s MASK_ERROR	EQU 0x40;
+0000 0000 s MASK_INTREQ	EQU 0x80;
+0000 0000 s 
+0000 0000 s PORT0		EQU 0x00; switches when reading, LEDs when writing
+0000 0000 s PORT1		EQU 0x01; buttons (3..0) when reading, LEDs when writing
+0000 0000 s PORT2		EQU 0x02; slider switches when reading, LEDs when writing
+0000 0000 s PORT_COL	EQU 0x03; hex key colums 3..0 when writing
+0000 0000 s PORT_ROW	EQU 0x03; hex key rows 3..0 when reading
+0000 0000 s PORT_VGATRACE	EQU 0xFF; write only port for VGA tracing (only ASCII char!)
+0000 0000 s ; writing to following ports will set / reset flip flops
+0000 0000 s CPUTRACEOFF	EQU 0x04; OUT CPUTRACEOFF to turn off CPU tracing
+0000 0000 s CPUTRACEON	EQU 0x05; OUT CPUTRACEON to turn on CPU tracing
+0000 0000 s BUSTRACEOFF	EQU 0x06; OUT BUSTRACEOFF to turn off bus tracing
+0000 0000 s BUSTRACEON	EQU 0x07; OUT BUSTRACEON to turn on bus tracing
+0000 0000 s 
+0000 0000 s MASK_BUTTON0	EQU 0x01;
+0000 0000 s MASK_BUTTON1	EQU 0x02;
+0000 0000 s MASK_BUTTON2	EQU 0x04;
+0000 0000 s MASK_BUTTON3	EQU 0x08;
+0000 0000 s MASK_SW0	EQU 0x01;
+0000 0000 s MASK_SW1	EQU 0x02;
+0000 0000 s MASK_SW2	EQU 0x04;
+0000 0000 s MASK_SW3	EQU 0x08;
+0000 0000 s MASK_SW4	EQU 0x10;
+0000 0000 s MASK_SW5	EQU 0x20;
+0000 0000 s MASK_SW6	EQU 0x40;
+0000 0000 s MASK_SW7	EQU 0x80;
+0000 0000 s 
+0000 0000 s ;-------------------------------------------------------------
+0000 0000 s AltMon		EQU 0x0400; Altmon is org'd to this location
+0000 0000 s 
+0000 0000 s ;-------------------------------------------------------------
+0000 0000 s VdpRam		EQU 0x0C00; text video memory, 512b
+0000 0000 s VdpFgColor	EQU VdpRam + 0x1FE	;write only, RRRGGGBB
+0000 0000 s VdpBkColor	EQU VdpRam + 0x1FF	;write only, RRRGGGBB
+0000 0000 s VdpCols		EQU VdpRam + 0x1FE	;read only, should be 30
+0000 0000 s VdpRows		EQU VdpRam + 0x1FF	;read only, should be 17
+0000 0000 s RamBottom	EQU 0xFE00
+0000 0000 s Heap		EQU RamBottom + 0x0180
+0000 0000 s Temp_PC		EQU Heap; can't use DW because the hex file maps to ROM only
+0000 0000 s CursorCol	EQU Heap + 2
+0000 0000 s CursorRow	EQU Heap + 3
+0000 0000 s 
+0000 0000 s ;Some ASCII codes with special handling during PrintCharText
+0000 0000 s CS 	EQU 1   ;CS: Clear Screen      
+0000 0000 s HM 	EQU 2   ;HM: HoMe cursor       
+0000 0000 s NL 	EQU 13  ;NL: New Line
+0000 0000 s CR 	EQU 13  ;CR: Carriage return == NL       
+0000 0000 s LF 	EQU 10  ;LF: Line Feed       
+0000 0000 s ML 	EQU  3  ;ML: Move cursor Left          
+0000 0000 s MR 	EQU  4  ;MR: Move cursor Right         
+0000 0000 s MU 	EQU  5  ;MU: Move cursor Up          
+0000 0000 s MD 	EQU  6  ;MD: Move cursor Down
+0000 0000 s TB 	EQU  9  ;TB: TaB        
+0000 0000 s BS 	EQU  8  ;BS: BackSpace  
+0000 0000 s 
+0000 0000 s ;--------------------------------------
+0000 0000 s fpuBase	EQU 0xF0	; I/O Mapped version
+0000 0000 s ;fpuBase		EQU 0x0E00	; Mem Mapped version
+0000 0000 s ;-- write access ----------------------
+0000 0000 s fpuId		EQU fpuBase + 0
+0000 0000 s fpuOperation	EQU fpuBase + 2
+0000 0000 s fpuOperand1Lo	EQU fpuBase + 4
+0000 0000 s fpuOperand1Hi	EQU fpuBase + 6
+0000 0000 s fpuOperand2Lo	EQU fpuBase + 8
+0000 0000 s fpuOperand2Hi	EQU fpuBase + 10
+0000 0000 s ;-- read access -----------------------
+0000 0000 s fpuDone		EQU fpuBase + 0
+0000 0000 s fpuStatus	EQU fpuBase + 2
+0000 0000 s fpuResultLo	EQU fpuBase + 4
+0000 0000 s fpuResultHi	EQU fpuBase + 6
+0000 0000 s fpuCycles	EQU fpuBase + 8
+0000 0000 s 
+0000 0000 s ;---------------------------------------
+0000 0000 s ; bus tracer "registers"
+0000 0000 s ;---------------------------------------
+0000 0000 s busTracer	EQU 0x03c0;
+0000 0000 s btMemRead	EQU busTracer + 0
+0000 0000 s btMemWrite	EQU busTracer + 4
+0000 0000 s btIoRead	EQU busTracer + 8
+0000 0000 s btIoWrite	EQU busTracer + 12
+0000 0000 s btFetch		EQU	busTracer + 16
+0000 0000 s btIntAck	EQU busTracer + 20
+0000 0000 s 
+0000 0000 s 
+0000 0000 f boot.asm
+0000 0000 s 
+0000 0000 s 		ORG 0x0000	;-----RST0 == RESET
+0000 0000 d f3
+0000 0000 s 		DI
+0001 0001 d c31701
+0001 0001 s 		JMP Boot
+0004 0004 s 
+0008 0008 s 		ORG 0x0008	;-----RST1 (TRACE)
+0008 0008 d d3ff
+0008 0008 s 		OUT PORT_VGATRACE
+000a 000a d c9
+000a 000a s 		RET
+000b 000b s 
+0010 0010 s 		ORG 0x0010	;-----RST2 (ACIA1)
+0010 0010 d f3
+0010 0010 s 		DI
+0011 0011 d c3d800
+0011 0011 s 		JMP Acia1ToPort
+0014 0014 s 
+0018 0018 s 		ORG 0x0018	;-----RST3 (no device, execution trap)
+0018 0018 d f3
+0018 0018 s 		DI
+0019 0019 d cd4600
+0019 0019 s 		CALL DumpState
+001c 001c d c33c00
+001c 001c s 		JMP WaitForSS
+001f 001f s 
+0020 0020 s 		ORG 0x0020	;-----RST4 (no device, execution trap)
+0020 0020 d f3
+0020 0020 s 		DI
+0021 0021 d cd4600
+0021 0021 s 		CALL DumpState
+0024 0024 d c33c00
+0024 0024 s 		JMP WaitForSS
+0027 0027 s 
+0028 0028 s 		ORG 0x0028	;-----RST5 (no device, execution trap)
+0028 0028 d f3
+0028 0028 s 		DI
+0029 0029 d cd4600
+0029 0029 s 		CALL DumpState
+002c 002c d c33c00
+002c 002c s 		JMP WaitForSS
+002f 002f s 
+0030 0030 s 		ORG 0x0030	;-----RST6 (BTN1, execution trap)
+0030 0030 d f3
+0030 0030 s 		DI
+0031 0031 d c34600
+0031 0031 s 		JMP DumpState
+0034 0034 d c33c00
+0034 0034 s 		JMP WaitForSS
+0037 0037 s 
+0038 0038 s 		ORG 0x0038	;-----RST7 (BTN0, execution trap)
+0038 0038 d f3
+0038 0038 s 		DI
+0039 0039 d cd4600
+0039 0039 s 		CALL DumpState
+003c 003c d f5
+003c 003c s WaitForSS:	PUSH PSW
+003d 003d d db00
+003d 003d s CheckSW7:	IN PORT0
+003f 003f d 17
+003f 003f s 			RAL		;faster than ANI MASK_SW7
+0040 0040 d d23d00
+0040 0040 s 			JNC CheckSW7
+0043 0043 d f1
+0043 0043 s 			POP PSW
+0044 0044 d fb
+0044 0044 s 			EI
+0045 0045 d c9
+0045 0045 s 			RET
+0046 0046 s 		
+0046 0046 d e3
+0046 0046 s DumpState:	XTHL			;PC from stack is now in HL
+0047 0047 d 2280ff
+0047 0047 s 			SHLD Temp_PC	;store away (making this code non re-entrant)
+004a 004a d e3
+004a 004a s 			XTHL			;restore PC to stack
+004b 004b d e5
+004b 004b s 			PUSH H
+004c 004c d d5
+004c 004c s 			PUSH D
+004d 004d d c5
+004d 004d s 			PUSH B
+004e 004e d f5
+004e 004e s 			PUSH PSW
+004f 004f s 
+004f 004f d e5
+004f 004f s 			PUSH H
+0050 0050 d d5
+0050 0050 s 			PUSH D
+0051 0051 d c5
+0051 0051 s 			PUSH B
+0052 0052 d f5
+0052 0052 s 			PUSH PSW
+0053 0053 s 
+0053 0053 d 21ab02
+0053 0053 s 			LXI H, TextAF
+0056 0056 d cd3c02
+0056 0056 s 			CALL TxStringAtHL
+0059 0059 d e3
+0059 0059 s 			XTHL
+005a 005a d cd6602
+005a 005a s 			CALL TxValueOfHL
+005d 005d d e1
+005d 005d s 			POP H
+005e 005e s 			
+005e 005e d 21b202
+005e 005e s 			LXI H, TextBC
+0061 0061 d cd3c02
+0061 0061 s 			CALL TxStringAtHL
+0064 0064 d e3
+0064 0064 s 			XTHL
+0065 0065 d cd6602
+0065 0065 s 			CALL TxValueOfHL
+0068 0068 d cd5502
+0068 0068 s 			CALL BytesAtHL
+006b 006b d e1
+006b 006b s 			POP H
+006c 006c s 
+006c 006c d 21b902
+006c 006c s 			LXI H, TextDE
+006f 006f d cd3c02
+006f 006f s 			CALL TxStringAtHL
+0072 0072 d e3
+0072 0072 s 			XTHL
+0073 0073 d cd6602
+0073 0073 s 			CALL TxValueOfHL
+0076 0076 d cd5502
+0076 0076 s 			CALL BytesAtHL
+0079 0079 d e1
+0079 0079 s 			POP H
+007a 007a s 
+007a 007a d 21c002
+007a 007a s 			LXI H, TextHL
+007d 007d d cd3c02
+007d 007d s 			CALL TxStringAtHL
+0080 0080 d e3
+0080 0080 s 			XTHL
+0081 0081 d cd6602
+0081 0081 s 			CALL TxValueOfHL
+0084 0084 d cd5502
+0084 0084 s 			CALL BytesAtHL
+0087 0087 d e1
+0087 0087 s 			POP H
+0088 0088 s 
+0088 0088 d 21c702
+0088 0088 s 			LXI H, TextPC
+008b 008b d cd3c02
+008b 008b s 			CALL TxStringAtHL
+008e 008e d 2a80ff
+008e 008e s 			LHLD Temp_PC
+0091 0091 d cd6602
+0091 0091 s 			CALL TxValueOfHL
+0094 0094 d cd5502
+0094 0094 s 			CALL BytesAtHL
+0097 0097 s 
+0097 0097 d 21ce02
+0097 0097 s 			LXI H, TextSP
+009a 009a d cd3c02
+009a 009a s 			CALL TxStringAtHL
+009d 009d d 11ffff
+009d 009d s 			LXI D, 0xFFFF		;start searching for stack position from top of memory down
+00a0 00a0 d 2a80ff
+00a0 00a0 s 			LHLD Temp_PC
+00a3 00a3 d eb
+00a3 00a3 s 			XCHG			;HL = 0xFFFF, DE = PC to search for
+00a4 00a4 d 7a
+00a4 00a4 s SearchForPC:MOV A, D
+00a5 00a5 d be
+00a5 00a5 s 			CMP M
+00a6 00a6 d c2c200
+00a6 00a6 s 			JNZ NotFound
+00a9 00a9 d 2b
+00a9 00a9 s 			DCX H
+00aa 00aa d 7b
+00aa 00aa s 			MOV A, E
+00ab 00ab d be
+00ab 00ab s 			CMP M
+00ac 00ac d c2a400
+00ac 00ac s 			JNZ SearchForPC
+00af 00af d cd6602
+00af 00af s 			CALL TxValueOfHL
+00b2 00b2 d cd5502
+00b2 00b2 s 			CALL BytesAtHL
+00b5 00b5 d 3e0d
+00b5 00b5 s 			MVI A, CR
+00b7 00b7 d cd8302
+00b7 00b7 s 			CALL SendChar
+00ba 00ba d 3e0a
+00ba 00ba s 			MVI A, LF
+00bc 00bc d cd8302
+00bc 00bc s 			CALL SendChar
+00bf 00bf d c3c600
+00bf 00bf s 			JMP RestoreRegs
+00c2 00c2 d 2b
+00c2 00c2 s NotFound:	DCX H
+00c3 00c3 d c3a400
+00c3 00c3 s 			JMP SearchForPC
+00c6 00c6 s 
+00c6 00c6 d f1
+00c6 00c6 s RestoreRegs:	POP PSW
+00c7 00c7 d c1
+00c7 00c7 s 		POP B
+00c8 00c8 d d1
+00c8 00c8 s 		POP D
+00c9 00c9 d e1
+00c9 00c9 s 		POP H
+00ca 00ca d fb
+00ca 00ca s 		EI
+00cb 00cb d c9
+00cb 00cb s 		RET
+00cc 00cc s ;-------------------------------------------
+00cc 00cc d f5
+00cc 00cc s Acia0toPort:	PUSH PSW
+00cd 00cd d db10
+00cd 00cd s 		IN ACIA0_STATUS
+00cf 00cf d d300
+00cf 00cf s 		OUT PORT0
+00d1 00d1 d db11
+00d1 00d1 s 		IN ACIA0_DATA
+00d3 00d3 d d301
+00d3 00d3 s 		OUT PORT1
+00d5 00d5 d f1
+00d5 00d5 s 		POP PSW
+00d6 00d6 d fb
+00d6 00d6 s 		EI
+00d7 00d7 d c9
+00d7 00d7 s 		RET
+00d8 00d8 s 
+00d8 00d8 d f5
+00d8 00d8 s Acia1toPort:	PUSH PSW
+00d9 00d9 d db12
+00d9 00d9 s 		IN ACIA1_STATUS
+00db 00db d d300
+00db 00db s 		OUT PORT0
+00dd 00dd d db13
+00dd 00dd s 		IN ACIA1_DATA
+00df 00df d d301
+00df 00df s 		OUT PORT1
+00e1 00e1 d f1
+00e1 00e1 s 		POP PSW
+00e2 00e2 d fb
+00e2 00e2 s 		EI
+00e3 00e3 d c9
+00e3 00e3 s 		RET
+00e4 00e4 s 
+00e4 00e4 d f5
+00e4 00e4 s OnByteReceived:	PUSH PSW
+00e5 00e5 d db01
+00e5 00e5 s 				IN PORT1		;hooked up to 4 push buttons
+00e7 00e7 d e602
+00e7 00e7 s 				ANI MASK_BUTTON1
+00e9 00e9 d ca1401
+00e9 00e9 s 				JZ ProcessByte	
+00ec 00ec d e5
+00ec 00ec s 				PUSH H
+00ed 00ed d d5
+00ed 00ed s 				PUSH D
+00ee 00ee d c5
+00ee 00ee s 				PUSH B
+00ef 00ef s 
+00ef 00ef d db12
+00ef 00ef s 				IN ACIA1_STATUS		
+00f1 00f1 d 67
+00f1 00f1 s 				MOV H, A
+00f2 00f2 d db13
+00f2 00f2 s 				IN ACIA1_DATA
+00f4 00f4 d 6f
+00f4 00f4 s 				MOV L, A
+00f5 00f5 d e5
+00f5 00f5 s 				PUSH H
+00f6 00f6 s 
+00f6 00f6 d db10
+00f6 00f6 s 				IN ACIA0_STATUS		
+00f8 00f8 d 67
+00f8 00f8 s 				MOV H, A
+00f9 00f9 d db11
+00f9 00f9 s 				IN ACIA0_DATA
+00fb 00fb d 6f
+00fb 00fb s 				MOV L, A
+00fc 00fc d e5
+00fc 00fc s 				PUSH H
+00fd 00fd s 
+00fd 00fd d 21d502
+00fd 00fd s 				LXI H, TextACIA0
+0100 0100 d cd3c02
+0100 0100 s 				CALL TxStringAtHL
+0103 0103 d e1
+0103 0103 s 				POP H
+0104 0104 d cd6602
+0104 0104 s 				CALL TxValueOfHL
+0107 0107 s 
+0107 0107 d 21df02
+0107 0107 s 				LXI H, TextACIA1
+010a 010a d cd3c02
+010a 010a s 				CALL TxStringAtHL
+010d 010d d e1
+010d 010d s 				POP H
+010e 010e d cd6602
+010e 010e s 				CALL TxValueOfHL
+0111 0111 s 
+0111 0111 d c1
+0111 0111 s 				POP B
+0112 0112 d d1
+0112 0112 s 				POP D
+0113 0113 d e1
+0113 0113 s 				POP H
+0114 0114 d f1
+0114 0114 s ProcessByte:	POP PSW
+0115 0115 d fb
+0115 0115 s 				EI
+0116 0116 d c9
+0116 0116 s 				RET
+0117 0117 s ;-------------------------------------------
+0117 0117 d 210000
+0117 0117 s Boot:			LXI H, 0000H
+011a 011a s 				;DCX H
+011a 011a d f9
+011a 011a s 				SPHL
+011b 011b d cdcb01
+011b 011b s 				CALL InitAcias
+011e 011e d cd4602
+011e 011e s 				CALL TxInlineString
+0121 0121 d 0d0a2a2a2a20537973393038302069732072656164792e2052414d20402000
+0121 0121 s TextGreet1:		DB CR, LF, "*** Sys9080 is ready. RAM @ ", 0x00
+0140 0140 d db00
+0140 0140 s 				IN PORT0
+0142 0142 d e640
+0142 0142 s 				ANI 01000000B
+0144 0144 d ca5701
+0144 0144 s 				JZ TestRam		;if using "fast" clock then check RAM, otherwise skip
+0147 0147 d cd4602
+0147 0147 s 				CALL TxInlineString
+014a 014a d 28736b69707065642900
+014a 014a s 				DB "(skipped)", 0x00
+0154 0154 d c36301
+0154 0154 s 				JMP TextPort
+0157 0157 d cd9102
+0157 0157 s TestRam:		CALL GetLowestRam
+015a 015a d 7d
+015a 015a s 				MOV A, L
+015b 015b d d300
+015b 015b s 				OUT PORT0
+015d 015d d 7c
+015d 015d s 				MOV A, H
+015e 015e d d301
+015e 015e s 				OUT PORT1		;display on LEDs
+0160 0160 d cd6602
+0160 0160 s 				CALL TxValueOfHL	;display on console
+0163 0163 d cd4602
+0163 0163 s TextPort:		CALL TxInlineString
+0166 0166 d 2053776974636865733d2000
+0166 0166 s 				DB " Switches= ", 0x00
+0172 0172 d db00
+0172 0172 s 				IN PORT0	;big slider switches
+0174 0174 d 6f
+0174 0174 s 				MOV L, A
+0175 0175 d db02
+0175 0175 s 				IN PORT2	;dip switches B4...B1 A4..A1
+0177 0177 d 67
+0177 0177 s 				MOV H, A
+0178 0178 d cd6602
+0178 0178 s 				CALL TxValueOfHL
+017b 017b d cd4602
+017b 017b s 				CALL TxInlineString
+017e 017e d 2056647020726f77732f636f6c733d2000
+017e 017e s TextVdp:		DB " Vdp rows/cols= ", 0x00	
+018f 018f d 2afe0d
+018f 018f s 				LHLD VdpCols
+0192 0192 d cd6602
+0192 0192 s 				CALL TxValueOfHL
+0195 0195 d cd4602
+0195 0195 s 				CALL TxInlineString
+0198 0198 d 202a2a2a0d0a20202842544e302f3120746f2064756d70204350552f4143494173207374617465290d0a00
+0198 0198 s TextGreet2:		DB " ***", CR, LF, "  (BTN0/1 to dump CPU/ACIAs state)", CR, LF, 0x00
+01c3 01c3 d 3e01
+01c3 01c3 s 				MVI A, CS
+01c5 01c5 d d3ff
+01c5 01c5 s 				OUT PORT_VGATRACE
+01c7 01c7 d fb
+01c7 01c7 s 				EI 
+01c8 01c8 s ;				HLT			;interrupt is needed to go further
+01c8 01c8 s ;-------------------------------------------------------------------------
+01c8 01c8 d c30004
+01c8 01c8 s 				JMP AltMon		;enter monitor program
+01cb 01cb s ;-------------------------------------------------------------------------
+01cb 01cb d 3e03
+01cb 01cb s InitAcias:		MVI	a,3		;reset 6850 uart
+01cd 01cd d d310
+01cd 01cd s 				OUT	ACIA0_STATUS
+01cf 01cf d d312
+01cf 01cf s 				OUT	ACIA1_STATUS	;2nd 2SIO port as well
+01d1 01d1 d db02
+01d1 01d1 s 				IN	PORT2		;slide switches contain ACIA mode
+01d3 01d3 d d302
+01d3 01d3 s 				OUT PORT2		;reflect on LEDs
+01d5 01d5 d 3e10
+01d5 01d5 s 				MVI	a,10h		;8N2, baudrate clock / 1 (== 38400)
+01d7 01d7 s 				;NOP
+01d7 01d7 s 				;NOP
+01d7 01d7 d d310
+01d7 01d7 s 				OUT	ACIA0_STATUS
+01d9 01d9 d d312
+01d9 01d9 s 				OUT	ACIA1_STATUS	;2nd 2SIO port as well
+01db 01db d c9
+01db 01db s 				RET
+01dc 01dc s 
+01dc 01dc s ;PrintAsciiSet: LXI B, 0D20H		;set C to ASCII space
+01dc 01dc s ;SendNextChar: 	MOV A, C
+01dc 01dc s ;		CALL SendChar		;send char
+01dc 01dc s ;		CPI "~"			;end of printable chars reached?
+01dc 01dc s ;		JZ NextLine
+01dc 01dc s ;		INR C
+01dc 01dc s ;		JMP SendNextChar
+01dc 01dc s ;NextLine:	MOV A, B
+01dc 01dc s ;		CALL SendChar		;send char
+01dc 01dc s ;		XRI 00000110B		;cheap trick to convert newline to linefeed 
+01dc 01dc s ;		CALL SendChar		;send char
+01dc 01dc s ;		RET
+01dc 01dc s 
+01dc 01dc d e5
+01dc 01dc s DumpTrace:		PUSH H
+01dd 01dd d d5
+01dd 01dd s 				PUSH D
+01de 01de d c5
+01de 01de s 				PUSH B
+01df 01df d f5
+01df 01df s 				PUSH PSW
+01e0 01e0 s 
+01e0 01e0 d cd4602
+01e0 01e0 s 				CALL TxInlineString
+01e3 01e3 d 41463d00
+01e3 01e3 s 				DB "AF=", 0x00
+01e7 01e7 d e3
+01e7 01e7 s 				XTHL
+01e8 01e8 d cd6602
+01e8 01e8 s 				CALL TxValueOfHL
+01eb 01eb d e3
+01eb 01eb s 				XTHL
+01ec 01ec d 33
+01ec 01ec s 				INX SP
+01ed 01ed d 33
+01ed 01ed s 				INX SP
+01ee 01ee s 				
+01ee 01ee d cd4602
+01ee 01ee s 				CALL TxInlineString
+01f1 01f1 d 2042433d00
+01f1 01f1 s 				DB " BC=", 0x00
+01f6 01f6 d e3
+01f6 01f6 s 				XTHL
+01f7 01f7 d cd6602
+01f7 01f7 s 				CALL TxValueOfHL
+01fa 01fa d e3
+01fa 01fa s 				XTHL
+01fb 01fb d 33
+01fb 01fb s 				INX SP
+01fc 01fc d 33
+01fc 01fc s 				INX SP
+01fd 01fd s 
+01fd 01fd d cd4602
+01fd 01fd s 				CALL TxInlineString
+0200 0200 d 2044453d00
+0200 0200 s 				DB " DE=", 0x00
+0205 0205 d e3
+0205 0205 s 				XTHL
+0206 0206 d cd6602
+0206 0206 s 				CALL TxValueOfHL
+0209 0209 d e3
+0209 0209 s 				XTHL
+020a 020a d 33
+020a 020a s 				INX SP
+020b 020b d 33
+020b 020b s 				INX SP
+020c 020c s 
+020c 020c d cd4602
+020c 020c s 				CALL TxInlineString
+020f 020f d 20484c3d00
+020f 020f s 				DB " HL=", 0x00
+0214 0214 d e3
+0214 0214 s 				XTHL
+0215 0215 d cd6602
+0215 0215 s 				CALL TxValueOfHL
+0218 0218 d e3
+0218 0218 s 				XTHL
+0219 0219 d 33
+0219 0219 s 				INX SP
+021a 021a d 33
+021a 021a s 				INX SP
+021b 021b s 
+021b 021b d cd4602
+021b 021b s 				CALL TxInlineString
+021e 021e d 2050433d00
+021e 021e s 				DB " PC=", 0x00
+0223 0223 d e3
+0223 0223 s 				XTHL
+0224 0224 d cd6602
+0224 0224 s 				CALL TxValueOfHL
+0227 0227 d e3
+0227 0227 s 				XTHL
+0228 0228 d cd4602
+0228 0228 s 				CALL TxInlineString
+022b 022b d 0d0a00
+022b 022b s 				DB CR, LF, 0x00
+022e 022e s 
+022e 022e d 3b
+022e 022e s 				DCX SP
+022f 022f d 3b
+022f 022f s 				DCX SP
+0230 0230 d 3b
+0230 0230 s 				DCX SP
+0231 0231 d 3b
+0231 0231 s 				DCX SP
+0232 0232 d 3b
+0232 0232 s 				DCX SP
+0233 0233 d 3b
+0233 0233 s 				DCX SP
+0234 0234 d 3b
+0234 0234 s 				DCX SP
+0235 0235 d 3b
+0235 0235 s 				DCX SP
+0236 0236 s 
+0236 0236 d f1
+0236 0236 s 				POP PSW
+0237 0237 d c1
+0237 0237 s 				POP B
+0238 0238 d d1
+0238 0238 s 				POP D
+0239 0239 d e1
+0239 0239 s 				POP H
+023a 023a s 				
+023a 023a s 				;OUT CPUTRACEON
+023a 023a d fb
+023a 023a s 				EI
+023b 023b d c9
+023b 023b s 				RET
+023c 023c s 			
+023c 023c d 7e
+023c 023c s TxStringAtHL:	MOV A, M
+023d 023d d a7
+023d 023d s 				ANA A
+023e 023e d c8
+023e 023e s 				RZ
+023f 023f d cd8302
+023f 023f s 				CALL SendChar
+0242 0242 d 23
+0242 0242 s 				INX H
+0243 0243 d c33c02
+0243 0243 s 				JMP TxStringAtHL
+0246 0246 s 
+0246 0246 d e1
+0246 0246 s TxInlineString:	POP H			;Return address was pointing at string start
+0247 0247 d 7e
+0247 0247 s TxInlineChar:	MOV A, M
+0248 0248 d a7
+0248 0248 s 				ANA A
+0249 0249 d ca5302
+0249 0249 s 				JZ Return
+024c 024c d cd8302
+024c 024c s 				CALL SendChar
+024f 024f d 23
+024f 024f s 				INX H
+0250 0250 d c34702
+0250 0250 s 				JMP TxInlineChar
+0253 0253 d 23
+0253 0253 s Return:			INX H			;go beyond terminating null byte
+0254 0254 d e9
+0254 0254 s 				PCHL
+0255 0255 s 
+0255 0255 d 0e10
+0255 0255 s BytesAtHL:		MVI C, 0x10		;dump 16 bytes at (HL)
+0257 0257 d 3e20
+0257 0257 s NextByteAtHL:	MVI A, " "
+0259 0259 d cd8302
+0259 0259 s 				CALL SendChar
+025c 025c d 7e
+025c 025c s 				MOV A, M
+025d 025d d cd6b02
+025d 025d s 				CALL TxValueOfA
+0260 0260 d 0d
+0260 0260 s 				DCR C
+0261 0261 d c8
+0261 0261 s 				RZ			;return if reached 0
+0262 0262 d 23
+0262 0262 s 				INX H
+0263 0263 d c35702
+0263 0263 s 				JMP NextByteAtHL
+0266 0266 s 
+0266 0266 d 7c
+0266 0266 s TxValueOfHL:	MOV A, H
+0267 0267 d cd6b02
+0267 0267 s 				CALL TxValueOfA
+026a 026a d 7d
+026a 026a s 				MOV A, L
+026b 026b d f5
+026b 026b s TxValueOfA:		PUSH PSW
+026c 026c d 0f
+026c 026c s 				RRC
+026d 026d d 0f
+026d 026d s 				RRC
+026e 026e d 0f
+026e 026e s 				RRC
+026f 026f d 0f
+026f 026f s 				RRC
+0270 0270 d cd7402
+0270 0270 s 				CALL TxHexDig
+0273 0273 d f1
+0273 0273 s 				POP PSW
+0274 0274 d e60f
+0274 0274 s TxHexDig:		ANI 0x0F
+0276 0276 d c630
+0276 0276 s 				ADI '0'
+0278 0278 d fe3a
+0278 0278 s 				CPI '9' + 1
+027a 027a d fa7f02
+027a 027a s 				JM TxHexDigOut
+027d 027d d c607
+027d 027d s 				ADI 0x07
+027f 027f d cd8302
+027f 027f s TxHexDigOut:	CALL SendChar
+0282 0282 d c9
+0282 0282 s 				RET
+0283 0283 s 	
+0283 0283 d f5
+0283 0283 s SendChar:		PUSH PSW
+0284 0284 d d3ff
+0284 0284 s 				OUT PORT_VGATRACE
+0286 0286 d db10
+0286 0286 s CheckIfReady:	IN ACIA0_STATUS
+0288 0288 d e602
+0288 0288 s 				ANI MASK_READY
+028a 028a d ca8602
+028a 028a s 				JZ CheckIfReady
+028d 028d d f1
+028d 028d s 				POP PSW
+028e 028e d d311
+028e 028e s 				OUT ACIA0_DATA
+0290 0290 d c9
+0290 0290 s 				RET
+0291 0291 s 
+0291 0291 d 21ffff
+0291 0291 s GetLowestRam:	LXI H, 0xFFFF	;assume RAM is located near top of address space
+0294 0294 d 7e
+0294 0294 s NextAddress:	MOV A, M
+0295 0295 d 2f
+0295 0295 s 				CMA		;flip all bits
+0296 0296 d 77
+0296 0296 s 				MOV M, A
+0297 0297 d be
+0297 0297 s 				CMP M
+0298 0298 d c2a902
+0298 0298 s 				JNZ LowestFound
+029b 029b d 2f
+029b 029b s 				CMA
+029c 029c d 77
+029c 029c s 				MOV M, A
+029d 029d d 7d
+029d 029d s 				MOV A, L
+029e 029e d d300
+029e 029e s 				OUT PORT0	;display address being examined
+02a0 02a0 d 7c
+02a0 02a0 s 				MOV A, H
+02a1 02a1 d d301
+02a1 02a1 s 				OUT PORT1
+02a3 02a3 d b5
+02a3 02a3 s 				ORA L
+02a4 02a4 d c8
+02a4 02a4 s 				RZ		;Bail if HL = 0
+02a5 02a5 d 2b
+02a5 02a5 s 				DCX H
+02a6 02a6 d c39402
+02a6 02a6 s 				JMP NextAddress
+02a9 02a9 d 23
+02a9 02a9 s LowestFound:	INX H
+02aa 02aa d c9
+02aa 02aa s 				RET
+02ab 02ab s 		
+02ab 02ab d 0d0a2041463d00
+02ab 02ab s TextAF:		DB CR, LF, " AF=", 0x00
+02b2 02b2 d 0d0a2042433d00
+02b2 02b2 s TextBC:		DB CR, LF, " BC=", 0x00
+02b9 02b9 d 0d0a2044453d00
+02b9 02b9 s TextDE:		DB CR, LF, " DE=", 0x00
+02c0 02c0 d 0d0a20484c3d00
+02c0 02c0 s TextHL:		DB CR, LF, " HL=", 0x00
+02c7 02c7 d 0d0a2050433d00
+02c7 02c7 s TextPC:		DB CR, LF, " PC=", 0x00
+02ce 02ce d 0d0a2053503d00
+02ce 02ce s TextSP:		DB CR, LF, " SP=", 0x00
+02d5 02d5 d 0d0a2041434941303d00
+02d5 02d5 s TextACIA0:	DB CR, LF, " ACIA0=", 0x00
+02df 02df d 0d0a2041434941313d00
+02df 02df s TextACIA1:	DB CR, LF, " ACIA1=", 0x00
+02e9 02e9 d 00
+02e9 02e9 s End:		DB 0x00		;Cheap trick to see last used address
+0006 v md
+000a v lf
+0002 v hm
+0001 v cs
+000d v cr
+0009 v tb
+0003 v ml
+000d v nl
+0008 v bs
+0004 v mr
+0005 v mu
+02e9 a end
+ff80 v heap
+0117 a boot
+0000 v port0
+0001 v port1
+0002 v port2
+00f0 v fpuid
+0c00 v vdpram
+0400 v altmon
+02ab a textaf
+02b2 a textbc
+02b9 a textde
+02c7 a textpc
+02c0 a texthl
+0253 a return
+02ce a textsp
+03d0 v btfetch
+00f0 v fpubase
+ff80 v temp_pc
+00f0 v fpudone
+0dfe v vdpcols
+0157 a testram
+017e a textvdp
+0dff v vdprows
+003d a checksw7
+0001 v mask_sw0
+0002 v mask_sw1
+0004 v mask_sw2
+0008 v mask_sw3
+0010 v mask_sw4
+0020 v mask_sw5
+0040 v mask_sw6
+0080 v mask_sw7
+0283 a sendchar
+03c8 v btioread
+03d4 v btintack
+0003 v port_col
+0274 a txhexdig
+00c2 a notfound
+0003 v port_row
+02d5 a textacia0
+02df a textacia1
+0163 a textport
+03c0 v btmemread
+01cb a initacias
+0011 v acia0_data
+0013 v acia1_data
+01dc a dumptrace
+03c0 v bustracer
+00f8 v fpucycles
+0255 a bytesathl
+fe00 v rambottom
+0046 a dumpstate
+03cc v btiowrite
+ff82 v cursorcol
+003c a waitforss
+00f2 v fpustatus
+ff83 v cursorrow
+0121 a textgreet1
+0198 a textgreet2
+0001 v mask_valid
+0002 v mask_ready
+0005 v cputraceon
+0040 v mask_error
+0007 v bustraceon
+0dfe v vdpfgcolor
+0dff v vdpbkcolor
+026b a txvalueofa
+03c4 v btmemwrite
+00cc a acia0toport
+00d8 a acia1toport
+00a4 a searchforpc
+0004 v cputraceoff
+0006 v bustraceoff
+0080 v mask_intreq
+0294 a nextaddress
+0266 a txvalueofhl
+0114 a processbyte
+00c6 a restoreregs
+02a9 a lowestfound
+00f6 v fpuresulthi
+027f a txhexdigout
+0010 v acia0_status
+0012 v acia1_status
+00f4 v fpuresultlo
+0001 v mask_button0
+0002 v mask_button1
+0004 v mask_button2
+0008 v mask_button3
+0286 a checkifready
+0247 a txinlinechar
+00f2 v fpuoperation
+0257 a nextbyteathl
+0291 a getlowestram
+023c a txstringathl
+00f6 v fpuoperand1hi
+00fa v fpuoperand2hi
+00f4 v fpuoperand1lo
+00f8 v fpuoperand2lo
+00ff v port_vgatrace
+00e4 a onbytereceived
+0246 a txinlinestring

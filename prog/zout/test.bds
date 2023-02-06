@@ -1,33 +1,124 @@
 binary-debuggable-source
 0000 0000 f test.asm
-0000 0000 s switch_lsb 	.equ 0x0 ;port 0 when reading
-0000 0000 s switch_msb	.equ 0x1 ;port 1 when reading
-0000 0000 s leds_lsb	.equ 0x0 ;port 0 when writing
-0000 0000 s leds_msb	.equ 0x1 ;port 1 when writing
-0000 0000 s 		
-0000 0000 s 		.org 0x0
-0000 0000 d f3
-0000 0000 s 		di
-0001 0001 d db00
-0001 0001 s loop: 		in switch_lsb
-0003 0003 d 3c
-0003 0003 s 		inr a
-0004 0004 d d300
-0004 0004 s 		out leds_lsb
-0006 0006 d db01
-0006 0006 s 		in switch_msb
-0008 0008 d af
-0008 0008 s 		xra a
-0009 0009 d d301
-0009 0009 s 		out leds_msb
-000b 000b d ca0100
-000b 000b s 		jz loop
-000e 000e d 76
-000e 000e s 		hlt
-000f 000f s 
-000f 000f s 
-0001 a loop
-0000 v leds_lsb
-0001 v leds_msb
-0000 v switch_lsb
-0001 v switch_msb
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ; Simple test program for Sys9080 project https://github.com/zpekic/sys9080
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2017, 2018
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ACIA0_STATUS	EQU 0x10; status read-only
+0000 0000 s ACIA0_DATA	EQU 0x11; data send/receive
+0000 0000 s ACIA1_STATUS	EQU 0x12; status read-only
+0000 0000 s ACIA1_DATA	EQU 0x13; data send/receive
+0000 0000 s PORT_0		EQU 0x00;
+0000 0000 s PORT_1		EQU 0x01;
+0000 0000 s MASK_VALID	EQU 0x01; fields in UART status register
+0000 0000 s MASK_READY	EQU 0x02;
+0000 0000 s MASK_ERROR	EQU 0x40;
+0000 0000 s MASK_INTREQ	EQU 0x80;
+0000 0000 s CR		EQU 0x0D; ASCII newline
+0000 0000 s LF		EQU 0x0A; ASCII line feed
+0000 0000 s MASK_BUTTON1	EQU 0x02;
+0000 0000 s Temp_PC		EQU 0xFF00; can't use DW because the hex file maps to ROM only
+0000 0000 s AltMon		EQU 0x0400; Altmon is org'd to this location
+0000 0000 s 
+0000 0000 s 
+fe00 fe00 s 		ORG 0xFE00	;-----Suitable for 512b RAM system
+fe00 fe00 s 
+fe00 fe00 d 210099
+fe00 fe00 s 		LXI H, 0x9900
+fe03 fe03 d 7c
+fe03 fe03 s LoopDAA		MOV A, H
+fe04 fe04 d d601
+fe04 fe04 s 		SUI 0x01
+fe06 fe06 d 27
+fe06 fe06 s 		DAA
+fe07 fe07 d d301
+fe07 fe07 s 		OUT PORT_1
+fe09 fe09 d 67
+fe09 fe09 s 		MOV H, A
+fe0a fe0a d 7d
+fe0a fe0a s 		MOV A, L
+fe0b fe0b d c601
+fe0b fe0b s 		ADI 0x01
+fe0d fe0d d 27
+fe0d fe0d s 		DAA
+fe0e fe0e d d300
+fe0e fe0e s 		OUT PORT_0
+fe10 fe10 d 6f
+fe10 fe10 s 		MOV L, A
+fe11 fe11 d b7
+fe11 fe11 s 		ORA A
+fe12 fe12 d c203fe
+fe12 fe12 s 		JNZ LoopDAA
+fe15 fe15 s 
+fe15 fe15 d 010000
+fe15 fe15 s 		LXI B, 0x0000
+fe18 fe18 d 0b
+fe18 fe18 s LoopB:		DCX B
+fe19 fe19 d 78
+fe19 fe19 s 		MOV A, B
+fe1a fe1a d d301
+fe1a fe1a s 		OUT PORT_1
+fe1c fe1c d 79
+fe1c fe1c s 		MOV A, C
+fe1d fe1d d d300
+fe1d fe1d s 		OUT PORT_0
+fe1f fe1f d b0
+fe1f fe1f s 		ORA B
+fe20 fe20 d c218fe
+fe20 fe20 s 		JNZ LoopB
+fe23 fe23 s 
+fe23 fe23 d 110000
+fe23 fe23 s 		LXI D, 0x0000
+fe26 fe26 d 1b
+fe26 fe26 s LoopD:		DCX D
+fe27 fe27 d 7a
+fe27 fe27 s 		MOV A, D
+fe28 fe28 d d301
+fe28 fe28 s 		OUT PORT_1
+fe2a fe2a d 7b
+fe2a fe2a s 		MOV A, E
+fe2b fe2b d d300
+fe2b fe2b s 		OUT PORT_0
+fe2d fe2d d b2
+fe2d fe2d s 		ORA D
+fe2e fe2e d c226fe
+fe2e fe2e s 		JNZ LoopD
+fe31 fe31 s 
+fe31 fe31 d 210000
+fe31 fe31 s 		LXI H, 0x0000
+fe34 fe34 d 2b
+fe34 fe34 s LoopH:		DCX H
+fe35 fe35 d 7c
+fe35 fe35 s 		MOV A, H
+fe36 fe36 d d301
+fe36 fe36 s 		OUT PORT_1
+fe38 fe38 d 7d
+fe38 fe38 s 		MOV A, L
+fe39 fe39 d d300
+fe39 fe39 s 		OUT PORT_0
+fe3b fe3b d b4
+fe3b fe3b s 		ORA H
+fe3c fe3c d c234fe
+fe3c fe3c s 		JNZ LoopH
+fe3f fe3f s 		
+fe3f fe3f d c30004
+fe3f fe3f s 		JMP AltMon
+000a v lf
+000d v cr
+fe18 a loopb
+fe26 a loopd
+fe34 a looph
+0000 v port_0
+0001 v port_1
+0400 v altmon
+fe03 a loopdaa
+ff00 v temp_pc
+0011 v acia0_data
+0013 v acia1_data
+0001 v mask_valid
+0002 v mask_ready
+0040 v mask_error
+0080 v mask_intreq
+0010 v acia0_status
+0012 v acia1_status
+0002 v mask_button1

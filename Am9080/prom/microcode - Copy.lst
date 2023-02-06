@@ -1,0 +1,561 @@
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0000 - m 000000111000 C/R    - TRUE 0 NOC    -- INTE 0 11 0 1 16 R_PC R_PC RAMF  AND   ZA 
+0001 - - 000000000000 C/R    - TRUE 0 NOC    -- ---- 0 11 0 1 8  RAS1 R38Z RAMF  OR    DZ 
+0002 - - 000000000000 C/R    - TRUE 0 NOC    -- ---- 0 11 0 1 8  RAS1 RZ38 RAMF  AND   ZA 
+0003 - - 000000000000 R/PUSH ! TRUE 0 NOC    -- ADDR 0 11 0 1 8  RAS1 RAS1 RAMF  AND   ZA 
+0004 i - = location = C/R    - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+0005 - - 000000001100 D/R    ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0006 (uninitialized)
+0007 (uninitialized)
+0008 (uninitialized)
+0009 (uninitialized)
+000A - - = location = R/RTN  - HOLD 0 HLDA   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+000B - - = location = R/F    - HOLD 0 HLDA   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+000C - - = location = D/R    ! HOLD 0 HLDA   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+000D - - = location = R/RTN  ! RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+000E - - = location = R/RTN  ! RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+000F - - = location = R/F    ! RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+0010 - - = location = R/F    ! RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+0011 - - = location = R/RTN  ! RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMF  OR    ZA 
+0012 - - = location = R/RTN  ! RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_SP R_SP RAMF  OR    ZA 
+0013 - - = location = R/RTN  ! RDY  0 MEMW   YL ADDR 0 11 0 1 16 R_SP R_SP RAMF  OR    ZA 
+0014 - - 000000001011 R/F    - HOLD 1 NOC    -- ---- 1 11 0 1 8  RAS1 RAS1 RAMF  OR    ZA 
+0015 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+0016 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 1 11 0 1 8  RAS1 RAS1 NOP   OR    ZA 
+0017 - - = location = R/F    ! RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+0018 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+0019 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+001A - - 000000001011 R/F    - HOLD 1 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+001B - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+001C - - 000000001011 R/F    - HOLD 1 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+001D - - 111111111111 R/F    ! TRUE 0 HLDA   FL INTE 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+001E - - 000000001101 C/SBR  - RDY  0 MEMR   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+001F - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0020 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+0021 - - 000000001111 R/F    ! RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0022 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0023 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_CB RAMF  OR    DZ 
+0024 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0025 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_BC RAMF  OR    DZ 
+0026 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0027 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 RAS1 RAMF  OR    DZ 
+0028 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0029 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+002A - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 RAS1 RAS1 NOP   OR    ZA 
+002B - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+002C - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  R_A? R_A? RAMF  OR    DZ 
+002D - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+002E - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 RAS1 RAMF  OR    DZ 
+002F - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0030 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+0031 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 RAS1 RAS1 RAMF  OR    ZA 
+0032 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 11 0 1 8  R_A? R_A? RAMF  OR    ZA 
+0033 - - 000000001111 R/F    ! RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+0034 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 1 00 0 0 8  RAS1 R_A? RAMF  ADD   AB 
+0035 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+0036 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+0037 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 0 8  R_A? R_A? RAMF  ADD   DA 
+0038 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0039 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 0 8  R_A? R_A? RAMF  ADD   DA 
+003A - - 000000110100 C/R    - CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+003B - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 1 00 0 1 8  RAS1 R_A? RAMF  ADD   AB 
+003C - - 000000110110 C/R    - CY   0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+003D - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+003E - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  ADD   DA 
+003F - - 000000111000 C/R    - CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0040 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0041 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  ADD   DA 
+0042 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0043 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 RAS1 RAMF  OR    DZ 
+0044 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0045 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+0046 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 RAS1 R_PC RAMA  OR    ZA 
+0047 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0048 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 RAS1 RAMF  OR    DZ 
+0049 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+004A - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+004B - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 0 16 R_SP R_SP RAMF  SUBR  ZA 
+004C - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+004D - - 000000010010 C/SBR  - RDY  0 MEMW   YH ADDR 0 11 0 0 16 R_SP R_SP RAMF  SUBR  ZA 
+004E - - = location = R/F    ! RDY  0 MEMW   YL ADDR 0 11 0 1 16 RAS1 R_PC RAMF  OR    ZA 
+004F - - 111111111111 R/F    ! TRUE 0 HLDA   FL INTE 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0050 - - 000000010001 C/SBR  ! TRUE 0 NOC    -- ADDR 0 11 0 1 16 R_SP R_SP RAMA  ADD   ZA 
+0051 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 R_PC R_PC RAMF  OR    DZ 
+0052 - - 000000010001 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMA  ADD   ZA 
+0053 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  R_PC R_PC RAMF  OR    DZ 
+0054 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC NOP   OR    ZA 
+0055 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RZ38 RAS1 RAMF  AND   DA 
+0056 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+0057 - - 000000010010 C/SBR  ! TRUE 0 NOC    -- ADDR 0 11 0 0 16 R_SP R_SP RAMF  SUBR  ZA 
+0058 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 0 16 R_SP R_SP RAMF  SUBR  ZA 
+0059 - - = location = R/F    ! RDY  0 MEMW   YL ADDR 0 11 0 1 16 RAS1 R_PC RAMF  OR    ZA 
+005A - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 01 0 1 8  R_A? R_A? RAMU  OR    ZA 
+005B - - 000010011100 R/F    - F3   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+005C - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 01 0 1 8  RAS1 RAS1 NOP   OR    DZ 
+005D - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 01 0 1 8  R_A? R_A? RAMD  OR    ZA 
+005E - - 000001011011 C/R    ! TRUE 0 NOC    -- ---- 0 11 0 1 8  R_A? RAS1 NOP   OR    ZA 
+005F - - 000001011011 C/R    ! TRUE 0 NOC    -- ---- 0 01 1 1 8  R_A? R_A? RAMU  OR    ZA 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0060 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  R_A? R_A? RAMD  OR    ZA 
+0061 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  R_A? R_A? RAMU  OR    ZA 
+0062 - - 000010011100 R/F    - F3   0 NOC    -- ---- 0 01 1 1 8  R_A? R_A? RAMD  OR    ZA 
+0063 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 01 0 1 8  RAS1 RAS1 NOP   OR    DZ 
+0064 - - 000000001010 C/SBR  ! HOLD 1 NOC    -- DATA 0 11 0 1 16 RAS1 RAS1 NOP   OR    ZB 
+0065 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 0 16 R_SP R_SP RAMF  SUBR  ZA 
+0066 - - 000000010010 C/SBR  - RDY  0 MEMW   YH ADDR 0 11 0 0 16 R_SP R_SP RAMF  SUBR  ZA 
+0067 - - = location = R/F    ! RDY  0 MEMW   YL ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+0068 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 11 0 1 8  R_A? RAS1 NOP   OR    ZA 
+0069 - - 000000010010 C/SBR  ! TRUE 0 NOC    -- ADDR 0 11 0 0 16 R_SP R_SP RAMF  SUBR  ZA 
+006A - - 000001101011 R/F    - TRUE 0 NOC    -- ADDR 0 11 0 0 16 R_SP R_SP RAMF  SUBR  ZA 
+006B - - 000000010010 C/SBR  - RDY  0 MEMW   FL ---- 0 11 0 0 8  RAS1 RAS1 NOP   EXNOR DZ 
+006C - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  OR    ZA 
+006D - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 R_BC RAMF  ADD   ZB 
+006E - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 1 1 16 R_BC R_CB RAMA  OR    DZ 
+006F - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 0 16 RAS1 R_BC RAMF  SUBR  ZB 
+0070 - - 000000001011 R/F    - HOLD 1 NOC    -- ---- 1 11 1 1 16 R_BC R_CB RAMA  OR    DZ 
+0071 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 01 0 0 16 R_BC R_HL RAMF  ADD   AB 
+0072 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 1 1 16 R_HL R_LH RAMA  OR    DZ 
+0073 - - 000001110010 C/R    ! TRUE 0 NOC    -- ---- 0 01 0 0 16 R_DE R_HL RAMF  ADD   AB 
+0074 - - 000001110010 C/R    ! TRUE 0 NOC    -- ---- 0 01 0 0 16 R_HL R_HL RAMF  ADD   AB 
+0075 - - 000001110010 C/R    ! TRUE 0 NOC    -- ---- 0 01 0 0 16 R_SP R_HL RAMF  ADD   AB 
+0076 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 1 00 0 1 8  RAS1 R_A? NOP   SUBR  AB 
+0077 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0078 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? RAS1 NOP   SUBR  DA 
+0079 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+007A - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+007B - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? RAS1 NOP   SUBR  DA 
+007C - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_SP R_SP RAMA  OR    ZA 
+007D - - 000000010001 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMF  ADD   ZA 
+007E - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_CB RAMF  OR    DZ 
+007F - - 000000010001 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMF  ADD   ZA 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0080 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_BC RAMF  OR    DZ 
+0081 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+0082 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0083 - - 000010000010 C/R    - INT  0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0084 - - 000000000000 C/R    - TRUE 0 INTA   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0085 - - 000001010110 C/R    ! TRUE 0 INTA   -- ---- 0 11 0 1 16 RZ38 RAS1 RAMA  AND   DA 
+0086 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0087 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0088 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 8  RAS1 RAS1 NOP   OR    DZ 
+0089 - - = location = C/R    - RDY  0 IOR    -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+008A - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_A? RAMF  OR    DZ 
+008B - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 11 0 1 8  R_A? RAS1 NOP   OR    ZA 
+008C - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+008D - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 8  RAS1 RAS1 NOP   OR    DZ 
+008E - - = location = R/F    ! RDY  0 IOW    YH ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+008F - - 000000001011 R/F    - HOLD 0 NOC    -- INTE 0 11 0 1 8  RZ38 RAS1 NOP   EXNOR ZA 
+0090 - - 000000001011 R/F    - HOLD 0 NOC    -- INTE 0 11 0 1 8  RAS1 RAS1 NOP   AND   ZA 
+0091 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 16 R_HL R_SP RAMF  OR    ZA 
+0092 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+0093 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_SP RAS1 NOP   OR    ZA 
+0094 - - = location = C/R    - RDY  0 MEMR   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0095 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_LH RAMF  OR    DZ 
+0096 - - 000000010011 C/SBR  - RDY  0 MEMW   YL ADDR 0 11 0 1 16 R_SP R_SP RAMF  ADD   ZA 
+0097 - - = location = C/R    - RDY  0 MEMR   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0098 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_HL RAMF  OR    DZ 
+0099 - - = location = C/R    - RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+009A - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 0 16 R_SP R_SP RAMF  SUBR  ZA 
+009B - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL R_PC RAMF  OR    ZA 
+009C - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 01 0 0 8  RZ38 RAS1 NOP   SUBR  ZA 
+009D - - 000010011100 R/F    ! CY   0 NOC    -- ---- 0 01 0 1 8  RAS1 RAS1 NOP   AND   ZA 
+009E - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 01 0 0 8  RAS1 RAS1 NOP   AND   ZA 
+009F - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 1 00 0 1 8  RAS1 R_A? RAMF  AND   AB 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+00A0 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 1 00 0 1 8  RAS1 R_A? RAMF  EXOR  AB 
+00A1 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 1 00 0 1 8  RAS1 R_A? RAMF  OR    AB 
+00A2 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+00A3 - - = location = C/R    - RDY  0 MEMR   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+00A4 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 10 0 0 8  RAS1 RAS1 NOP   SUBS  DZ 
+00A5 - - = location = R/F    ! RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00A6 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+00A7 - - = location = C/R    - RDY  0 MEMR   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+00A8 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 10 0 1 8  RAS1 RAS1 NOP   ADD   DZ 
+00A9 - - = location = R/F    ! RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00AA - - 000000001011 R/F    - HOLD 1 NOC    -- ---- 0 10 0 0 8  RAS1 RAS1 RAMF  SUBR  ZB 
+00AB - - 000000001011 R/F    - HOLD 1 NOC    -- ---- 0 10 0 1 8  RAS1 RAS1 RAMF  ADD   ZB 
+00AC - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 1 00 0 1 8  RAS1 R_A? RAMF  SUBR  AB 
+00AD - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+00AE - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00AF - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  SUBR  DA 
+00B0 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00B1 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  SUBR  DA 
+00B2 - - 000010101100 C/R    - CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+00B3 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 1 00 0 0 8  RAS1 R_A? RAMF  SUBR  AB 
+00B4 - - 000010101110 C/R    - CY   0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+00B5 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00B6 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 0 8  R_A? R_A? RAMF  SUBR  DA 
+00B7 - - 000010110000 C/R    - CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+00B8 - - 000101011101 C/R    ! TRUE 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+00B9 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+00BA - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00BB - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  AND   DA 
+00BC - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+00BD - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00BE - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  EXOR  DA 
+00BF - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+00C0 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00C1 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  OR    DA 
+00C2 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00C3 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  AND   DA 
+00C4 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00C5 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  EXOR  DA 
+00C6 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00C7 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 1 8  R_A? R_A? RAMF  OR    DA 
+00C8 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  R_A? R_A? RAMF  EXNOR ZA 
+00C9 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00CA - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 RAS1 RAMF  OR    DZ 
+00CB - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00CC - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+00CD - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 RAS1 RAS1 RAMF  OR    ZA 
+00CE - - = location = C/R    - RDY  0 MEMR   -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+00CF - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_LH RAMF  OR    DZ 
+00D0 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 RAS1 RAS1 RAMF  ADD   ZA 
+00D1 - - = location = C/R    - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00D2 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_HL RAMF  OR    DZ 
+00D3 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00D4 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 RAS1 RAMF  OR    DZ 
+00D5 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00D6 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+00D7 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 RAS1 RAS1 RAMF  OR    ZA 
+00D8 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 11 0 1 16 R_HL RAS1 NOP   OR    ZA 
+00D9 - - = location = C/R    - RDY  0 MEMW   YL ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+00DA - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 RAS1 RAS1 RAMF  ADD   ZA 
+00DB - - = location = R/F    ! RDY  0 MEMW   YH ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00DC - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_BC RAS1 NOP   OR    ZA 
+00DD - - = location = C/R    - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00DE - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_A? RAMF  OR    DZ 
+00DF - - 000000001010 C/SBR  ! HOLD 1 NOC    -- ADDR 0 11 0 1 16 RAS1 RAS1 NOP   OR    ZB 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+00E0 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- DATA 0 11 0 1 8  R_A? RAS1 NOP   OR    ZA 
+00E1 - - 000000001011 R/F    - HOLD 0 MEMW   YH ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+00E2 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 R_DE RAS1 RAMF  OR    ZA 
+00E3 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 R_HL R_DE RAMF  OR    ZA 
+00E4 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 R_HL RAMF  OR    ZA 
+00E5 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00E6 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_ED RAMF  OR    DZ 
+00E7 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00E8 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_DE RAMF  OR    DZ 
+00E9 - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00EA - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_LH RAMF  OR    DZ 
+00EB - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00EC - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_HL RAMF  OR    DZ 
+00ED - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00EE - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 R_SP RAMF  OR    DZ 
+00EF - - 000000011101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00F0 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_SP RAMF  OR    DZ 
+00F1 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 R_DE RAMF  ADD   ZB 
+00F2 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 1 1 16 R_DE R_ED RAMA  OR    DZ 
+00F3 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 R_HL RAMF  ADD   ZB 
+00F4 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 1 1 16 R_HL R_LH RAMA  OR    DZ 
+00F5 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 R_SP RAMF  ADD   ZB 
+00F6 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 0 16 RAS1 R_DE RAMF  SUBR  ZB 
+00F7 - - 000000001011 R/F    - HOLD 1 NOC    -- ---- 1 11 1 1 16 R_DE R_ED RAMA  OR    DZ 
+00F8 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 0 16 RAS1 R_HL RAMF  SUBR  ZB 
+00F9 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 1 1 16 R_HL R_LH RAMA  OR    DZ 
+00FA - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 0 16 RAS1 R_SP RAMF  SUBR  ZB 
+00FB - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_SP R_SP RAMA  OR    ZA 
+00FC - - 000000010001 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMF  ADD   ZA 
+00FD - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_ED RAMF  OR    DZ 
+00FE - - 000000010001 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMF  ADD   ZA 
+00FF - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_DE RAMF  OR    DZ 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0100 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+0101 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_SP R_SP RAMA  OR    ZA 
+0102 - - 000000010001 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMF  ADD   ZA 
+0103 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_LH RAMF  OR    DZ 
+0104 - - 000000010001 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMF  ADD   ZA 
+0105 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_HL RAMF  OR    DZ 
+0106 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+0107 - - 000001000010 C/R    - Z    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0108 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0109 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+010A - - 000001000111 C/R    - Z    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+010B - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+010C - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+010D - - 000001010000 R/F    ! Z    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+010E - - 000001000010 C/R    ! Z    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+010F - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0110 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0111 - - 000001000111 C/R    ! Z    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0112 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0113 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0114 - - 000001010000 R/F    - Z    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0115 - - 000001000010 C/R    - CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0116 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0117 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0118 - - 000001000111 C/R    - CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0119 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+011A - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+011B - - 000001010000 R/F    ! CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+011C - - 000001000010 C/R    ! CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+011D - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+011E - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+011F - - 000001000111 C/R    ! CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0120 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0121 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0122 - - 000001010000 R/F    - CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0123 - - 000001000010 C/R    - P    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0124 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0125 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0126 - - 000001000111 C/R    - P    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0127 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0128 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0129 - - 000001010000 R/F    ! P    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+012A - - 000001000010 C/R    ! P    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+012B - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+012C - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+012D - - 000001000111 C/R    ! P    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+012E - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+012F - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0130 - - 000001010000 R/F    - P    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0131 - - 000001000010 C/R    - S    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0132 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0133 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0134 - - 000001000111 R/F    ! S    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0135 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0136 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+0137 - - 000001010000 C/R    - S    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0138 - - 000001000010 C/R    ! S    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0139 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+013A - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+013B - - 000001000111 C/R    ! S    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+013C - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+013D - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+013E - - 000001010000 R/F    - S    0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+013F - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0140 - m 000000000110 C/R    - TRUE 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0141 - - 000101000110 C/R    ! AC   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+0142 - m 000000001111 C/R    - TRUE 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0143 - m 000000001010 C/R    - TRUE 0 NOC    -- ---- 0 11 0 1 8  R_A? RAS1 QREG  AND   DA 
+0144 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   SUBR  DQ 
+0145 - - 000101000111 C/R    - CN4  0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0146 - - 000101011111 C/SBR  ! CY   0 NOC    -- ---- 0 00 0 0 8  RAS1 R_A? RAMF  ADD   AB 
+0147 - m 000001100000 C/R    - TRUE 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+0148 - - 000101001111 C/R    ! CY   0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 RAMF  OR    DZ 
+0149 - m 000011110000 C/R    - TRUE 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+014A - m 000010100000 C/R    - TRUE 0 NOC    -- ---- 0 11 0 1 8  R_A? RAS1 QREG  AND   DA 
+014B - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   SUBR  DQ 
+014C - - 000101001110 C/R    - CN4  0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+014D - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 00 0 0 8  RAS1 R_A? RAMF  ADD   AB 
+014E - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+014F - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 10 0 0 8  RAS1 R_A? RAMF  ADD   AB 
+0150 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_SP R_SP RAMA  OR    ZA 
+0151 - - 000000010001 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMF  ADD   ZA 
+0152 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   NOTRS DZ 
+0153 - - 000000010001 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_SP R_SP RAMF  ADD   ZA 
+0154 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_A? RAMF  OR    DZ 
+0155 - - 000000001011 R/F    - HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+0156 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ADDR 0 11 0 1 16 R_DE RAS1 NOP   OR    ZA 
+0157 - - = location = C/R    - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC RAS1 NOP   OR    ZA 
+0158 - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_A? RAMF  OR    DZ 
+0159 - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 1 1 16 R_DE R_LH RAMA  OR    DZ 
+015A - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 R_HL R_DE RAMA  OR    ZA 
+015B - - 000000001010 C/SBR  ! HOLD 0 NOC    -- ---- 0 11 1 1 16 R_LH R_HL RAMA  OR    DZ 
+015C - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 11 1 1 16 R_DE R_ED RAMA  OR    DZ 
+015D - - 000000001101 C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+015E - - 000000001011 R/F    - HOLD 0 NOC    -- ---- 0 00 0 0 8  R_A? R_A? RAMF  SUBR  DA 
+015F - - 000000000000 R/RTN  ! TRUE 0 NOC    -- ---- 0 01 0 0 8  RZ38 RAS1 NOP   SUBR  ZA 
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0160 (uninitialized)
+0161 (uninitialized)
+0162 (uninitialized)
+0163 (uninitialized)
+0164 (uninitialized)
+0165 (uninitialized)
+0166 (uninitialized)
+0167 (uninitialized)
+0168 (uninitialized)
+0169 (uninitialized)
+016A (uninitialized)
+016B (uninitialized)
+016C (uninitialized)
+016D (uninitialized)
+016E (uninitialized)
+016F (uninitialized)
+0170 (uninitialized)
+0171 (uninitialized)
+0172 (uninitialized)
+0173 (uninitialized)
+0174 (uninitialized)
+0175 (uninitialized)
+0176 (uninitialized)
+0177 (uninitialized)
+0178 (uninitialized)
+0179 (uninitialized)
+017A (uninitialized)
+017B (uninitialized)
+017C (uninitialized)
+017D (uninitialized)
+017E (uninitialized)
+017F (uninitialized)
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+0180 (uninitialized)
+0181 (uninitialized)
+0182 (uninitialized)
+0183 (uninitialized)
+0184 (uninitialized)
+0185 (uninitialized)
+0186 (uninitialized)
+0187 (uninitialized)
+0188 (uninitialized)
+0189 (uninitialized)
+018A (uninitialized)
+018B (uninitialized)
+018C (uninitialized)
+018D (uninitialized)
+018E (uninitialized)
+018F (uninitialized)
+0190 (uninitialized)
+0191 (uninitialized)
+0192 (uninitialized)
+0193 (uninitialized)
+0194 (uninitialized)
+0195 (uninitialized)
+0196 (uninitialized)
+0197 (uninitialized)
+0198 (uninitialized)
+0199 (uninitialized)
+019A (uninitialized)
+019B (uninitialized)
+019C (uninitialized)
+019D (uninitialized)
+019E (uninitialized)
+019F (uninitialized)
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+01A0 (uninitialized)
+01A1 (uninitialized)
+01A2 (uninitialized)
+01A3 (uninitialized)
+01A4 (uninitialized)
+01A5 (uninitialized)
+01A6 (uninitialized)
+01A7 (uninitialized)
+01A8 (uninitialized)
+01A9 (uninitialized)
+01AA (uninitialized)
+01AB (uninitialized)
+01AC (uninitialized)
+01AD (uninitialized)
+01AE (uninitialized)
+01AF (uninitialized)
+01B0 (uninitialized)
+01B1 (uninitialized)
+01B2 (uninitialized)
+01B3 (uninitialized)
+01B4 (uninitialized)
+01B5 (uninitialized)
+01B6 (uninitialized)
+01B7 (uninitialized)
+01B8 (uninitialized)
+01B9 (uninitialized)
+01BA (uninitialized)
+01BB (uninitialized)
+01BC (uninitialized)
+01BD (uninitialized)
+01BE (uninitialized)
+01BF (uninitialized)
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+01C0 (uninitialized)
+01C1 (uninitialized)
+01C2 (uninitialized)
+01C3 (uninitialized)
+01C4 (uninitialized)
+01C5 (uninitialized)
+01C6 (uninitialized)
+01C7 (uninitialized)
+01C8 (uninitialized)
+01C9 (uninitialized)
+01CA (uninitialized)
+01CB (uninitialized)
+01CC (uninitialized)
+01CD (uninitialized)
+01CE (uninitialized)
+01CF (uninitialized)
+01D0 (uninitialized)
+01D1 (uninitialized)
+01D2 (uninitialized)
+01D3 (uninitialized)
+01D4 (uninitialized)
+01D5 (uninitialized)
+01D6 (uninitialized)
+01D7 (uninitialized)
+01D8 (uninitialized)
+01D9 (uninitialized)
+01DA (uninitialized)
+01DB (uninitialized)
+01DC (uninitialized)
+01DD (uninitialized)
+01DE (uninitialized)
+01DF (uninitialized)
+-----------------------------------------------------------------------------------------
+     I D DIRECT-VALUE NXT    P COND B SYSCTL OE OS   A UK S C W  AADR BADR DST   FCT  SRC
+-----------------------------------------------------------------------------------------
+01E0 (uninitialized)
+01E1 (uninitialized)
+01E2 (uninitialized)
+01E3 (uninitialized)
+01E4 (uninitialized)
+01E5 (uninitialized)
+01E6 (uninitialized)
+01E7 (uninitialized)
+01E8 (uninitialized)
+01E9 (uninitialized)
+01EA (uninitialized)
+01EB (uninitialized)
+01EC (uninitialized)
+01ED (uninitialized)
+01EE (uninitialized)
+01EF (uninitialized)
+01F0 (uninitialized)
+01F1 (uninitialized)
+01F2 (uninitialized)
+01F3 (uninitialized)
+01F4 (uninitialized)
+01F5 (uninitialized)
+01F6 (uninitialized)
+01F7 (uninitialized)
+01F8 (uninitialized)
+01F9 (uninitialized)
+01FA (uninitialized)
+01FB (uninitialized)
+01FC (uninitialized)
+01FD (uninitialized)
+01FE (uninitialized)
+01FF - - 000010000100 C/R    ! TRUE 0 NOC    -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 
+ -- ---- 0 11 0 1 8  RAS1 RAS1 NOP   EXNOR DZ 

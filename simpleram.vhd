@@ -87,25 +87,35 @@ signal control: std_logic_vector(2 downto 0);
 
 signal ram: bytememory := (others => default_value);
 attribute ram_style: string;
-attribute ram_style of ram: signal is "block";
+attribute ram_style of ram: signal is "distributed";
 
 begin
+
+--control <= nSelect & nRead & nWrite;
+--D <= d_out when (nRead = '0' and nSelect = '0') else "ZZZZZZZZ";
+--
+--readwrite: process(clk, control, A, D, ram)
+--begin
+--	case control is
+--		when "010" => -- write 
+--			if (rising_edge(clk)) then
+--				ram(to_integer(unsigned(A))) <= D;
+--			end if;
+--		when "001" => -- read
+--			d_out <= ram(to_integer(unsigned(A)));
+--		when others =>
+--			null;
+--	end case;
+--end process;
 
 control <= nSelect & nRead & nWrite;
-D <= d_out when (nRead = '0' and nSelect = '0') else "ZZZZZZZZ";
+D <= ram(to_integer(unsigned(A))) when (control = "001") else "ZZZZZZZZ";
 
-readwrite: process(clk, control, A, D, ram)
+on_clk: process(clk, control, A, D, ram)
 begin
-	case control is
-		when "010" => -- write 
-			if (rising_edge(clk)) then
-				ram(to_integer(unsigned(A))) <= D;
-			end if;
-		when "001" => -- read
-			d_out <= ram(to_integer(unsigned(A)));
-		when others =>
-			null;
-	end case;
+	if (falling_edge(clk) and control = "010") then
+		ram(to_integer(unsigned(A))) <= D;
+	end if;
 end process;
 
 end Behavioral;

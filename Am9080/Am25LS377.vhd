@@ -8,7 +8,7 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
--- Description: 
+-- Description: https://datasheet.datasheetarchive.com/originals/scans/Scans-001/Scans-0034821.pdf
 -- 
 -- Dependencies: 
 -- 

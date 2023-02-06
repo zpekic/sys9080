@@ -24,7 +24,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -39,50 +39,28 @@ end rom32x8;
 
 architecture Behavioral of rom32x8 is
 
-signal data_int: std_logic_vector(4 downto 0);
+type rom is array(0 to 15) of std_logic_vector(4 downto 0);
+constant lookup: rom := (
+            "01000", -- C
+            "01001", -- R
+            "01011", -- D
+            "01001", -- R
+            "01000", -- C
+            "00101", -- SBR
+            "01001", -- R
+            "00010", -- RTN
+            "11010", -- F
+            "00101", -- SBR
+            "00000", -- POP
+            "00001", -- PR
+            "01001", -- R
+            "00100", -- PUSH
+            "01001", -- R
+            "11010"  -- F
+				);
 
 begin
 
-sequence: process(address)
-begin
-    case address is
-        when "0000" =>
-            data_int <= "01000"; -- C
-        when "0001" =>
-            data_int <= "01001"; -- R
-        when "0010" =>
-            data_int <= "01011"; -- D
-        when "0011" =>
-            data_int <= "01001"; -- R
-        when "0100" =>
-            data_int <= "01000"; -- C
-        when "0101" =>
-            data_int <= "00101"; -- SBR
-        when "0110" =>
-            data_int <= "01001"; -- R
-        when "0111" =>
-            data_int <= "00010"; -- RTN
-        when "1000" =>
-            data_int <= "11010"; -- F
-        when "1001" =>
-            data_int <= "00101"; -- SBR
-        when "1010" =>
-            data_int <= "00000"; -- POP
-        when "1011" =>
-            data_int <= "00001"; -- PR
-        when "1100" =>
-            data_int <= "01001"; -- R
-        when "1101" =>
-            data_int <= "00100"; -- PUSH
-        when "1110" =>
-            data_int <= "01001"; -- R
-        when "1111" =>
-            data_int <= "11010"; -- F
-        when others =>
-            data_int <= "11111";
-    end case;
-end process;
-
-data <= data_int when (nCS = '0') else "ZZZZZ";
+	data <= lookup(to_integer(unsigned(address))) when (nCS = '0') else "ZZZZZ";
 
 end Behavioral;

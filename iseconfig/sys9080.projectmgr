@@ -7,14 +7,18 @@
    <ItemView engineview="SynthesisOnly" guiview="Source" compilemode="AutoCompile" >
       <ClosedNodes>
          <ClosedNodesVersion>2</ClosedNodesVersion>
+         <ClosedNode>/UART_LOOPBACK - FULL C:|Users|zoltanp|Documents|HexCalc|Sys9080|uart-for-fpga-master|example|uart_loopback.vhd/uart_i - UART - FULL</ClosedNode>
          <ClosedNode>/rgb_leds - Behavioral C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd</ClosedNode>
+         <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/cpu - Am9080a - structural</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/cpu - Am9080a - structural/u33 - am2901 - am2901</ClosedNode>
+         <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/cpu - Am9080a - structural/u34 - am2901 - am2901/u1 - ram_regs - ram_regs</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/cpu - Am9080a - structural/u34 - am2901 - am2901/u2 - q_reg - q_reg</ClosedNode>
+         <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/cpu - Am9080a - structural/u43 - am2901 - am2901</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/cpu - Am9080a - structural/u43 - am2901 - am2901/u2 - q_reg - q_reg</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/cpu - Am9080a - structural/u44 - am2901 - am2901</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/debouncer_btn - debouncer8channel - Behavioral</ClosedNode>
-         <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/debouncer_sw - debouncer8channel - Behavioral</ClosedNode>
-         <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/led4x7 - fourdigitsevensegled - structural</ClosedNode>
+         <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/iodevice - simpledevice - Behavioral/sio - UART - FULL/uart_rx_i - UART_RX - FULL</ClosedNode>
+         <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|Sys9080|sys9080.vhd/loopback - UART_LOOPBACK - FULL</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|sys9080|sys9080.vhd/cpu - Am9080a - structural/u33 - am2901 - am2901</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|sys9080|sys9080.vhd/cpu - Am9080a - structural/u43 - am2901 - am2901/u1 - ram_regs - ram_regs</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|sys9080|sys9080.vhd/cpu - Am9080a - structural/u43 - am2901 - am2901/u2 - q_reg - q_reg</ClosedNode>
@@ -27,9 +31,9 @@
       <SelectedItems>
          <SelectedItem>sys9080 - Structural (C:/Users/zoltanp/Documents/HexCalc/Sys9080/sys9080.vhd)</SelectedItem>
       </SelectedItems>
-      <ScrollbarPosition orientation="vertical" >0</ScrollbarPosition>
+      <ScrollbarPosition orientation="vertical" >1</ScrollbarPosition>
       <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
-      <ViewHeaderState orientation="horizontal" >000000ff000000000000000100000001000000000000000000000000000000000202000000010000000100000064000002e6000000020000000000000000000000000200000064ffffffff000000810000000300000002000002e60000000100000003000000000000000100000003</ViewHeaderState>
+      <ViewHeaderState orientation="horizontal" >000000ff000000000000000100000001000000000000000000000000000000000202000000010000000100000064000002e7000000020000000000000000000000000200000064ffffffff000000810000000300000002000002e70000000100000003000000000000000100000003</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >true</UserChangedColumnWidths>
       <CurrentItem>sys9080 - Structural (C:/Users/zoltanp/Documents/HexCalc/Sys9080/sys9080.vhd)</CurrentItem>
    </ItemView>
@@ -46,7 +50,7 @@
       </SelectedItems>
       <ScrollbarPosition orientation="vertical" >0</ScrollbarPosition>
       <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
-      <ViewHeaderState orientation="horizontal" >000000ff0000000000000001000000010000000000000000000000000000000000000000000000013d000000010000000100000000000000000000000064ffffffff0000008100000000000000010000013d0000000100000000</ViewHeaderState>
+      <ViewHeaderState orientation="horizontal" >000000ff0000000000000001000000010000000000000000000000000000000000000000000000014a000000010000000100000000000000000000000064ffffffff0000008100000000000000010000014a0000000100000000</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
       <CurrentItem>Design Utilities</CurrentItem>
    </ItemView>
@@ -55,39 +59,42 @@
          <ClosedNodesVersion>1</ClosedNodesVersion>
       </ClosedNodes>
       <SelectedItems>
-         <SelectedItem>C:\Users\zoltanp\Documents\HexCalc\Sys9080\Am9080\Am29XX\mnemonics.vhd</SelectedItem>
+         <SelectedItem>C:\Users\zoltanp\Documents\HexCalc\Sys9080\mercury.ucf</SelectedItem>
       </SelectedItems>
-      <ScrollbarPosition orientation="vertical" >0</ScrollbarPosition>
+      <ScrollbarPosition orientation="vertical" >14</ScrollbarPosition>
       <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
       <ViewHeaderState orientation="horizontal" >000000ff0000000000000001000000000000000001000000000000000000000000000000000000031c000000040101000100000000000000000000000064ffffffff000000810000000000000004000001bd0000000100000000000000950000000100000000000000660000000100000000000000640000000100000000</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
-      <CurrentItem>C:\Users\zoltanp\Documents\HexCalc\Sys9080\Am9080\Am29XX\mnemonics.vhd</CurrentItem>
+      <CurrentItem>C:\Users\zoltanp\Documents\HexCalc\Sys9080\mercury.ucf</CurrentItem>
    </ItemView>
    <ItemView guiview="Library" >
       <ClosedNodes>
          <ClosedNodesVersion>1</ClosedNodesVersion>
       </ClosedNodes>
-      <SelectedItems/>
-      <ScrollbarPosition orientation="vertical" >0</ScrollbarPosition>
+      <SelectedItems>
+         <SelectedItem>C:\Users\zoltanp\Documents\HexCalc\Sys9080\ipcore_dir\ram4kx8.xco</SelectedItem>
+      </SelectedItems>
+      <ScrollbarPosition orientation="vertical" >16</ScrollbarPosition>
       <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
       <ViewHeaderState orientation="horizontal" >000000ff000000000000000100000000000000000100000000000000000000000000000000000000f8000000010001000100000000000000000000000064ffffffff000000810000000000000001000000f80000000100000000</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
-      <CurrentItem>work</CurrentItem>
+      <CurrentItem>C:\Users\zoltanp\Documents\HexCalc\Sys9080\ipcore_dir\ram4kx8.xco</CurrentItem>
    </ItemView>
    <ItemView engineview="SynthesisOnly" sourcetype="DESUT_VHDL_ARCHITECTURE" guiview="Process" >
       <ClosedNodes>
          <ClosedNodesVersion>1</ClosedNodesVersion>
          <ClosedNode>Configure Target Device</ClosedNode>
-         <ClosedNode>Design Utilities</ClosedNode>
-         <ClosedNode>Implement Design</ClosedNode>
+         <ClosedNode>Implement Design/Map</ClosedNode>
+         <ClosedNode>Implement Design/Place &amp; Route</ClosedNode>
+         <ClosedNode>Implement Design/Translate</ClosedNode>
          <ClosedNode>User Constraints</ClosedNode>
       </ClosedNodes>
       <SelectedItems>
          <SelectedItem>Design Summary/Reports</SelectedItem>
       </SelectedItems>
-      <ScrollbarPosition orientation="vertical" >7</ScrollbarPosition>
+      <ScrollbarPosition orientation="vertical" >14</ScrollbarPosition>
       <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
-      <ViewHeaderState orientation="horizontal" >000000ff0000000000000001000000010000000000000000000000000000000000000000000000013d000000010000000100000000000000000000000064ffffffff0000008100000000000000010000013d0000000100000000</ViewHeaderState>
+      <ViewHeaderState orientation="horizontal" >000000ff0000000000000001000000010000000000000000000000000000000000000000000000014a000000010000000100000000000000000000000064ffffffff0000008100000000000000010000014a0000000100000000</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
       <CurrentItem>Design Summary/Reports</CurrentItem>
    </ItemView>
@@ -136,5 +143,18 @@
       <ViewHeaderState orientation="horizontal" >000000ff0000000000000001000000010000000000000000000000000000000000000000000000014e000000010000000100000000000000000000000064ffffffff0000008100000000000000010000014e0000000100000000</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
       <CurrentItem/>
+   </ItemView>
+   <ItemView engineview="SynthesisOnly" sourcetype="DESUT_XCO" guiview="Process" >
+      <ClosedNodes>
+         <ClosedNodesVersion>1</ClosedNodesVersion>
+      </ClosedNodes>
+      <SelectedItems>
+         <SelectedItem>View HDL Functional Model</SelectedItem>
+      </SelectedItems>
+      <ScrollbarPosition orientation="vertical" >0</ScrollbarPosition>
+      <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
+      <ViewHeaderState orientation="horizontal" >000000ff00000000000000010000000100000000000000000000000000000000000000000000000143000000010000000100000000000000000000000064ffffffff000000810000000000000001000001430000000100000000</ViewHeaderState>
+      <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
+      <CurrentItem>View HDL Functional Model</CurrentItem>
    </ItemView>
 </Project>

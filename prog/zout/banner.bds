@@ -1,0 +1,178 @@
+binary-debuggable-source
+0000 0000 f banner.asm
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ; Simple test program for Sys9080 project https://github.com/zpekic/sys9080
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2017, 2018
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s 
+0000 0000 s include ./sys9080.asm
+0000 0000 f ./sys9080.asm
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ; Common definitions for  Sys9080 project https://github.com/zpekic/sys9080
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2017, 2018
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ACIA0_STATUS	EQU 0x10; status read-only
+0000 0000 s ACIA0_DATA	EQU 0x11; data send/receive
+0000 0000 s ACIA1_STATUS	EQU 0x12; status read-only
+0000 0000 s ACIA1_DATA	EQU 0x13; data send/receive
+0000 0000 s PORT0		EQU 0x00; switches when reading, LEDs when writing
+0000 0000 s PORT1		EQU 0x01; buttons (3..0) when reading, LEDs when writing
+0000 0000 s PORT2		EQU 0x02; slider switches when reading, LEDs when writing
+0000 0000 s PORT_COL	EQU 0x07; hex key colums 3..0 when writing
+0000 0000 s PORT_ROW	EQU 0x07; hex key rows 3..0 when reading
+0000 0000 s MASK_VALID	EQU 0x01; fields in UART status register
+0000 0000 s MASK_READY	EQU 0x02;
+0000 0000 s MASK_ERROR	EQU 0x40;
+0000 0000 s MASK_INTREQ	EQU 0x80;
+0000 0000 s 
+0000 0000 s MASK_BUTTON0	EQU 0x01;
+0000 0000 s MASK_BUTTON1	EQU 0x02;
+0000 0000 s MASK_BUTTON2	EQU 0x04;
+0000 0000 s MASK_BUTTON3	EQU 0x08;
+0000 0000 s MASK_SW0	EQU 0x01;
+0000 0000 s MASK_SW1	EQU 0x02;
+0000 0000 s MASK_SW2	EQU 0x04;
+0000 0000 s MASK_SW3	EQU 0x08;
+0000 0000 s MASK_SW4	EQU 0x10;
+0000 0000 s MASK_SW5	EQU 0x20;
+0000 0000 s MASK_SW6	EQU 0x40;
+0000 0000 s MASK_SW7	EQU 0x80;
+0000 0000 s 
+0000 0000 s ;-------------------------------------------------------------
+0000 0000 s AltMon		EQU 0x0400; Altmon is org'd to this location
+0000 0000 s 
+0000 0000 s ;-------------------------------------------------------------
+0000 0000 s VdpRam		EQU 0x0C00; text video memory, 512b
+0000 0000 s VdpFgColor	EQU VdpRam + 0x1FE	;write only, RRRGGGBB
+0000 0000 s VdpBkColor	EQU VdpRam + 0x1FF	;write only, RRRGGGBB
+0000 0000 s VdpCols		EQU VdpRam + 0x1FE	;read only, should be 30
+0000 0000 s VdpRows		EQU VdpRam + 0x1FF	;read only, should be 17
+0000 0000 s RamBottom	EQU 0xFE00
+0000 0000 s Heap		EQU RamBottom + 0x0180
+0000 0000 s Temp_PC		EQU Heap; can't use DW because the hex file maps to ROM only
+0000 0000 s CursorCol	EQU Heap + 2
+0000 0000 s CursorRow	EQU Heap + 3
+0000 0000 s 
+0000 0000 s ;Some ASCII codes with special handling during PrintCharText
+0000 0000 s CS 	EQU 16  ;CS: Clear Screen      
+0000 0000 s HM 	EQU 1   ;HM: HoMe cursor       
+0000 0000 s NL 	EQU 13  ;NL: New Line
+0000 0000 s CR 	EQU 13  ;CR: Carriage return == NL       
+0000 0000 s LF 	EQU 10  ;LF: Line Feed       
+0000 0000 s ML 	EQU  3  ;ML: Move cursor Left          
+0000 0000 s MR 	EQU  4  ;MR: Move cursor Right         
+0000 0000 s MU 	EQU  5  ;MU: Move cursor Up          
+0000 0000 s MD 	EQU  6  ;MD: Move cursor Down
+0000 0000 s TB 	EQU  9  ;TB: TaB        
+0000 0000 s BS 	EQU  8  ;BS: BackSpace  
+0000 0000 f banner.asm
+0000 0000 s 
+0000 0000 s 
+0000 0000 s ; text video memory, 512b
+0c00 0c00 s 		ORG VdpRam
+0c00 0c00 d 303132333435363738393031323334353637383931323334353637383930
+0c00 0c00 s l0:	DB '012345678901234567891234567890'
+0c1e 0c1e d 20205f5f5f5f5f2020202020202020202020202020202020202020202031
+0c1e 0c1e s l1:	DB '  _____                      1'                      
+0c3c 0c3c d 202f205f5f5f5f7c20202020202020202020202020202020202020202032
+0c3c 0c3c s l2:	DB ' / ____|                     2'			                       
+0c5a 0c5a d 7c20285f5f5f2020205f2020205f2020205f5f5f20202020202020202033
+0c5a 0c5a s l3:	DB '| (___   _   _   ___         3'         
+0c78 0c78 d 205c5f5f5f205c207c207c207c207c202f205f5f7c202020202020202034
+0c78 0c78 s l4:	DB ' \___ \ | | | | / __|        4'         
+0c96 0c96 d 205f5f5f5f29207c7c207c5f7c207c205c5f5f205c202020202020202035
+0c96 0c96 s l5:	DB ' ____) || |_| | \__ \        5'         
+0cb4 0cb4 d 7c5f5f5f5f5f2f20205c5f5f2c207c207c5f5f5f2f202020202020202036
+0cb4 0cb4 s l6:	DB '|_____/  \__, | |___/        6'         
+0cd2 0cd2 d 202020202020202020205f5f2f207c202020202020202020202020202037
+0cd2 0cd2 s l7:	DB '          __/ |              7'               
+0cf0 0cf0 d 20205f5f5f202020207c5f5f5f2f2020205f5f5f202020205f5f5f202038
+0cf0 0cf0 s l8:	DB '  ___    |___/   ___    ___  8'
+0d0e 0d0e d 202f205f205c20202f205f205c2020202f205f205c20202f205f205c2039
+0d0e 0d0e s l9:	DB ' / _ \  / _ \   / _ \  / _ \ 9'
+0d2c 0d2c d 7c20285f29207c7c207c207c207c207c20285f29207c7c207c207c207c30
+0d2c 0d2c s l10:	DB '| (_) || | | | | (_) || | | |0'
+0d4a 0d4a d 205c5f5f2c207c7c207c207c207c20203e205f203c207c207c207c207c31
+0d4a 0d4a s l11:	DB ' \__, || | | |  > _ < | | | |1'
+0d68 0d68 d 2020202f202f207c207c5f7c207c207c20285f29207c7c207c5f7c207c32
+0d68 0d68 s l12:	DB '   / / | |_| | | (_) || |_| |2'
+0d86 0d86 d 20202f5f2f2020205c5f5f5f2f2020205c5f5f5f2f20205c5f5f5f2f2033
+0d86 0d86 s l13:	DB '  /_/   \___/   \___/  \___/ 3'
+0da4 0da4 d 2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d34
+0da4 0da4 s l14:	DB '-----------------------------4'
+0dc2 0dc2 d 7a70656b696340686f746d61696c2e636f6d20323031372c323031382035
+0dc2 0dc2 s l15:	DB 'zpekic@hotmail.com 2017,2018 5'
+0de0 0de0 d 2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d36
+0de0 0de0 s l16:	DB '-----------------------------6'
+0dfe 0dfe s 
+0dfe 0dfe s ; set display colors
+0dfe 0dfe s 		ORG VdpFgColor	
+0dfe 0dfe d f0
+0dfe 0dfe s 		DB 	0xF0	;RRRGGGBB
+0dff 0dff s 		ORG VdpBkColor	
+0dff 0dff d 0f
+0dff 0dff s 		DB 	0x0F	;RRRGGGBB
+0c00 a l0
+0c1e a l1
+0c3c a l2
+0c5a a l3
+0c78 a l4
+0c96 a l5
+0cb4 a l6
+0cd2 a l7
+0cf0 a l8
+0d0e a l9
+0d2c a l10
+0d4a a l11
+0d68 a l12
+0d86 a l13
+0006 v md
+000a v lf
+0da4 a l14
+0dc2 a l15
+0001 v hm
+0010 v cs
+000d v cr
+0009 v tb
+0003 v ml
+000d v nl
+0008 v bs
+0de0 a l16
+0004 v mr
+0005 v mu
+ff80 v heap
+0000 v port0
+0001 v port1
+0002 v port2
+0c00 v vdpram
+0400 v altmon
+ff80 v temp_pc
+0dfe v vdpcols
+0dff v vdprows
+0001 v mask_sw0
+0002 v mask_sw1
+0004 v mask_sw2
+0008 v mask_sw3
+0010 v mask_sw4
+0020 v mask_sw5
+0040 v mask_sw6
+0080 v mask_sw7
+0007 v port_col
+0007 v port_row
+0011 v acia0_data
+0013 v acia1_data
+fe00 v rambottom
+ff82 v cursorcol
+ff83 v cursorrow
+0001 v mask_valid
+0002 v mask_ready
+0040 v mask_error
+0dfe v vdpfgcolor
+0dff v vdpbkcolor
+0080 v mask_intreq
+0010 v acia0_status
+0012 v acia1_status
+0001 v mask_button0
+0002 v mask_button1
+0004 v mask_button2
+0008 v mask_button3

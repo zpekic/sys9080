@@ -21,7 +21,7 @@
 ----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use work.mnemonics.all;
+--use work.mnemonics.all;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
@@ -48,34 +48,32 @@ entity Am9080a is
 			  INT: in STD_LOGIC;
 			  READY: in STD_LOGIC;
 			  HOLD: in STD_LOGIC;
+			  M1: out STD_LOGIC;		-- indicates M1 machine cycle (instruction fetch)
 			  -- debug port, not part of actual processor
-			  -- 0: debug bus not used
-			  -- 1: debug bus used
-			  debug_ena: in STD_LOGIC;
 			  -- 0: current microinstruction details appear on debug_out (processor can work!)
-			  -- 1: register contents appears on debug_out (processor CANNOT work!)
+			  -- 1: register contents appears on debug_out
            debug_sel : in  STD_LOGIC;
-			  -- data from processor internals
-           debug_out : out  STD_LOGIC_VECTOR (19 downto 0);
 			  -- register selection if debug_sel == '1', otherwise ignored
-			  --debug_reg	register value that appears on debug_out
-			  --0				BC
-			  --1				CB
-			  --2				DE
-			  --3				ED
-			  --4				HL
-			  --5				LH
-			  --6				-A
-			  --7				A-
-			  --8				SP (in documentation, this is marked as "not used")
-			  --9				not used (in documentation, this is marked as SP)
-			  --A				scratch pad
-			  --B				scratch pad
-			  --C				X"0038"
-			  --D				X"3800"
-			  --E				not used
-			  --F				PC
-			  debug_reg : in STD_LOGIC_VECTOR(3 downto 0)
+			  --debug_reg	Am2901_reg	value that appears on debug_out
+			  --1				0				BC
+			  --				1				CB
+			  --2				2				DE
+			  --				3				ED
+			  --3				4				HL
+			  --				5				LH
+			  --				6				-A
+			  --0				7				A-
+			  --4				8				SP (in documentation, this is marked as "not used")
+			  --				9				not used (in documentation, this is marked as SP)
+			  --				A				scratch pad
+			  --				B				scratch pad
+			  --6				C				X"0038"
+			  --7				D				X"3800"
+			  --				E				not used
+			  --5				F				PC
+			  debug_reg : in STD_LOGIC_VECTOR(2 downto 0);
+			  -- data from processor internals
+           debug_out : out  STD_LOGIC_VECTOR (19 downto 0)
 		);
 end Am9080a;
 
@@ -170,7 +168,7 @@ component Am2918 is
     Port ( clk : in STD_LOGIC;
            nOE : in STD_LOGIC;
            d : in STD_LOGIC_VECTOR (3 downto 0);
-           o : out STD_LOGIC_VECTOR (3 downto 0);
+           o : buffer STD_LOGIC_VECTOR (3 downto 0);
            y : out STD_LOGIC_VECTOR (3 downto 0));
 end component;
 
@@ -189,17 +187,32 @@ component Am2922 is
 end component;
 
 -- http://www.cselettronica.com/datasheet/AM2909.pdf
-component Am2909 is
+--component Am2909 is
+--	port
+--	(
+--		-- Input ports
+--		S : in std_logic_vector(1 downto 0);
+--		R,D	: in  std_logic_vector(3 downto 0);
+--		ORi	: in  std_logic_vector(3 downto 0);
+--		nFE, PUP, nRE, nZERO, nOE, CN : in std_logic;
+--		CLK  : in std_logic;
+--		-- Output ports
+--		Y	: out std_logic_vector(3 downto 0);
+--		C4	: out std_logic
+--	);
+--end component;
+
+component Am2909x12 is
 	port
 	(
 		-- Input ports
 		S : in std_logic_vector(1 downto 0);
-		R,D	: in  std_logic_vector(3 downto 0);
-		ORi	: in  std_logic_vector(3 downto 0);
+		R,D	: in  std_logic_vector(11 downto 0);
+		ORi	: in  std_logic_vector(11 downto 0);
 		nFE, PUP, nRE, nZERO, nOE, CN : in std_logic;
 		CLK  : in std_logic;
 		-- Output ports
-		Y	: out std_logic_vector(3 downto 0);
+		Y	: out std_logic_vector(11 downto 0);
 		C4	: out std_logic
 	);
 end component;
@@ -207,30 +220,33 @@ end component;
 -- http://www.cselettronica.com/datasheet/AM2901.pdf
 component am2901c is
     Port ( clk : in  STD_LOGIC; 
-           --rst : in  STD_LOGIC;---------------------note: not present on real device
-           a : in  std_logic_vector (3 downto 0);---address  inputs
-           b : in  STD_LOGIC_VECTOR (3 downto 0);---address inputs
-           d : in  STD_LOGIC_VECTOR (3 downto 0);---direct data
-           i : in  STD_LOGIC_VECTOR (8 downto 0);---micro instruction
-           c_n : in  STD_LOGIC;---------------------carry in
-           oe : in  STD_LOGIC;----------------------output enable
-           ram0 : inout  STD_LOGIC;-----------------shift lines to ram
-           ram3 : inout  STD_LOGIC;-----------------shift lines to ram
-           qs0 : inout  STD_LOGIC;------------------shift lines to q
-           qs3 : inout  STD_LOGIC;------------------shift lines to q
-           y : out  STD_LOGIC_VECTOR (3 downto 0);-------data outputs(3-state)
-           g_bar : out   STD_LOGIC;---------------carry generate
+           a : in  std_logic_vector (3 downto 0);-- address inputs
+           b : in  STD_LOGIC_VECTOR (3 downto 0);-- address inputs
+           d : in  STD_LOGIC_VECTOR (3 downto 0);-- direct data
+           i : in  STD_LOGIC_VECTOR (8 downto 0);-- micro instruction
+           c_n : in  STD_LOGIC;-------------------- carry in
+           oe : in  STD_LOGIC;--------------------- output enable
+           ram0 : inout  STD_LOGIC;---------------- shift lines to ram
+           ram3 : inout  STD_LOGIC;---------------- shift lines to ram
+           qs0 : inout  STD_LOGIC;----------------- shift lines to q
+           qs3 : inout  STD_LOGIC;----------------- shift lines to q
+           y : out  STD_LOGIC_VECTOR (3 downto 0);	-- data outputs(3-state)
+           g_bar : out   STD_LOGIC;	---------------carry generate
            p_bar : out  STD_LOGIC;---------------carry propagate
-           ovr : out  STD_LOGIC;-----------------overflow
+           ovr : out  STD_LOGIC;	----------------overflow
            c_n4 : out  STD_LOGIC;----------------carry out
-           f_0 : out  STD_LOGIC;-----------------f = 0
-           f3 : out  STD_LOGIC);-----------------f(3) w/o 3-state
+           f_0 : out  STD_LOGIC;	-----------------f = 0
+           f3 : out  STD_LOGIC;	-----------------f(3) w/o 3-state
+			  --- DEBUG PORT ---
+			  debug_regsel: in STD_LOGIC_VECTOR(3 downto 0);
+			  debug_regval: out STD_LOGIC_VECTOR(3 downto 0)
+			);
 end component;
 
 signal current_instruction: std_logic_vector(7 downto 0);
 signal instruction_startaddress: std_logic_vector(11 downto 0);
 
-signal ma: std_logic_vector(11 downto 0);	-- microcode address
+signal ma: std_logic_vector(11 downto 0);		-- microcode address
 
 signal u: std_logic_vector(55 downto 0);		-- microcode output 
 signal pl: std_logic_vector(55 downto 0);		-- microcode register
@@ -281,7 +297,7 @@ alias pl_instregenable: std_logic is pl(55);
 
 signal sequence: std_logic_vector(4 downto 0); -- sequencer output (U14)
 
-signal u21_pin24, u22_pin24: std_logic;
+--signal u21_pin24, u22_pin24: std_logic;
 signal u62_pin2, u62_pin4, u62_pin6, u62_pin10, u62_pin12: std_logic;
 signal u63_pin7, u63_pin9: std_logic;
 signal u64_pin4: std_logic;
@@ -299,9 +315,9 @@ signal u131_pin10: std_logic;
 signal u135_pin12: std_logic;
 signal u5161_pin19: std_logic;
 signal u8474_u8475_pin15: std_logic; -- joined due to opposite tri-state enable
+signal u121_pin2, u121_pin5, u121_pin6, u121_pin12, u121_pin15, u121_pin16: std_logic;
 
---signal reset: std_logic;
-signal interrupt_or_mask: std_logic_vector(3 downto 0);
+signal interrupt_or_mask: std_logic_vector(11 downto 0);
 
 signal ocl: std_logic_vector(3 downto 1);
 signal db: std_logic_vector(3 downto 1);
@@ -314,6 +330,8 @@ signal flag_s:  std_logic; --is t(3);
 signal flag_ac: std_logic; --is t(4);
 signal interrupt_enabled: std_logic;
 
+signal am2901_dbg_val: std_logic_vector(15 downto 0);
+signal am2901_dbg_sel: std_logic_vector(3 downto 0);
 signal am2901_data: std_logic_vector(15 downto 0);
 signal am2901_y: std_logic_vector(15 downto 0);
 signal am2901_a: std_logic_vector(3 downto 0);
@@ -332,26 +350,41 @@ signal bl: std_logic_vector(7 downto 0);
 
 -- various debug signals
 signal debug_register, debug_microcode: std_logic_vector(19 downto 0);
-signal debug_alu_destination, debug_alu_function, debug_alu_source: std_logic_vector(2 downto 0);
-signal debug_a_lop, debug_a_hop: std_logic_vector(3 downto 0);
+--signal debug_alu_destination, debug_alu_function, debug_alu_source: std_logic_vector(2 downto 0);
+--signal debug_a_lop, debug_a_hop: std_logic_vector(3 downto 0);
 signal is_debug_register_mode: std_logic;
 
 begin
 
 -----       debug port     --------
-is_debug_register_mode <= debug_ena and debug_sel;
+--is_debug_register_mode <= debug_ena and debug_sel;
+with debug_reg select am2901_dbg_sel <= 
+	X"7" when O"0",	-- AF
+	X"0" when O"1",	-- BC
+	X"2" when O"2",	-- DE
+	X"4" when O"3",	-- HL
+	X"8" when O"4",	-- SP
+	X"F" when O"5",	-- PC
+	X"C" when O"6",	-- 0038
+	X"D" when others;	-- 3800
 
-debug_register <= debug_reg & am2901_y;
-debug_microcode <= ma(11 downto 0) & current_instruction;
+debug_register(19 downto 16) <= am2901_dbg_sel;
+-- map F register (flags) to LSB of AF
+debug_register(15 downto 0) <= am2901_dbg_val(15 downto 8) & (flag_s & flag_z & '0' & flag_ac & '0' & flag_p & '1' & flag_cy) when (debug_reg = "000") else am2901_dbg_val;
+-- combine current microinstruction with CPU opcode
+debug_microcode <= ma & current_instruction;
 
-debug_out <= debug_register when (is_debug_register_mode = '1') else debug_microcode; 
+debug_out <= debug_register when (debug_sel = '0') else debug_microcode; 
 -- if debugging register, feed NOP/OR/ZA to Am2901 instead of one coming from microcode ("pl" fields)
 -- note that this interferes with the CPU operation, so the debug_ena must be explicitly enabled!
-debug_alu_destination <= "001" when (is_debug_register_mode = '1') else pl_alu_destination; -- NOP
-debug_alu_function <= "011" when (is_debug_register_mode = '1') else pl_alu_function; -- OR
-debug_alu_source <= "100" when (is_debug_register_mode = '1') else pl_alu_source; -- ZA
-debug_a_hop <= debug_reg when (is_debug_register_mode = '1') else am2901_a;
-debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 downto 1) & u63_pin7;
+--debug_alu_destination <= "001" when (is_debug_register_mode = '1') else pl_alu_destination; -- NOP
+--debug_alu_function <= "011" when (is_debug_register_mode = '1') else pl_alu_function; -- OR
+--debug_alu_source <= "100" when (is_debug_register_mode = '1') else pl_alu_source; -- ZA
+--debug_a_hop <= debug_reg when (is_debug_register_mode = '1') else am2901_a;
+--debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 downto 1) & u63_pin7;
+
+--- expose loading of instruction register as M1 cycle signal ---
+M1 <= not pl_instregenable;
 
 -----------------------------------
 ---     START OF FIGURE 3       ---
@@ -372,13 +405,13 @@ debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 dow
    );	
 
 	-- microcode sequencers ---
-	interrupt_or_mask <= "1111" when (u73_pin8 = '1') else "0000";
+	interrupt_or_mask <= (others => u73_pin8);
 	
-	u21: am2909 port map (
-		S(1) => sequence(1),
-		S(0) => sequence(0),
-		R => u_immediate(3 downto 0),
-		D => instruction_startaddress(3 downto 0),
+	-- to save some FPGA area, 3 * 2909 = 1 * 2909-12
+	u21u22u23: am2909x12 port map (
+		S => sequence(1 downto 0),
+		R => u_immediate,
+		D => instruction_startaddress,
 		ORi => interrupt_or_mask,
 		nFE => sequence(3),
 		PUP => sequence(2),
@@ -388,45 +421,63 @@ debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 dow
 		CN => '1', 
 		CLK => CLK,
 		-- Output ports
-		Y	=> ma(3 downto 0),
-		C4	=> u21_pin24
-	);
-
-	u22: am2909 port map (
-		S(1) => sequence(1),
-		S(0) => sequence(0),
-		R => u_immediate(7 downto 4),
-		D => instruction_startaddress(7 downto 4),
-		ORi => interrupt_or_mask,
-		nFE => sequence(3),
-		PUP => sequence(2),
-		nRE => '0',
-		nZERO => nRESET,
-		nOE => '0',
-		CN => u21_pin24,
-		CLK => CLK,
-		-- Output ports
-		Y	=> ma(7 downto 4),
-		C4	=> u22_pin24
-	);
-
-	u23: am2909 port map (
-		S(1) => sequence(1),
-		S(0) => sequence(0),
-		R => u_immediate(11 downto 8),
-		D => instruction_startaddress(11 downto 8),
-		ORi => interrupt_or_mask,
-		nFE => sequence(3),
-		PUP => sequence(2),
-		nRE => '0',
-		nZERO => nRESET,
-		nOE => '0',
-		CN => u22_pin24,
-		CLK => CLK,
-		-- Output ports
-		Y	=> ma(11 downto 8),
+		Y	=> ma,
 		C4	=> open
 	);
+	
+--	u21: am2909 port map (
+--		S(1) => sequence(1),
+--		S(0) => sequence(0),
+--		R => u_immediate(3 downto 0),
+--		D => instruction_startaddress(3 downto 0),
+--		ORi => interrupt_or_mask,
+--		nFE => sequence(3),
+--		PUP => sequence(2),
+--		nRE => '0',
+--		nZERO => nRESET,
+--		nOE => '0',
+--		CN => '1', 
+--		CLK => CLK,
+--		-- Output ports
+--		Y	=> ma(3 downto 0),
+--		C4	=> u21_pin24
+--	);
+--
+--	u22: am2909 port map (
+--		S(1) => sequence(1),
+--		S(0) => sequence(0),
+--		R => u_immediate(7 downto 4),
+--		D => instruction_startaddress(7 downto 4),
+--		ORi => interrupt_or_mask,
+--		nFE => sequence(3),
+--		PUP => sequence(2),
+--		nRE => '0',
+--		nZERO => nRESET,
+--		nOE => '0',
+--		CN => u21_pin24,
+--		CLK => CLK,
+--		-- Output ports
+--		Y	=> ma(7 downto 4),
+--		C4	=> u22_pin24
+--	);
+--
+--	u23: am2909 port map (
+--		S(1) => sequence(1),
+--		S(0) => sequence(0),
+--		R => u_immediate(11 downto 8),
+--		D => instruction_startaddress(11 downto 8),
+--		ORi => interrupt_or_mask,
+--		nFE => sequence(3),
+--		PUP => sequence(2),
+--		nRE => '0',
+--		nZERO => nRESET,
+--		nOE => '0',
+--		CN => u22_pin24,
+--		CLK => CLK,
+--		-- Output ports
+--		Y	=> ma(11 downto 8),
+--		C4	=> open
+--	);
 	
 	--- test condition multiplexers ---
 	u8474: am2922 port map (
@@ -444,13 +495,13 @@ debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 dow
 	);
 
 	t(15) <= '1'; -- TRUE
-	--t(14) <= u121_pin12; 
-	--t(13) <= u121_pin15; 
-	--t(12) <= u121_pin16;
+	t(14) <= u121_pin12; -- (coming from u34_pin33 == CN+4)
+	t(13) <= u121_pin15; -- (coming from Am2901 common F=0)
+	t(12) <= u121_pin16; -- (coming from u34_pin31 == F3)
 	t(11) <= '0'; -- OPEN
-	--t(10) <= u121_pin6;
-	--t(9) <= u121_pin5;
-	--t(8) <= u121_pin2;
+	t(10) <= u121_pin6; -- HOLD
+	t(9) <= READY; --u121_pin5; -- READY -- bypass clocked register and have READY one cycle faster
+	t(8) <= u121_pin2; -- INT
 	t(7) <= '0'; -- OPEN
 	t(6) <= '0'; -- OPEN
 	t(5) <= '0'; -- OPEN
@@ -675,15 +726,14 @@ debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 dow
 -- LOP slices ---
 	u43: Am2901c port map (
 				  clk => CLK, 
-				  --rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
-				  a(3 downto 1) => debug_a_lop(3 downto 1), --am2901_a(3 downto 1), 
-				  a(0) => debug_a_lop(0), --u63_pin7,
+				  a(3 downto 1) => am2901_a(3 downto 1), 
+				  a(0) => u63_pin7,
 				  b(3 downto 1) => am2901_b(3 downto 1), 
 				  b(0) => u63_pin9,
 				  d => am2901_data(3 downto 0),
-				  i(8 downto 6) => debug_alu_destination, --pl_alu_destination,
-				  i(5 downto 3) => debug_alu_function, --pl_alu_function,
-				  i(2 downto 0) => debug_alu_source, --pl_alu_source,
+				  i(8 downto 6) => pl_alu_destination,
+				  i(5 downto 3) => pl_alu_function,
+				  i(2 downto 0) => pl_alu_source,
 				  c_n => pl_carryin,
 				  oe => '0',
 				  ram0 => am2901_ram0,
@@ -696,20 +746,22 @@ debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 dow
 				  ovr => open,
 				  c_n4 => am2901_c3,
 				  f_0 => u43pin11,
-				  f3 => open
+				  f3 => open,
+				  -- DEBUG PORT --
+				  debug_regsel => am2901_dbg_sel,
+				  debug_regval => am2901_dbg_val(3 downto 0)
 	);		  
 
 	u44: Am2901c port map (
 				  clk => CLK, 
-				  --rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
-				  a(3 downto 1) => debug_a_lop(3 downto 1), --am2901_a(3 downto 1), 
-				  a(0) => debug_a_lop(0), --u63_pin7,
+				  a(3 downto 1) => am2901_a(3 downto 1), 
+				  a(0) => u63_pin7,
 				  b(3 downto 1) => am2901_b(3 downto 1), 
 				  b(0) => u63_pin9,
 				  d => am2901_data(7 downto 4),
-				  i(8 downto 6) => debug_alu_destination, --pl_alu_destination,
-				  i(5 downto 3) => debug_alu_function, --pl_alu_function,
-				  i(2 downto 0) => debug_alu_source, --pl_alu_source,
+				  i(8 downto 6) => pl_alu_destination,
+				  i(5 downto 3) => pl_alu_function,
+				  i(2 downto 0) => pl_alu_source,
 				  c_n => am2901_c3,
 				  oe => '0',
 				  ram0 => am2901_ram3,
@@ -722,19 +774,21 @@ debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 dow
 				  ovr => open,
 				  c_n4 => am2901_c7,
 				  f_0 => u44pin11,
-				  f3 => open
+				  f3 => open,
+				  -- DEBUG PORT --
+				  debug_regsel => am2901_dbg_sel,
+				  debug_regval => am2901_dbg_val(7 downto 4)
 	);		  
 
 -- HOP slices ---
 	u33: Am2901c port map (
 				  clk => CLK, 
-				  --rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
-				  a => debug_a_hop, --am2901_a,
+				  a => am2901_a,
 				  b => am2901_b,
 				  d => am2901_data(11 downto 8),
-				  i(8 downto 6) => debug_alu_destination, --pl_alu_destination,
-				  i(5 downto 3) => debug_alu_function, --pl_alu_function,
-				  i(2 downto 0) => debug_alu_source, --pl_alu_source,
+				  i(8 downto 6) => pl_alu_destination,
+				  i(5 downto 3) => pl_alu_function,
+				  i(2 downto 0) => pl_alu_source,
 				  c_n => u64_pin4,
 				  oe => '0',
 				  ram0 => signal_b,
@@ -747,18 +801,20 @@ debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 dow
 				  ovr => open,
 				  c_n4 => am2901_c11,
 				  f_0 => u33pin11,
-				  f3 => open
+				  f3 => open,
+				  -- DEBUG PORT --
+				  debug_regsel => am2901_dbg_sel,
+				  debug_regval => am2901_dbg_val(11 downto 8)
 	);		  
 
 	u34: Am2901c port map (
 				  clk => CLK, 
-				  --rst => '0', -- NOTE: specific to this implementation, real Am2901 has no reset
-				  a => debug_a_hop, --am2901_a,
+				  a => am2901_a,
 				  b => am2901_b,
 				  d => am2901_data(15 downto 12),
-				  i(8 downto 6) => debug_alu_destination, --pl_alu_destination,
-				  i(5 downto 3) => debug_alu_function, --pl_alu_function,
-				  i(2 downto 0) => debug_alu_source, --pl_alu_source,
+				  i(8 downto 6) => pl_alu_destination,
+				  i(5 downto 3) => pl_alu_function,
+				  i(2 downto 0) => pl_alu_source,
 				  c_n => am2901_c11,
 				  oe => '0',
 				  ram0 => am2901_ram11,
@@ -771,21 +827,25 @@ debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 dow
 				  ovr => open,
 				  c_n4 => am2901_c15,
 				  f_0 => u34pin11,
-				  f3 => am2901_f15
+				  f3 => am2901_f15,
+				  -- DEBUG PORT --
+				  debug_regsel => am2901_dbg_sel,
+				  debug_regval => am2901_dbg_val(15 downto 12)
 	);		  
 
-	am2901_f_is_0 <= u33pin11 and u34pin11 and u43pin11 and u44pin11; -- use standard "and", not open collector.
+	-- use standard "and", not open collector.
+	am2901_f_is_0 <= u33pin11 and u34pin11 and u43pin11 and u44pin11; 
 	
 	u64: Am25LS157 port map ( 
 				 a(3) => '0',
 				 a(2) => pl_rotateorswap,
 				 a(1) => pl_carryin, 
-				 a(0) => '0', -- open 
+				 a(0) => '0',			-- open 
 				 
 				 b(3) => pl_rotateorswap,   
 				 b(2) => '0',   
-				 b(1) => am2901_c7, -- open 
-				 b(0) => '0', -- open,
+				 b(1) => am2901_c7,	-- open 
+				 b(0) => '0', 			-- open,
 				 
 				 s => pl_not8or16,
 				 nG => '0',
@@ -955,13 +1015,13 @@ debug_a_lop <= debug_reg when (is_debug_register_mode = '1') else am2901_a(3 dow
            d(5) => am2901_f_is_0,
            d(6) => am2901_f15,
            d(7) => '0', --open
-           y(0) => t(8),--u121_pin2,
-           y(1) => t(9), --u121_pin5,
-           y(2) => t(10), --u121_pin6,
+           y(0) => u121_pin2,
+           y(1) => u121_pin5,
+           y(2) => u121_pin6,
            y(3) => open,
-           y(4) => t(14), --u121_pin12,
-           y(5) => t(13), --u121_pin15,
-           y(6) => t(12), --u121_pin16,
+           y(4) => u121_pin12,
+           y(5) => u121_pin15,
+           y(6) => u121_pin16,
            y(7) => open
 			);
 

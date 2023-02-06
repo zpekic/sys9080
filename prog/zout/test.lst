@@ -1,20 +1,68 @@
-   1:     -	0000          	switch_lsb 	.equ 0x0 ;port 0 when reading
-   2:     -	0001          	switch_msb	.equ 0x1 ;port 1 when reading
-   3:     -	0000          	leds_lsb	.equ 0x0 ;port 0 when writing
-   4:     -	0001          	leds_msb	.equ 0x1 ;port 1 when writing
-   5:						
-   6:     -	0000          			.org 0x0
-   7:    0+4	0000  F3      			di
-   8:    4+10	0001  DB00    	loop: 		in switch_lsb
-   9:   14+5	0003  3C      			inr a
-  10:   19+10	0004  D300    			out leds_lsb
-  11:   29+10	0006  DB01    			in switch_msb
-  12:   39+4	0008  AF      			xra a
-  13:   43+10	0009  D301    			out leds_msb
-  14:   53+10	000B  CA0100  			jz loop
-  15:   63+7	000E  76      			hlt
-  16:				
-  17:				
+   1:				;--------------------------------------------------------------------------
+   2:				; Simple test program for Sys9080 project https://github.com/zpekic/sys9080
+   3:				; 		(c) zpekic@hotmail.com - 2017, 2018
+   4:				;--------------------------------------------------------------------------
+   5:     -	0010          	ACIA0_STATUS	EQU 0x10; status read-only
+   6:     -	0011          	ACIA0_DATA	EQU 0x11; data send/receive
+   7:     -	0012          	ACIA1_STATUS	EQU 0x12; status read-only
+   8:     -	0013          	ACIA1_DATA	EQU 0x13; data send/receive
+   9:     -	0000          	PORT_0		EQU 0x00;
+  10:     -	0001          	PORT_1		EQU 0x01;
+  11:     -	0001          	MASK_VALID	EQU 0x01; fields in UART status register
+  12:     -	0002          	MASK_READY	EQU 0x02;
+  13:     -	0040          	MASK_ERROR	EQU 0x40;
+  14:     -	0080          	MASK_INTREQ	EQU 0x80;
+  15:     -	000D          	CR		EQU 0x0D; ASCII newline
+  16:     -	000A          	LF		EQU 0x0A; ASCII line feed
+  17:     -	0002          	MASK_BUTTON1	EQU 0x02;
+  18:     -	FF00          	Temp_PC		EQU 0xFF00; can't use DW because the hex file maps to ROM only
+  19:     -	0400          	AltMon		EQU 0x0400; Altmon is org'd to this location
+  20:				
+  21:				
+  22:     -	FE00          			ORG 0xFE00	;-----Suitable for 512b RAM system
+  23:				
+  24:    0+10	FE00  210099  			LXI H, 0x9900
+  25:   10+5	FE03  7C      	LoopDAA		MOV A, H
+  26:   15+7	FE04  D601    			SUI 0x01
+  27:   22+4	FE06  27      			DAA
+  28:   26+10	FE07  D301    			OUT PORT_1
+  29:   36+5	FE09  67      			MOV H, A
+  30:   41+5	FE0A  7D      			MOV A, L
+  31:   46+7	FE0B  C601    			ADI 0x01
+  32:   53+4	FE0D  27      			DAA
+  33:   57+10	FE0E  D300    			OUT PORT_0
+  34:   67+5	FE10  6F      			MOV L, A
+  35:   72+4	FE11  B7      			ORA A
+  36:   76+10	FE12  C203FE  			JNZ LoopDAA
+  37:				
+  38:   86+10	FE15  010000  			LXI B, 0x0000
+  39:   96+5	FE18  0B      	LoopB:		DCX B
+  40:  101+5	FE19  78      			MOV A, B
+  41:  106+10	FE1A  D301    			OUT PORT_1
+  42:  116+5	FE1C  79      			MOV A, C
+  43:  121+10	FE1D  D300    			OUT PORT_0
+  44:  131+4	FE1F  B0      			ORA B
+  45:  135+10	FE20  C218FE  			JNZ LoopB
+  46:				
+  47:  145+10	FE23  110000  			LXI D, 0x0000
+  48:  155+5	FE26  1B      	LoopD:		DCX D
+  49:  160+5	FE27  7A      			MOV A, D
+  50:  165+10	FE28  D301    			OUT PORT_1
+  51:  175+5	FE2A  7B      			MOV A, E
+  52:  180+10	FE2B  D300    			OUT PORT_0
+  53:  190+4	FE2D  B2      			ORA D
+  54:  194+10	FE2E  C226FE  			JNZ LoopD
+  55:				
+  56:  204+10	FE31  210000  			LXI H, 0x0000
+  57:  214+5	FE34  2B      	LoopH:		DCX H
+  58:  219+5	FE35  7C      			MOV A, H
+  59:  224+10	FE36  D301    			OUT PORT_1
+  60:  234+5	FE38  7D      			MOV A, L
+  61:  239+10	FE39  D300    			OUT PORT_0
+  62:  249+4	FE3B  B4      			ORA H
+  63:  253+10	FE3C  C234FE  			JNZ LoopH
+  64:						
+  65:  263+10	FE3F  C30004  			JMP AltMon
 
 
 
@@ -22,16 +70,30 @@ Statistics:
 
      4	passes
      0	jr promotions
-     5	symbols
-    15	bytes
+    19	symbols
+    66	bytes
 
 
 
 Symbol Table:
 
-leds_lsb       =   0     
-leds_msb       =   1     
-loop               1     
-switch_lsb     =   0     
-switch_msb     =   1     
+acia0_data     =  11     
+acia0_status   =  10     
+acia1_data     =  13     
+acia1_status   =  12     
+altmon         = 400     
+cr             =   d     
+lf             =   a     
+loopb           fe18     
+loopd           fe26     
+loopdaa         fe03     
+looph           fe34     
+mask_button1   =   2     
+mask_error     =  40     
+mask_intreq    =  80     
+mask_ready     =   2     
+mask_valid     =   1     
+port_0         =   0     
+port_1         =   1     
+temp_pc        =ff00     
 

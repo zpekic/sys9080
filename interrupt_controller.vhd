@@ -36,8 +36,8 @@ entity interrupt_controller is
            nINTA : in  STD_LOGIC;
            INTE : in  STD_LOGIC;
            D : out  STD_LOGIC_VECTOR (7 downto 0);
-           DEVICEREQ : in  STD_LOGIC_VECTOR (7 downto 0);
-           DEVICEACK : out  STD_LOGIC_VECTOR (7 downto 0));
+           DEVICEREQ : in STD_LOGIC_VECTOR (7 downto 0);
+           DEVICEACK : out STD_LOGIC_VECTOR (7 downto 0));
 end interrupt_controller;
 
 architecture Behavioral of interrupt_controller is
@@ -62,14 +62,14 @@ D <= vector when (nINTA = '0') else "ZZZZZZZZ";
 --intclk <= CLK when (intreq = '0') else nINTA;
 INT <= intreq;
 
-level <= "1111" when DEVICEREQ(7) = '1' else -- highest level 7 == RST 7
-			"1110" when DEVICEREQ(6) = '1' else
-			"1101" when DEVICEREQ(5) = '1' else
-			"1100" when DEVICEREQ(4) = '1' else
-			"1011" when DEVICEREQ(3) = '1' else
-			"1010" when DEVICEREQ(2) = '1' else
+level <= "1000" when DEVICEREQ(0) = '1' else -- highest level 0 == RST 0
 			"1001" when DEVICEREQ(1) = '1' else
-			"1000" when DEVICEREQ(0) = '1' else -- lowest level 0 == RST 0
+			"1010" when DEVICEREQ(2) = '1' else
+			"1011" when DEVICEREQ(3) = '1' else
+			"1100" when DEVICEREQ(4) = '1' else
+			"1101" when DEVICEREQ(5) = '1' else
+			"1110" when DEVICEREQ(6) = '1' else
+			"1111" when DEVICEREQ(7) = '1' else -- lowest level 7 == RST 7
 			"0000";										-- no interrupt
 
 generate_ack: process(nINTA, vector)

@@ -1,0 +1,98 @@
+binary-debuggable-source
+0000 0000 f test_tft.asm
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ; Simple test program for Sys9080 project https://github.com/zpekic/sys9080
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2017, 2018
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ACIA0_STATUS	EQU 0x10; status read-only
+0000 0000 s ACIA0_DATA	EQU 0x11; data send/receive
+0000 0000 s ACIA1_STATUS	EQU 0x12; status read-only
+0000 0000 s ACIA1_DATA	EQU 0x13; data send/receive
+0000 0000 s PORT_0		EQU 0x00;
+0000 0000 s PORT_1		EQU 0x01;
+0000 0000 s MASK_VALID	EQU 0x01; fields in UART status register
+0000 0000 s MASK_READY	EQU 0x02;
+0000 0000 s MASK_ERROR	EQU 0x40;
+0000 0000 s MASK_INTREQ	EQU 0x80;
+0000 0000 s CR		EQU 0x0D; ASCII newline
+0000 0000 s LF		EQU 0x0A; ASCII line feed
+0000 0000 s MASK_BUTTON1	EQU 0x02;
+0000 0000 s Temp_PC		EQU 0xFF00; can't use DW because the hex file maps to ROM only
+0000 0000 s AltMon		EQU 0x0400; Altmon is org'd to this location
+0000 0000 s ;-------------------------------------------------------------
+0000 0000 s VdpRam		EQU 0xFC00; text video memory, 512b
+0000 0000 s VdpFgColor	EQU VdpRam + 0x1FE	;write only, RRRGGGBB
+0000 0000 s VdpBkColor	EQU VdpRam + 0x1FF	;write only, RRRGGGBB
+0000 0000 s VdpCols		EQU VdpRam + 0x1FE	;read only, should be 30
+0000 0000 s VdpRows		EQU VdpRam + 0x1FF	;read only, should be 17
+0000 0000 s 
+0000 0000 s 
+fe00 fe00 s 		ORG 0xFE00	;-----Suitable for 512b RAM system
+fe00 fe00 s 
+fe00 fe00 d 3afefd
+fe00 fe00 s 		LDA VdpCols
+fe03 fe03 d d300
+fe03 fe03 s 		OUT PORT_0
+fe05 fe05 d 3afffd
+fe05 fe05 s 		LDA VdpRows
+fe08 fe08 d d301
+fe08 fe08 s 		OUT PORT_1
+fe0a fe0a d 0e00
+fe0a fe0a s 		MVI C, 0x00	;-- start with white as fg color
+fe0c fe0c d 79
+fe0c fe0c s NextColor:	MOV A, C
+fe0d fe0d d 32fefd
+fe0d fe0d s 		STA VdpFgColor
+fe10 fe10 d 2f
+fe10 fe10 s 		CMA
+fe11 fe11 d 32fffd
+fe11 fe11 s 		STA VdpBkColor
+fe14 fe14 d 41
+fe14 fe14 s 		MOV B, C
+fe15 fe15 d 2100fc
+fe15 fe15 s 		LXI H, VdpRam
+fe18 fe18 d 11fd01
+fe18 fe18 s 		LXI D, 30*17-1
+fe1b fe1b d 70
+fe1b fe1b s NextChar:	MOV M, B
+fe1c fe1c d 04
+fe1c fe1c s 		INR B
+fe1d fe1d d 23
+fe1d fe1d s 		INX H
+fe1e fe1e d 1b
+fe1e fe1e s 		DCX D
+fe1f fe1f d 7a
+fe1f fe1f s 		MOV A, D
+fe20 fe20 d feff
+fe20 fe20 s 		CPI 0xFF
+fe22 fe22 d c21bfe
+fe22 fe22 s 		JNZ NextChar
+fe25 fe25 d 0c
+fe25 fe25 s 		INR C
+fe26 fe26 d c20cfe
+fe26 fe26 s 		JNZ NextColor
+fe29 fe29 s 		
+fe29 fe29 d c30004
+fe29 fe29 s 		JMP AltMon
+000a v lf
+000d v cr
+0000 v port_0
+0001 v port_1
+fc00 v vdpram
+0400 v altmon
+ff00 v temp_pc
+fdfe v vdpcols
+fdff v vdprows
+fe1b a nextchar
+0011 v acia0_data
+0013 v acia1_data
+fe0c a nextcolor
+0001 v mask_valid
+0002 v mask_ready
+0040 v mask_error
+fdfe v vdpfgcolor
+fdff v vdpbkcolor
+0080 v mask_intreq
+0010 v acia0_status
+0012 v acia1_status
+0002 v mask_button1

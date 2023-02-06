@@ -1,0 +1,128 @@
+   1:				;--------------------------------------------------------------------------
+   2:				; "fast" plot for TIM-011 (with "clear screen" test routine)
+   3:				; 		(c) zpekic@hotmail.com - 2020
+   4:				;--------------------------------------------------------------------------
+   5:     -	0800          		org 0x0800	; some place in ROM or RAM
+   6:				
+   7:				; ------------------------------------------------------------	
+   8:				; test routine - fill screen with all 4 colors and then return
+   9:				; ------------------------------------------------------------
+  10:    0+10	0800  110300  	testplot	ld de, 3	;colors from 3 downto 0
+  11:   10+10	0803  01FF00  	c_loop		ld bc, 255	;Y from 255 downto 0
+  12:   20+10	0806  21FF01  	y_loop		ld hl, 511	;X from 511 downto 0
+  13:				
+  14:   30+17	0809  CD2508  	x_loop		call fastplot
+  15:				
+  16:   47+4	080C  7C      			ld a, h		;X == 0?
+  17:   51+4	080D  B5      			or l
+  18:   55+10	080E  CA1508  			jz y_next
+  19:   65+6	0811  2B      			dec hl		;X--
+  20:   71+10	0812  C30908  			jmp x_loop	
+  21:				
+  22:   81+4	0815  78      	y_next		ld a, b		;Y == 0?
+  23:   85+4	0816  B1      			or c
+  24:   89+10	0817  CA1E08  			jz c_next
+  25:   99+6	081A  0B      			dec bc		;Y--
+  26:  105+10	081B  C30608  			jmp y_loop
+  27:				
+  28:  115+4	081E  7A      	c_next		ld a, d		;color == 0?
+  29:  119+4	081F  B3      			or e
+  30:  123+5+6	0820  C8      			rz		;yes, all colors drawn, return
+  31:  128+6	0821  1B      			dec de
+  32:  134+10	0822  C30308  			jmp c_loop
+  33:				
+  34:				; -------------------------------------------------------
+  35:				; Set pixel on TIM-011 screen, call with:
+  36:				; HL = X (normalize to 0..511) 
+  37:				; BC = Y (normalize to 0..255), 
+  38:				; DE = color (normalize to 0..3)
+  39:				; Note: byte address is 1yyyyyyy yxxxxxxx in 64k I/O space
+  40:				; -------------------------------------------------------
+  41:  144+11	0825  F5      	fastplot	push af		;save regs
+  42:  155+11	0826  C5      			push bc		;????????yyyyyyyy
+  43:  166+11	0827  D5      			push de		;??????????????cc
+  44:  177+11	0828  E5      			push hl		;???????xxxxxxxxx
+  45:				
+  46:				;--- handle Y
+  47:  188+4	0829  41      			ld b, c		;BC = yyyyyyyyyyyyyyyy 
+  48:  192+7	082A  0E00    			ld c, 0x00	;BC = yyyyyyyy00000000 (sanitize Y)
+  49:  199+4	082C  37      			scf	
+  50:  203+8	082D  CB18    			rr b		;BC = 1yyyyyyy00000000, CY = y0
+  51:  211+8	082F  CB19    			rr c		;BC = 1yyyyyyyy0000000
+  52:								
+  53:				;--- handle X and color
+  54:  219+4	0831  7C      			ld a, h
+  55:  223+7	0832  E601    			and a, 0x01	
+  56:  230+4	0834  67      			ld h, a		;HL = 0000000xxxxxxxxx (sanitize X)	
+  57:				
+  58:  234+7	0835  1600    			ld d, 0x00
+  59:  241+4	0837  7B      			ld a, e
+  60:  245+7	0838  E603    			and a, 0x03
+  61:  252+4	083A  5F      			ld e, a		;DE = 00000000000000cc (sanitize color)
+  62:				
+  63:  256+8	083B  CB2C    			sra h		;HL = 00000000xxxxxxxx, CY = x8
+  64:  264+8	083D  CB1D    			rr l		;HL = 00000000xxxxxxxx, CY = x0
+  65:  272+8	083F  CB12    			rl d		;DE = 0000000000000ccx
+  66:  280+8	0841  CB2D    			sra l		;HL = 000000000xxxxxxx, CY = x1
+  67:  288+8	0843  CB12    			rl d		;DE = 000000000000ccxx, note C1 C0 X0 X1 (lower 2 x-bits reversed!)
+  68:									
+  69:				;--- create video RAM base address
+  70:  296+11	0845  09      			add hl, bc	;HL = 1yyyyyyyyxxxxxxx
+  71:  307+4	0846  4D      			ld c, l
+  72:  311+4	0847  44      			ld b, h		;BC = 1yyyyyyyyxxxxxxx (video RAM address for indirect I/O)
+  73:				
+  74:				;--- apply to video RAM
+  75:  315+12	0848  ED78    			in a, (c)	;load byte from video RAM
+  76:						
+  77:  327+10	084A  215B08  			ld hl, mask_clr
+  78:  337+11	084D  19      			add hl, de
+  79:  348+7	084E  A6      			and (hl)	;clear appropriate 2 bits
+  80:				
+  81:  355+10	084F  216B08  			ld hl, mask_set
+  82:  365+11	0852  19      			add hl, de
+  83:  376+7	0853  B6      			or (hl)		;set same 2 bits with right color
+  84:				
+  85:  383+12	0854  ED79    			out (c), a	;write back to video RAM
+  86:				
+  87:				;--- 
+  88:  395+10	0856  E1      			pop hl		;restore and return
+  89:  405+10	0857  D1      			pop de
+  90:  415+10	0858  C1      			pop bc
+  91:  425+10	0859  F1      			pop af
+  92:  435+10	085A  C9      			ret
+  93:				
+  94:				;masks for clearing bits for x mod 3 (color is not important)
+  95:     -	085B  CFFC3FF3	mask_clr	db 11001111b, 11111100b, 00111111b, 11110011b;	color 0: pix 0, 2, 1, 3 
+  96:     -	085F  CFFC3FF3			db 11001111b, 11111100b, 00111111b, 11110011b;	color 1: pix 0, 2, 1, 3 
+  97:     -	0863  CFFC3FF3			db 11001111b, 11111100b, 00111111b, 11110011b;	color 2: pix 0, 2, 1, 3 
+  98:     -	0867  CFFC3FF3			db 11001111b, 11111100b, 00111111b, 11110011b;	color 3: pix 0, 2, 1, 3 
+  99:				
+ 100:				;masks for setting bits for x mod 3 (color is taken into account)
+ 101:     -	086B  00000000	mask_set	db 00000000b, 00000000b, 00000000b, 00000000b; 	color 0: pix 0, 2, 1, 3 
+ 102:     -	086F  10014004			db 00010000b, 00000001b, 01000000b, 00000100b; 	color 1: pix 0, 2, 1, 3 
+ 103:     -	0873  20028008			db 00100000b, 00000010b, 10000000b, 00001000b; 	color 2: pix 0, 2, 1, 3 
+ 104:     -	0877  3003C00C			db 00110000b, 00000011b, 11000000b, 00001100b; 	color 3: pix 0, 2, 1, 3 
+
+
+
+Statistics:
+
+     4	passes
+     0	jr promotions
+     9	symbols
+   123	bytes
+
+
+
+Symbol Table:
+
+c_loop           803     
+c_next           81e     
+fastplot         825     
+mask_clr         85b     
+mask_set         86b     
+testplot         800     
+x_loop           809     
+y_loop           806     
+y_next           815     
+

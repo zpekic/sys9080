@@ -51,7 +51,7 @@ y <= q when (nOE = '0') else "ZZZZZZZZ";
 load_q: process(clk, d, nE, nCLR)
 begin
     if (nCLR = '0') then
-        q <= "00000000";
+        q <= (others => '0');
     else
        if (rising_edge(clk) and (nE = '0')) then
             q <= d;

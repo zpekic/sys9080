@@ -1,7 +1,7 @@
 ##############################################################
 #
 # Xilinx Core Generator version 14.7
-# Date: Fri Dec 01 06:36:31 2017
+# Date: Wed Dec 27 18:13:44 2017
 #
 ##############################################################
 #
@@ -40,7 +40,7 @@ SELECT Block_Memory_Generator xilinx.com:ip:blk_mem_gen:7.3
 # END Select
 # BEGIN Parameters
 CSET additional_inputs_for_power_estimation=false
-CSET algorithm=Fixed_Primitives
+CSET algorithm=Minimum_Area
 CSET assume_synchronous_clk=false
 CSET axi_id_width=4
 CSET axi_slave_type=Memory_Slave
@@ -73,7 +73,7 @@ CSET port_a_write_rate=50
 CSET port_b_clock=0
 CSET port_b_enable_rate=0
 CSET port_b_write_rate=0
-CSET primitive=4kx4
+CSET primitive=8kx2
 CSET read_width_a=8
 CSET read_width_b=8
 CSET register_porta_input_of_softecc=false
@@ -82,7 +82,7 @@ CSET register_porta_output_of_memory_primitives=false
 CSET register_portb_output_of_memory_core=false
 CSET register_portb_output_of_memory_primitives=false
 CSET register_portb_output_of_softecc=false
-CSET remaining_memory_locations=76
+CSET remaining_memory_locations=FF
 CSET reset_memory_latch_a=false
 CSET reset_memory_latch_b=false
 CSET reset_priority_a=CE
@@ -97,7 +97,7 @@ CSET use_regcea_pin=false
 CSET use_regceb_pin=false
 CSET use_rsta_pin=false
 CSET use_rstb_pin=false
-CSET write_depth_a=4096
+CSET write_depth_a=256
 CSET write_width_a=8
 CSET write_width_b=8
 # END Parameters
@@ -105,4 +105,4 @@ CSET write_width_b=8
 MISC pkg_timestamp=2012-11-19T16:22:25Z
 # END Extra information
 GENERATE
-# CRC: 410ac100
+# CRC: e0d1b75d

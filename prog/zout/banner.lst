@@ -1,0 +1,291 @@
+   1:				;--------------------------------------------------------------------------
+   2:				; Simple test program for Sys9080 project https://github.com/zpekic/sys9080
+   3:				; 		(c) zpekic@hotmail.com - 2017, 2018
+   4:				;--------------------------------------------------------------------------
+   5:				
+   6:				include ./sys9080.asm
+**** ./sys9080.asm ****
+   1:				;--------------------------------------------------------------------------
+   2:				; Common definitions for  Sys9080 project https://github.com/zpekic/sys9080
+   3:				; 		(c) zpekic@hotmail.com - 2017, 2018
+   4:				;--------------------------------------------------------------------------
+   5:     -	0010          	ACIA0_STATUS	EQU 0x10; status read-only
+   6:     -	0011          	ACIA0_DATA	EQU 0x11; data send/receive
+   7:     -	0012          	ACIA1_STATUS	EQU 0x12; status read-only
+   8:     -	0013          	ACIA1_DATA	EQU 0x13; data send/receive
+   9:     -	0000          	PORT0		EQU 0x00; switches when reading, LEDs when writing
+  10:     -	0001          	PORT1		EQU 0x01; buttons (3..0) when reading, LEDs when writing
+  11:     -	0002          	PORT2		EQU 0x02; slider switches when reading, LEDs when writing
+  12:     -	0007          	PORT_COL	EQU 0x07; hex key colums 3..0 when writing
+  13:     -	0007          	PORT_ROW	EQU 0x07; hex key rows 3..0 when reading
+  14:     -	0001          	MASK_VALID	EQU 0x01; fields in UART status register
+  15:     -	0002          	MASK_READY	EQU 0x02;
+  16:     -	0040          	MASK_ERROR	EQU 0x40;
+  17:     -	0080          	MASK_INTREQ	EQU 0x80;
+  18:				
+  19:     -	0001          	MASK_BUTTON0	EQU 0x01;
+  20:     -	0002          	MASK_BUTTON1	EQU 0x02;
+  21:     -	0004          	MASK_BUTTON2	EQU 0x04;
+  22:     -	0008          	MASK_BUTTON3	EQU 0x08;
+  23:     -	0001          	MASK_SW0	EQU 0x01;
+  24:     -	0002          	MASK_SW1	EQU 0x02;
+  25:     -	0004          	MASK_SW2	EQU 0x04;
+  26:     -	0008          	MASK_SW3	EQU 0x08;
+  27:     -	0010          	MASK_SW4	EQU 0x10;
+  28:     -	0020          	MASK_SW5	EQU 0x20;
+  29:     -	0040          	MASK_SW6	EQU 0x40;
+  30:     -	0080          	MASK_SW7	EQU 0x80;
+  31:				
+  32:				;-------------------------------------------------------------
+  33:     -	0400          	AltMon		EQU 0x0400; Altmon is org'd to this location
+  34:				
+  35:				;-------------------------------------------------------------
+  36:     -	0C00          	VdpRam		EQU 0x0C00; text video memory, 512b
+  37:     -	0DFE          	VdpFgColor	EQU VdpRam + 0x1FE	;write only, RRRGGGBB
+  38:     -	0DFF          	VdpBkColor	EQU VdpRam + 0x1FF	;write only, RRRGGGBB
+  39:     -	0DFE          	VdpCols		EQU VdpRam + 0x1FE	;read only, should be 30
+  40:     -	0DFF          	VdpRows		EQU VdpRam + 0x1FF	;read only, should be 17
+  41:     -	FE00          	RamBottom	EQU 0xFE00
+  42:     -	FF80          	Heap		EQU RamBottom + 0x0180
+  43:     -	FF80          	Temp_PC		EQU Heap; can't use DW because the hex file maps to ROM only
+  44:     -	FF82          	CursorCol	EQU Heap + 2
+  45:     -	FF83          	CursorRow	EQU Heap + 3
+  46:				
+  47:				;Some ASCII codes with special handling during PrintCharText
+  48:     -	0010          	CS 	EQU 16  ;CS: Clear Screen      
+  49:     -	0001          	HM 	EQU 1   ;HM: HoMe cursor       
+  50:     -	000D          	NL 	EQU 13  ;NL: New Line
+  51:     -	000D          	CR 	EQU 13  ;CR: Carriage return == NL       
+  52:     -	000A          	LF 	EQU 10  ;LF: Line Feed       
+  53:     -	0003          	ML 	EQU  3  ;ML: Move cursor Left          
+  54:     -	0004          	MR 	EQU  4  ;MR: Move cursor Right         
+  55:     -	0005          	MU 	EQU  5  ;MU: Move cursor Up          
+  56:     -	0006          	MD 	EQU  6  ;MD: Move cursor Down
+  57:     -	0009          	TB 	EQU  9  ;TB: TaB        
+  58:     -	0008          	BS 	EQU  8  ;BS: BackSpace  
+**** banner.asm ****
+   7:				
+   8:				
+   9:				; text video memory, 512b
+  10:     -	0C00          			ORG VdpRam
+  11:     -	0C00  30313233	l0:	DB '012345678901234567891234567890'
+	      34353637
+	      38393031
+	      32333435
+	      36373839
+	      31323334
+	      35363738
+	      3930
+  12:     -	0C1E  20205F5F	l1:	DB '  _____                      1'                      
+	      5F5F5F20
+	      20202020
+	      20202020
+	      20202020
+	      20202020
+	      20202020
+	      2031
+  13:     -	0C3C  202F205F	l2:	DB ' / ____|                     2'			                       
+	      5F5F5F7C
+	      20202020
+	      20202020
+	      20202020
+	      20202020
+	      20202020
+	      2032
+  14:     -	0C5A  7C20285F	l3:	DB '| (___   _   _   ___         3'         
+	      5F5F2020
+	      205F2020
+	      205F2020
+	      205F5F5F
+	      20202020
+	      20202020
+	      2033
+  15:     -	0C78  205C5F5F	l4:	DB ' \___ \ | | | | / __|        4'         
+	      5F205C20
+	      7C207C20
+	      7C207C20
+	      2F205F5F
+	      7C202020
+	      20202020
+	      2034
+  16:     -	0C96  205F5F5F	l5:	DB ' ____) || |_| | \__ \        5'         
+	      5F29207C
+	      7C207C5F
+	      7C207C20
+	      5C5F5F20
+	      5C202020
+	      20202020
+	      2035
+  17:     -	0CB4  7C5F5F5F	l6:	DB '|_____/  \__, | |___/        6'         
+	      5F5F2F20
+	      205C5F5F
+	      2C207C20
+	      7C5F5F5F
+	      2F202020
+	      20202020
+	      2036
+  18:     -	0CD2  20202020	l7:	DB '          __/ |              7'               
+	      20202020
+	      20205F5F
+	      2F207C20
+	      20202020
+	      20202020
+	      20202020
+	      2037
+  19:     -	0CF0  20205F5F	l8:	DB '  ___    |___/   ___    ___  8'
+	      5F202020
+	      207C5F5F
+	      5F2F2020
+	      205F5F5F
+	      20202020
+	      5F5F5F20
+	      2038
+  20:     -	0D0E  202F205F	l9:	DB ' / _ \  / _ \   / _ \  / _ \ 9'
+	      205C2020
+	      2F205F20
+	      5C202020
+	      2F205F20
+	      5C20202F
+	      205F205C
+	      2039
+  21:     -	0D2C  7C20285F	l10:	DB '| (_) || | | | | (_) || | | |0'
+	      29207C7C
+	      207C207C
+	      207C207C
+	      20285F29
+	      207C7C20
+	      7C207C20
+	      7C30
+  22:     -	0D4A  205C5F5F	l11:	DB ' \__, || | | |  > _ < | | | |1'
+	      2C207C7C
+	      207C207C
+	      207C2020
+	      3E205F20
+	      3C207C20
+	      7C207C20
+	      7C31
+  23:     -	0D68  2020202F	l12:	DB '   / / | |_| | | (_) || |_| |2'
+	      202F207C
+	      207C5F7C
+	      207C207C
+	      20285F29
+	      207C7C20
+	      7C5F7C20
+	      7C32
+  24:     -	0D86  20202F5F	l13:	DB '  /_/   \___/   \___/  \___/ 3'
+	      2F202020
+	      5C5F5F5F
+	      2F202020
+	      5C5F5F5F
+	      2F20205C
+	      5F5F5F2F
+	      2033
+  25:     -	0DA4  2D2D2D2D	l14:	DB '-----------------------------4'
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D34
+  26:     -	0DC2  7A70656B	l15:	DB 'zpekic@hotmail.com 2017,2018 5'
+	      69634068
+	      6F746D61
+	      696C2E63
+	      6F6D2032
+	      3031372C
+	      32303138
+	      2035
+  27:     -	0DE0  2D2D2D2D	l16:	DB '-----------------------------6'
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D2D2D2D
+	      2D36
+  28:				
+  29:				; set display colors
+  30:     -	0DFE          			ORG VdpFgColor	
+  31:     -	0DFE  F0      			DB 	0xF0	;RRRGGGBB
+  32:     -	0DFF          			ORG VdpBkColor	
+  33:     -	0DFF  0F      			DB 	0x0F	;RRRGGGBB
+
+
+
+Statistics:
+
+     3	passes
+     0	jr promotions
+    64	symbols
+   512	bytes
+
+
+
+Symbol Table:
+
+acia0_data     =  11     
+acia0_status   =  10     
+acia1_data     =  13     
+acia1_status   =  12     
+altmon         = 400     
+bs             =   8     
+cr             =   d     
+cs             =  10     
+cursorcol      =ff82     
+cursorrow      =ff83     
+heap           =ff80     
+hm             =   1     
+l0               c00     
+l1               c1e     
+l10              d2c     
+l11              d4a     
+l12              d68     
+l13              d86     
+l14              da4     
+l15              dc2     
+l16              de0     
+l2               c3c     
+l3               c5a     
+l4               c78     
+l5               c96     
+l6               cb4     
+l7               cd2     
+l8               cf0     
+l9               d0e     
+lf             =   a     
+mask_button0   =   1     
+mask_button1   =   2     
+mask_button2   =   4     
+mask_button3   =   8     
+mask_error     =  40     
+mask_intreq    =  80     
+mask_ready     =   2     
+mask_sw0       =   1     
+mask_sw1       =   2     
+mask_sw2       =   4     
+mask_sw3       =   8     
+mask_sw4       =  10     
+mask_sw5       =  20     
+mask_sw6       =  40     
+mask_sw7       =  80     
+mask_valid     =   1     
+md             =   6     
+ml             =   3     
+mr             =   4     
+mu             =   5     
+nl             =   d     
+port0          =   0     
+port1          =   1     
+port2          =   2     
+port_col       =   7     
+port_row       =   7     
+rambottom      =fe00     
+tb             =   9     
+temp_pc        =ff80     
+vdpbkcolor     = dff     
+vdpcols        = dfe     
+vdpfgcolor     = dfe     
+vdpram         = c00     
+vdprows        = dff     
+

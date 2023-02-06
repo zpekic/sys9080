@@ -33,14 +33,17 @@ entity simpledevice is
     Port ( clk: in std_logic;
 			  reset: in std_logic;
 			  D : inout  STD_LOGIC_VECTOR (7 downto 0);
-           A : in  STD_LOGIC_VECTOR(3 downto 0);
+           A : in  STD_LOGIC_VECTOR(2 downto 0);
            nRead : in  STD_LOGIC;
            nWrite : in  STD_LOGIC;
            nSelect : in  STD_LOGIC;
 			  IntReq: buffer std_logic;
 			  IntAck: in STD_LOGIC;
-           direct_in : in  STD_LOGIC_VECTOR (15 downto 0);
-           direct_out : out STD_LOGIC_VECTOR (15 downto 0));
+			  kbd_col: out STD_LOGIC_VECTOR (3 downto 0);
+			  kbd_row: in STD_LOGIC_VECTOR (3 downto 0);
+           direct_in : in  STD_LOGIC_VECTOR (23 downto 0);
+           direct_out : out STD_LOGIC_VECTOR (23 downto 0);
+			  direct_flags: buffer STD_LOGIC_VECTOR(1 downto 0));
 end simpledevice;
 
 architecture Behavioral of simpledevice is
@@ -54,27 +57,44 @@ readSelect <= nSelect nor nRead;
 writeSelect <= nSelect nor nWrite;
 
 D <= d_out when (readSelect = '1') else "ZZZZZZZZ";
-
+					
 with A select
-	d_out <= direct_in(7 downto 0) when "0000", 
-				direct_in(15 downto 8) when "0001", 
-				X"FF" when others;
+	d_out <= direct_in(7 downto 0) when "000", 
+				direct_in(15 downto 8) when "001", 
+				direct_in(23 downto 16) when "010",
+				X"F" & kbd_row when "011",
+				direct_flags(0) & "0000000" when "100",	-- 4 and 5
+				direct_flags(0) & "0000000" when "101",
+				direct_flags(1) & "0000000" when others;	-- 6 and 7
+				
 
 IntReq <= '0'; -- generate no interrupt for now
 
 set_output: process(reset, clk, writeSelect, D, A)
 begin
 	if (reset = '1') then
-		direct_out <= X"FFFF";
+		direct_out <= X"000000";
+		direct_flags <= "00";
 	else
 		if (rising_edge(clk) and writeSelect = '1') then
 			case A is
-				when "0000" =>
+				when "000" =>
 					direct_out(7 downto 0) <= D;
-				when "0001" => 
+				when "001" => 
 					direct_out(15 downto 8) <= D;
+				when "010" =>
+					direct_out(23 downto 16) <= D;
+				when "011" => 
+					kbd_col <= D(3 downto 0);
+				when "100" =>
+					direct_flags(0) <= '0';
+				when "101" =>
+					direct_flags(0) <= '1';
+				when "110" =>
+					direct_flags(1) <= '0';
+				when "111" =>
+					direct_flags(1) <= '1';
 				when others =>
-					null;
 			end case;
 		end if;
 	end if;

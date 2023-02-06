@@ -24,7 +24,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -52,23 +52,23 @@ signal q: std_logic_vector(3 downto 0) := "0000";
 
 begin
 
-muxen <= not nME;
-mux <= not (
-        (muxen and q(2)       and q(1)       and q(0)       and d(7)) or
-        (muxen and q(2)       and q(1)       and (not q(0)) and d(6)) or
-        (muxen and q(2)       and (not q(1)) and q(0)       and d(5)) or
-        (muxen and q(2)       and (not q(1)) and (not q(0)) and d(4)) or
-        (muxen and (not q(2)) and q(1)       and q(0)       and d(3)) or
-        (muxen and (not q(2)) and q(1)       and (not q(0)) and d(2)) or
-        (muxen and (not q(2)) and (not q(1)) and q(0)       and d(1)) or
-        (muxen and (not q(2)) and (not q(1)) and (not q(0)) and d(0))
-    );
-y <= (q(3) xor mux) when (nOE = '0') else 'Z';
+y <= ((not q(3)) xor mux) when (nOE = '0') else 'Z';
+with nME & q(2 downto 0) select
+	mux <= 	d(0) when "0000",
+				d(1) when "0001",
+				d(2) when "0010",
+				d(3) when "0011",
+				d(4) when "0100",
+				d(5) when "0101",
+				d(6) when "0110",
+				d(7) when "0111",
+				'0' when others;
+--mux <= (not nME) and d(to_integer(unsigned(q)));				
 
-load_q: process(clk, a, b, c, pol, nCLR, nRE)
+on_clk: process(clk, a, b, c, pol, nCLR, nRE)
 begin
     if (nCLR = '0') then
-        q <= "0000";
+        q <= (others => '0');
     else
         if (rising_edge(clk) and (nRE = '0')) then
             q <= pol & c & b & a;

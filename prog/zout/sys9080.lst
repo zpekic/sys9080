@@ -1,0 +1,183 @@
+   1:				;--------------------------------------------------------------------------
+   2:				; Common definitions for  Sys9080 project https://github.com/zpekic/sys9080
+   3:				; 		(c) zpekic@hotmail.com - 2017, 2018
+   4:				;--------------------------------------------------------------------------
+   5:     -	0010          	ACIA0_STATUS	EQU 0x10; status read-only
+   6:     -	0011          	ACIA0_DATA		EQU 0x11; data send/receive
+   7:				
+   8:     -	0012          	ACIA1_STATUS	EQU 0x12; status read-only
+   9:     -	0013          	ACIA1_DATA		EQU 0x13; data send/receive
+  10:				
+  11:     -	0001          	MASK_VALID	EQU 0x01; fields in UART status register
+  12:     -	0002          	MASK_READY	EQU 0x02;
+  13:     -	0040          	MASK_ERROR	EQU 0x40;
+  14:     -	0080          	MASK_INTREQ	EQU 0x80;
+  15:				
+  16:     -	0000          	PORT0		EQU 0x00; switches when reading, LEDs when writing
+  17:     -	0001          	PORT1		EQU 0x01; buttons (3..0) when reading, LEDs when writing
+  18:     -	0002          	PORT2		EQU 0x02; slider switches when reading, LEDs when writing
+  19:     -	0003          	PORT_COL	EQU 0x03; hex key colums 3..0 when writing
+  20:     -	0003          	PORT_ROW	EQU 0x03; hex key rows 3..0 when reading
+  21:     -	00FF          	PORT_VGATRACE	EQU 0xFF; write only port for VGA tracing (only ASCII char!)
+  22:				; writing to following ports will set / reset flip flops
+  23:     -	0004          	CPUTRACEOFF	EQU 0x04; OUT CPUTRACEOFF to turn off CPU tracing
+  24:     -	0005          	CPUTRACEON	EQU 0x05; OUT CPUTRACEON to turn on CPU tracing
+  25:     -	0006          	BUSTRACEOFF	EQU 0x06; OUT BUSTRACEOFF to turn off bus tracing
+  26:     -	0007          	BUSTRACEON	EQU 0x07; OUT BUSTRACEON to turn on bus tracing
+  27:				
+  28:     -	0001          	MASK_BUTTON0	EQU 0x01;
+  29:     -	0002          	MASK_BUTTON1	EQU 0x02;
+  30:     -	0004          	MASK_BUTTON2	EQU 0x04;
+  31:     -	0008          	MASK_BUTTON3	EQU 0x08;
+  32:     -	0001          	MASK_SW0	EQU 0x01;
+  33:     -	0002          	MASK_SW1	EQU 0x02;
+  34:     -	0004          	MASK_SW2	EQU 0x04;
+  35:     -	0008          	MASK_SW3	EQU 0x08;
+  36:     -	0010          	MASK_SW4	EQU 0x10;
+  37:     -	0020          	MASK_SW5	EQU 0x20;
+  38:     -	0040          	MASK_SW6	EQU 0x40;
+  39:     -	0080          	MASK_SW7	EQU 0x80;
+  40:				
+  41:				;-------------------------------------------------------------
+  42:     -	0400          	AltMon		EQU 0x0400; Altmon is org'd to this location
+  43:				
+  44:				;-------------------------------------------------------------
+  45:     -	0C00          	VdpRam		EQU 0x0C00; text video memory, 512b
+  46:     -	0DFE          	VdpFgColor	EQU VdpRam + 0x1FE	;write only, RRRGGGBB
+  47:     -	0DFF          	VdpBkColor	EQU VdpRam + 0x1FF	;write only, RRRGGGBB
+  48:     -	0DFE          	VdpCols		EQU VdpRam + 0x1FE	;read only, should be 30
+  49:     -	0DFF          	VdpRows		EQU VdpRam + 0x1FF	;read only, should be 17
+  50:     -	FE00          	RamBottom	EQU 0xFE00
+  51:     -	FF80          	Heap		EQU RamBottom + 0x0180
+  52:     -	FF80          	Temp_PC		EQU Heap; can't use DW because the hex file maps to ROM only
+  53:     -	FF82          	CursorCol	EQU Heap + 2
+  54:     -	FF83          	CursorRow	EQU Heap + 3
+  55:				
+  56:				;Some ASCII codes with special handling during PrintCharText
+  57:     -	0001          	CS 	EQU 1   ;CS: Clear Screen      
+  58:     -	0002          	HM 	EQU 2   ;HM: HoMe cursor       
+  59:     -	000D          	NL 	EQU 13  ;NL: New Line
+  60:     -	000D          	CR 	EQU 13  ;CR: Carriage return == NL       
+  61:     -	000A          	LF 	EQU 10  ;LF: Line Feed       
+  62:     -	0003          	ML 	EQU  3  ;ML: Move cursor Left          
+  63:     -	0004          	MR 	EQU  4  ;MR: Move cursor Right         
+  64:     -	0005          	MU 	EQU  5  ;MU: Move cursor Up          
+  65:     -	0006          	MD 	EQU  6  ;MD: Move cursor Down
+  66:     -	0009          	TB 	EQU  9  ;TB: TaB        
+  67:     -	0008          	BS 	EQU  8  ;BS: BackSpace  
+  68:				
+  69:				;--------------------------------------
+  70:     -	00F0          	fpuBase	EQU 0xF0	; I/O Mapped version
+  71:				;fpuBase		EQU 0x0E00	; Mem Mapped version
+  72:				;-- write access ----------------------
+  73:     -	00F0          	fpuId		EQU fpuBase + 0
+  74:     -	00F2          	fpuOperation	EQU fpuBase + 2
+  75:     -	00F4          	fpuOperand1Lo	EQU fpuBase + 4
+  76:     -	00F6          	fpuOperand1Hi	EQU fpuBase + 6
+  77:     -	00F8          	fpuOperand2Lo	EQU fpuBase + 8
+  78:     -	00FA          	fpuOperand2Hi	EQU fpuBase + 10
+  79:				;-- read access -----------------------
+  80:     -	00F0          	fpuDone		EQU fpuBase + 0
+  81:     -	00F2          	fpuStatus	EQU fpuBase + 2
+  82:     -	00F4          	fpuResultLo	EQU fpuBase + 4
+  83:     -	00F6          	fpuResultHi	EQU fpuBase + 6
+  84:     -	00F8          	fpuCycles	EQU fpuBase + 8
+  85:				
+  86:				;---------------------------------------
+  87:				; bus tracer "registers"
+  88:				;---------------------------------------
+  89:     -	03C0          	busTracer	EQU 0x03c0;
+  90:     -	03C0          	btMemRead	EQU busTracer + 0
+  91:     -	03C4          	btMemWrite	EQU busTracer + 4
+  92:     -	03C8          	btIoRead	EQU busTracer + 8
+  93:     -	03CC          	btIoWrite	EQU busTracer + 12
+  94:     -	03D0          	btFetch		EQU	busTracer + 16
+  95:     -	03D4          	btIntAck	EQU busTracer + 20
+  96:				
+  97:				
+
+
+
+Statistics:
+
+     3	passes
+     0	jr promotions
+    71	symbols
+     0	bytes
+
+
+
+Symbol Table:
+
+acia0_data     =  11     
+acia0_status   =  10     
+acia1_data     =  13     
+acia1_status   =  12     
+altmon         = 400     
+bs             =   8     
+btfetch        = 3d0     
+btintack       = 3d4     
+btioread       = 3c8     
+btiowrite      = 3cc     
+btmemread      = 3c0     
+btmemwrite     = 3c4     
+bustraceoff    =   6     
+bustraceon     =   7     
+bustracer      = 3c0     
+cputraceoff    =   4     
+cputraceon     =   5     
+cr             =   d     
+cs             =   1     
+cursorcol      =ff82     
+cursorrow      =ff83     
+fpubase        =  f0     
+fpucycles      =  f8     
+fpudone        =  f0     
+fpuid          =  f0     
+fpuoperand1hi  =  f6     
+fpuoperand1lo  =  f4     
+fpuoperand2hi  =  fa     
+fpuoperand2lo  =  f8     
+fpuoperation   =  f2     
+fpuresulthi    =  f6     
+fpuresultlo    =  f4     
+fpustatus      =  f2     
+heap           =ff80     
+hm             =   2     
+lf             =   a     
+mask_button0   =   1     
+mask_button1   =   2     
+mask_button2   =   4     
+mask_button3   =   8     
+mask_error     =  40     
+mask_intreq    =  80     
+mask_ready     =   2     
+mask_sw0       =   1     
+mask_sw1       =   2     
+mask_sw2       =   4     
+mask_sw3       =   8     
+mask_sw4       =  10     
+mask_sw5       =  20     
+mask_sw6       =  40     
+mask_sw7       =  80     
+mask_valid     =   1     
+md             =   6     
+ml             =   3     
+mr             =   4     
+mu             =   5     
+nl             =   d     
+port0          =   0     
+port1          =   1     
+port2          =   2     
+port_col       =   3     
+port_row       =   3     
+port_vgatrace  =  ff     
+rambottom      =fe00     
+tb             =   9     
+temp_pc        =ff80     
+vdpbkcolor     = dff     
+vdpcols        = dfe     
+vdpfgcolor     = dfe     
+vdpram         = c00     
+vdprows        = dff     
+

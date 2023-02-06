@@ -90,6 +90,8 @@
 ;	S SSSS FFFF DD search for single byte sequence
 ;	T SSSS FFFF test memory
 ;
+
+PORT_VGATRACE equ 0FFh ;-- output to VGA tracer
 ;-------------------------------------------------------------------------
 ;
 ; Memory location equates
@@ -113,6 +115,9 @@ CR	equ	13		;ASCII carriage return
 LF	equ	10		;ASCII line feed
 CTRLC	equ	3		;ASCII control-c
 ESC	equ	27		;ASCII ESCAPE
+PORT0	EQU 0x00; 8 bit parallel port
+PORT1	EQU 0x01; 8 bit parallel port
+PORT2	EQU 0x02
 
 ;---------------------------------------------------------
 ;  monit - monitor entry point
@@ -120,10 +125,12 @@ ESC	equ	27		;ASCII ESCAPE
 monit	mvi	a,3		;reset 6850 uart
 	out	CONS
 	out	CONS+2		;2nd 2SIO port as well
-	mvi	a,11h		;8N2
+	;IN PORT2
+	mvi	a,10h		;all int off, 8N2, baudrate / 1 (originally this was 11h, meaning / 16)
 	out	CONS
+	mvi	a,10h		;all int off, 8N2, baudrate / 1
+	;IN PORT2
 	out	CONS+2		;2nd 2SIO port as well
-
 	lxi	sp,SPTR
 	call	dspMsg		;display welcome banner
 	db	CR,LF,LF,'ALTMON 1.','1'+80h
@@ -608,10 +615,12 @@ data	call	iByte		;read a data byte (2 hex digits)
 
 	call	iByte		;read and add checksum
 	jz	rcvLine		;checksum good, receive next line
+	;jnz	rcvLine		;-- DEBUG -- ignore checksum error
 
 	call	dspMsg		;display error message
 	db	' ER','R'+80h
 				;fall into flush
+	jmp rcvLine		;-- DEBUG -- still continue
 
 ; flush - flush rest of file as it comes in until no characters
 ;    received for about 1/4 second to prevent incoming file
@@ -619,15 +628,19 @@ data	call	iByte		;read a data byte (2 hex digits)
 ;    port needs to be flushed. 
 
 flush	in	COND		;clear possible received char
-	lxi	d,10417		;.25s timeout for 48 cycle loop
+	;lxi	b,10417		;.25s timeout for 48 cycle loop -- for 2MHz
+	lxi b,32553		;.25s timeout for 6.125MHz
 
 flshLp	in	CONS		;(10) look for character on console
 	rrc			;(4) data flag in carry
 	jc	flush		;(10) data received, restart
 
-	dcx	d		;(5) decrement timeout
-	mov	a,d		;(5)
-	ora	e		;(4)
+	dcx	b		;(5) decrement timeout
+	mov 	a,c
+	out port0		;visualize C register
+	mov	a,b		;(5)
+	out port1		;visualize B register
+	ora	c		;(4)
 	jnz	flshLp		;(10) loop until zero
 	ret			;done
 
@@ -648,8 +661,10 @@ iByte	call	getChar		;get a character
 	call	getChar		;get a character
 	call	asc2Bin		;ascii hex digit to binary
 	add	e		;combine msn and lsn
+	;OUT PORT0		;--- DEBUG ----
 	mov	e,a		;save in EH
 	add	d		;add character to checksum
+	;OUT PORT1		;--- DEBUG ----
 	mov	d,a
 	ret		
 
@@ -689,6 +704,9 @@ inWait1	call	cntlc		;look for ctrl-c on console
 	rrc			;data flag in carry
 	jnc	inWait1
 	in	COND+2		;a=character read
+;---- DEBUG ----------
+	RST 1		;output A to port FF (VGA tracer)
+;---- /DEBUG ---------
 
 ; process new character in a. Echo to console if c is non-zero
 

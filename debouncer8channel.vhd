@@ -48,53 +48,17 @@ component debouncer is
 end component;
 
 begin
-	d0: debouncer port map (
+
+-- this is just a collection of 8 identical debouncers
+channel_generate: for i in 0 to 7 generate
+begin
+
+	di: debouncer port map (
 		reset => reset,
 		clock => clock,
-		signal_in => signal_raw(0),
-		signal_out => signal_debounced(0)
+		signal_in => signal_raw(i),
+		signal_out => signal_debounced(i)
 	);
-	d1: debouncer port map (
-        reset => reset,
-        clock => clock,
-        signal_in => signal_raw(1),
-        signal_out => signal_debounced(1)
-    );
-	d2: debouncer port map (
-        reset => reset,
-        clock => clock,
-        signal_in => signal_raw(2),
-        signal_out => signal_debounced(2)
-    );
-	d3: debouncer port map (
-        reset => reset,
-        clock => clock,
-        signal_in => signal_raw(3),
-        signal_out => signal_debounced(3)
-    );
-	d4: debouncer port map (
-        reset => reset,
-        clock => clock,
-        signal_in => signal_raw(4),
-        signal_out => signal_debounced(4)
-    );
-	d5: debouncer port map (
-        reset => reset,
-        clock => clock,
-        signal_in => signal_raw(5),
-        signal_out => signal_debounced(5)
-    );
-	d6: debouncer port map (
-        reset => reset,
-        clock => clock,
-        signal_in => signal_raw(6),
-        signal_out => signal_debounced(6)
-    );
-	d7: debouncer port map (
-        reset => reset,
-        clock => clock,
-        signal_in => signal_raw(7),
-        signal_out => signal_debounced(7)
-    );
+end generate;
 
 end Behavioral;

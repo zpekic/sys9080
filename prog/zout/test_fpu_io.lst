@@ -1,0 +1,461 @@
+   1:				;--------------------------------------------------------------------------
+   2:				; Simple test program for Sys9080 project https://github.com/zpekic/sys9080
+   3:				; 		(c) zpekic@hotmail.com - 2017, 2018
+   4:				;--------------------------------------------------------------------------
+   5:				
+   6:				include ./sys9080.asm
+**** ./sys9080.asm ****
+   1:				;--------------------------------------------------------------------------
+   2:				; Common definitions for  Sys9080 project https://github.com/zpekic/sys9080
+   3:				; 		(c) zpekic@hotmail.com - 2017, 2018
+   4:				;--------------------------------------------------------------------------
+   5:     -	0010          	ACIA0_STATUS	EQU 0x10; status read-only
+   6:     -	0011          	ACIA0_DATA		EQU 0x11; data send/receive
+   7:				
+   8:     -	0012          	ACIA1_STATUS	EQU 0x12; status read-only
+   9:     -	0013          	ACIA1_DATA		EQU 0x13; data send/receive
+  10:				
+  11:     -	0001          	MASK_VALID	EQU 0x01; fields in UART status register
+  12:     -	0002          	MASK_READY	EQU 0x02;
+  13:     -	0040          	MASK_ERROR	EQU 0x40;
+  14:     -	0080          	MASK_INTREQ	EQU 0x80;
+  15:				
+  16:     -	0000          	PORT0		EQU 0x00; switches when reading, LEDs when writing
+  17:     -	0001          	PORT1		EQU 0x01; buttons (3..0) when reading, LEDs when writing
+  18:     -	0002          	PORT2		EQU 0x02; slider switches when reading, LEDs when writing
+  19:     -	0003          	PORT_COL	EQU 0x03; hex key colums 3..0 when writing
+  20:     -	0003          	PORT_ROW	EQU 0x03; hex key rows 3..0 when reading
+  21:				; writing to following ports will set / reset flip flops
+  22:     -	0004          	CPUTRACEOFF	EQU 0x04; OUT CPUTRACEOFF to turn off CPU tracing
+  23:     -	0005          	CPUTRACEON	EQU 0x05; OUT CPUTRACEON to turn on CPU tracing
+  24:     -	0006          	BUSTRACEOFF	EQU 0x06; OUT BUSTRACEOFF to turn off bus tracing
+  25:     -	0007          	BUSTRACEON	EQU 0x07; OUT BUSTRACEON to turn on bus tracing
+  26:				
+  27:     -	0001          	MASK_BUTTON0	EQU 0x01;
+  28:     -	0002          	MASK_BUTTON1	EQU 0x02;
+  29:     -	0004          	MASK_BUTTON2	EQU 0x04;
+  30:     -	0008          	MASK_BUTTON3	EQU 0x08;
+  31:     -	0001          	MASK_SW0	EQU 0x01;
+  32:     -	0002          	MASK_SW1	EQU 0x02;
+  33:     -	0004          	MASK_SW2	EQU 0x04;
+  34:     -	0008          	MASK_SW3	EQU 0x08;
+  35:     -	0010          	MASK_SW4	EQU 0x10;
+  36:     -	0020          	MASK_SW5	EQU 0x20;
+  37:     -	0040          	MASK_SW6	EQU 0x40;
+  38:     -	0080          	MASK_SW7	EQU 0x80;
+  39:				
+  40:				;-------------------------------------------------------------
+  41:     -	0400          	AltMon		EQU 0x0400; Altmon is org'd to this location
+  42:				
+  43:				;-------------------------------------------------------------
+  44:     -	0C00          	VdpRam		EQU 0x0C00; text video memory, 512b
+  45:     -	0DFE          	VdpFgColor	EQU VdpRam + 0x1FE	;write only, RRRGGGBB
+  46:     -	0DFF          	VdpBkColor	EQU VdpRam + 0x1FF	;write only, RRRGGGBB
+  47:     -	0DFE          	VdpCols		EQU VdpRam + 0x1FE	;read only, should be 30
+  48:     -	0DFF          	VdpRows		EQU VdpRam + 0x1FF	;read only, should be 17
+  49:     -	FE00          	RamBottom	EQU 0xFE00
+  50:     -	FF80          	Heap		EQU RamBottom + 0x0180
+  51:     -	FF80          	Temp_PC		EQU Heap; can't use DW because the hex file maps to ROM only
+  52:     -	FF82          	CursorCol	EQU Heap + 2
+  53:     -	FF83          	CursorRow	EQU Heap + 3
+  54:				
+  55:				;Some ASCII codes with special handling during PrintCharText
+  56:     -	0010          	CS 	EQU 16  ;CS: Clear Screen      
+  57:     -	0001          	HM 	EQU 1   ;HM: HoMe cursor       
+  58:     -	000D          	NL 	EQU 13  ;NL: New Line
+  59:     -	000D          	CR 	EQU 13  ;CR: Carriage return == NL       
+  60:     -	000A          	LF 	EQU 10  ;LF: Line Feed       
+  61:     -	0003          	ML 	EQU  3  ;ML: Move cursor Left          
+  62:     -	0004          	MR 	EQU  4  ;MR: Move cursor Right         
+  63:     -	0005          	MU 	EQU  5  ;MU: Move cursor Up          
+  64:     -	0006          	MD 	EQU  6  ;MD: Move cursor Down
+  65:     -	0009          	TB 	EQU  9  ;TB: TaB        
+  66:     -	0008          	BS 	EQU  8  ;BS: BackSpace  
+  67:				
+  68:				;--------------------------------------
+  69:     -	00F0          	fpuBase	EQU 0xF0	; I/O Mapped version
+  70:				;fpuBase		EQU 0x0E00	; Mem Mapped version
+  71:				;-- write access ----------------------
+  72:     -	00F0          	fpuId		EQU fpuBase + 0
+  73:     -	00F2          	fpuOperation	EQU fpuBase + 2
+  74:     -	00F4          	fpuOperand1Lo	EQU fpuBase + 4
+  75:     -	00F6          	fpuOperand1Hi	EQU fpuBase + 6
+  76:     -	00F8          	fpuOperand2Lo	EQU fpuBase + 8
+  77:     -	00FA          	fpuOperand2Hi	EQU fpuBase + 10
+  78:				;-- read access -----------------------
+  79:     -	00F0          	fpuDone		EQU fpuBase + 0
+  80:     -	00F2          	fpuStatus	EQU fpuBase + 2
+  81:     -	00F4          	fpuResultLo	EQU fpuBase + 4
+  82:     -	00F6          	fpuResultHi	EQU fpuBase + 6
+  83:     -	00F8          	fpuCycles	EQU fpuBase + 8
+  84:				
+  85:				;---------------------------------------
+  86:				; bus tracer "registers"
+  87:				;---------------------------------------
+  88:     -	03C0          	busTracer	EQU 0x03c0;
+  89:     -	03C0          	btMemRead	EQU busTracer + 0
+  90:     -	03C4          	btMemWrite	EQU busTracer + 4
+  91:     -	03C8          	btIoRead	EQU busTracer + 8
+  92:     -	03CC          	btIoWrite	EQU busTracer + 12
+  93:     -	03D0          	btFetch		EQU	busTracer + 16
+  94:     -	03D4          	btIntAck	EQU busTracer + 20
+  95:				
+  96:				
+**** test_fpu_io.asm ****
+   7:				
+   8:				
+   9:				; text video memory, 512b
+  10:     -	8000          			ORG 0x8000
+  11:				
+  12:    0+10	8000  D307    	TestFpu:	OUT BUSTRACEON
+  13:				
+  14:   10+10	8002  219280  				LXI H, test_div
+  15:   20+17	8005  CD4180  				CALL WriteId
+  16:   37+17	8008  CD4A80  				CALL WriteOper
+  17:   54+17	800B  CD5380  				CALL WriteOprand	;"gen1" == source
+  18:   71+17	800E  CD5380  				CALL WriteOprand	;"gen2" == destination (in case of division: gen2/gen1)
+  19:   88+17	8011  CD8B80  				Call FpuWait
+  20:  105+17	8014  CD6480  				CALL ReadStatus
+  21:  122+10	8017  DA3B80  				JC Error
+  22:  132+17	801A  CD7180  				CALL ReadResult		;"gen2" == destination
+  23:  149+17	801D  CD8280  				CALL ReadElapsed
+  24:				
+  25:  166+10	8020  21A680  				LXI H, test_sfsr
+  26:  176+17	8023  CD4180  				CALL WriteId
+  27:  193+17	8026  CD4A80  				CALL WriteOper
+  28:  210+17	8029  CD8B80  				CALL FpuWait
+  29:  227+17	802C  CD6480  				CALL ReadStatus
+  30:  244+10	802F  DA3B80  				JC Error
+  31:  254+17	8032  CD7180  				CALL ReadResult
+  32:  271+17	8035  CD8280  				CALL ReadElapsed
+  33:				
+  34:  288+10	8038  C33C80  				JMP NoError
+  35:				
+  36:  298+11	803B  FF      	Error:		RST 7
+  37:  309+10	803C  D306    	NoError:	OUT BUSTRACEOFF
+  38:  319+10	803E  C30004  				JMP AltMon
+  39:				
+  40:  329+7	8041  7E      	WriteId		MOV A, M
+  41:  336+10	8042  D3F0    				OUT fpuID
+  42:  346+5	8044  23      				INX H
+  43:  351+7	8045  7E      				MOV A, M
+  44:  358+10	8046  D3F1    				OUT fpuID+1
+  45:  368+5	8048  23      				INX H
+  46:  373+10	8049  C9      				RET
+  47:				
+  48:  383+7	804A  7E      	WriteOper:	MOV A, M
+  49:  390+10	804B  D3F2    				OUT fpuOperation
+  50:  400+5	804D  23      				INX H
+  51:  405+7	804E  7E      				MOV A, M
+  52:  412+10	804F  D3F3    				OUT fpuOperation+1
+  53:  422+5	8051  23      				INX H
+  54:  427+10	8052  C9      				RET
+  55:				
+  56:  437+7	8053  7E      	WriteOprand:MOV A, M
+  57:  444+10	8054  D3F4    				OUT fpuOperand1Lo
+  58:  454+5	8056  23      				INX H
+  59:  459+7	8057  7E      				MOV A, M
+  60:  466+10	8058  D3F5    				OUT fpuOperand1Lo+1
+  61:  476+5	805A  23      				INX H
+  62:  481+7	805B  7E      				MOV A, M
+  63:  488+10	805C  D3F6    				OUT fpuOperand1Hi
+  64:  498+5	805E  23      				INX H
+  65:  503+7	805F  7E      				MOV A, M
+  66:  510+10	8060  D3F7    				OUT fpuOperand1Hi+1
+  67:  520+5	8062  23      				INX H
+  68:  525+10	8063  C9      				RET
+  69:				
+  70:  535+10	8064  DBF2    	ReadStatus:	IN fpuStatus
+  71:  545+7	8066  77      				MOV M, A
+  72:  552+5	8067  5F      				MOV E, A
+  73:  557+5	8068  23      				INX H
+  74:  562+10	8069  DBF3    				IN fpuStatus+1
+  75:  572+7	806B  77      				MOV M, A
+  76:  579+5	806C  57      				MOV D, A
+  77:  584+5	806D  23      				INX H
+  78:  589+11	806E  D5      				PUSH D
+  79:  600+10	806F  F1      				POP PSW		;carry flag indicates FPU "quit", and after f11Cmp, Sign and Zero are also valid
+  80:  610+10	8070  C9      				RET
+  81:				
+  82:  620+10	8071  DBF4    	ReadResult:	IN fpuResultLo
+  83:  630+7	8073  77      				MOV M, A
+  84:  637+5	8074  23      				INX H
+  85:  642+10	8075  DBF5    				IN fpuResultLo+1
+  86:  652+7	8077  77      				MOV M, A
+  87:  659+5	8078  23      				INX H
+  88:  664+10	8079  DBF6    				IN fpuResultHi
+  89:  674+7	807B  77      				MOV M, A
+  90:  681+5	807C  23      				INX H
+  91:  686+10	807D  DBF7    				IN fpuResultHi+1
+  92:  696+7	807F  77      				MOV M, A
+  93:  703+5	8080  23      				INX H
+  94:  708+10	8081  C9      				RET
+  95:				
+  96:  718+10	8082  DBF8    	ReadElapsed:IN fpuCycles
+  97:  728+7	8084  77      				MOV M, A
+  98:  735+5	8085  23      				INX H
+  99:  740+10	8086  DBF9    				IN fpuCycles+1
+ 100:  750+7	8088  77      				MOV M, A
+ 101:  757+5	8089  23      				INX H
+ 102:  762+10	808A  C9      				RET 
+ 103:				
+ 104:  772+10	808B  DBF0    	FpuWait:	IN fpuDone
+ 105:  782+4	808D  B7      				ORA A
+ 106:  786+5+6	808E  C0      				RNZ	
+ 107:  791+10	808F  C38B80  				JMP FpuWait
+ 108:				
+ 109:     -	8092  BE00    	test_div:	DW format11
+ 110:     -	8094  8421    				DW f11Single | f11Div | dm | sm
+ 111:     -	8096  0000    				DW fTenLo
+ 112:     -	8098  2041    				DW fTenHi
+ 113:     -	809A  0000    				DW fMinusOneLo
+ 114:     -	809C  80BF    				DW fMinusOneHi
+ 115:     -	809E  FFFF    	div_status:	DW 0xFFFF	;-- filler
+ 116:     -	80A0  DEAD    	resultLo:	DW 0xADDE	;-- filler
+ 117:     -	80A2  BEEF    	resultHi:	DW 0xEFBE	;-- filler
+ 118:     -	80A4  FFFF    	div_cycles	DW 0xFFFF	;-- filler
+ 119:				
+ 120:     -	80A6  3E00    	test_sfsr:	DW format9
+ 121:     -	80A8  0432    				DW f9Sfsr | dm | f9DWord | f9Double
+ 122:     -	80AA  FFFF    	fpsr_status:DW 0xFFFF	;-- filler
+ 123:     -	80AC  DEAD    	fpsrLo:		DW 0xADDE	;-- filler
+ 124:     -	80AE  BEEF    	fpsrHi:		DW 0xEFBE	;-- filler
+ 125:     -	80B0  FFFF    	fpsr_cycles:DW 0xFFFF	;-- filler
+ 126:						
+ 127:				;------ DEBUG registers
+ 128:     -	03C0          				ORG btMemRead
+ 129:     -	03C0  0000    				DW 0x0000
+ 130:     -	03C2  0000    				DW 0x0000
+ 131:							
+ 132:     -	03C4          				ORG btMemWrite
+ 133:     -	03C4  9E80    				DW div_status
+ 134:     -	03C6  B080    				DW fpsr_cycles
+ 135:							
+ 136:     -	03C8          				ORG btIoRead
+ 137:     -	03C8  F0F0    				DW fpuBase << 8 | fpuBase
+ 138:     -	03CA  FFFF    				DW 0xFFFF 
+ 139:							
+ 140:     -	03CC          				ORG btIoWrite
+ 141:     -	03CC  F0F0    				DW fpuBase << 8 | fpuBase
+ 142:     -	03CE  FFFF    				DW 0xFFFF
+ 143:							
+ 144:     -	03D0          				ORG btFetch
+ 145:     -	03D0  0000    				DW 0x0000
+ 146:     -	03D2  0000    				DW 0x0000
+ 147:							
+ 148:     -	03D4          				ORG btIntAck
+ 149:     -	03D4  0000    				DW 0x0000
+ 150:     -	03D6  0000    				DW 0x0000
+ 151:				;------------------------			
+ 152:							
+ 153:     -	0000          	OneLo:		EQU 0x0000
+ 154:     -	3F80          	fOneHi:		EQU 0x3F80
+ 155:     -	0000          	fMinusOneLo:EQU 0x0000
+ 156:     -	BF80          	fMinusOneHi:EQU 0xBF80
+ 157:     -	0000          	fTenLo:		EQU 0x0000
+ 158:     -	4120          	fTenHi:		EQU 0x4120
+ 159:				
+ 160:				; -- source operands (m = supplied from the bus (from memory), rx = internal from register x)
+ 161:     -	0080          	sm		EQU 0x0080
+ 162:     -	0038          	sr7		EQU 0x0038
+ 163:     -	0030          	sr6		EQU 0x0030
+ 164:     -	0028          	sr5		EQU 0x0028
+ 165:     -	0020          	sr4		EQU 0x0020
+ 166:     -	0018          	sr3		EQU 0x0018
+ 167:     -	0010          	sr2		EQU 0x0010
+ 168:     -	0008          	sr1		EQU 0x0008
+ 169:     -	0000          	sr0		EQU 0x0000
+ 170:				; -- destination operands (m = supplied from/to the bus (from memory), rx = internal from register x)
+ 171:     -	0004          	dm		EQU 0x0004
+ 172:     -	8003          	dr7		EQU 0x8003
+ 173:     -	0003          	dr6		EQU 0x0003
+ 174:     -	8002          	dr5		EQU 0x8002
+ 175:     -	0002          	dr4		EQU 0x0002
+ 176:     -	8001          	dr3		EQU 0x8001
+ 177:     -	0001          	dr2		EQU 0x0001
+ 178:     -	8000          	dr1		EQU 0x8000
+ 179:     -	0000          	dr0		EQU 0x0000
+ 180:				
+ 181:				;--- format 11 constants ---
+ 182:     -	00BE          	format11:	EQU 0x00BE	
+ 183:     -	0100          	f11Single:	EQU 0x0100
+ 184:     -	0000          	f11Double:	EQU 0x0000
+ 185:     -	0000          	f11Add:		EQU 0x0000
+ 186:     -	1000          	f11Sub:		EQU 0x1000
+ 187:     -	2000          	f11Div:		EQU 0x2000
+ 188:     -	3000          	f11Mul:		EQU 0x3000
+ 189:     -	0800          	f11Cmp:		EQU 0x0800
+ 190:     -	2400          	f11Neg:		EQU 0x2400
+ 191:     -	3400          	f11Abs:		EQU 0x3400
+ 192:				
+ 193:				;--- format 19 constants ---
+ 194:     -	003E          	format9:	EQU 0x003E	
+ 195:     -	0400          	f9Single:	EQU 0x0400
+ 196:     -	0000          	f9Double:	EQU 0x0000
+ 197:     -	0000          	f9Byte:		EQU 0x0000
+ 198:     -	0100          	f9Word:		EQU 0x0100
+ 199:     -	0200          	f9DWord:	EQU 0x0200
+ 200:     -	0000          	f9Mov:		EQU 0x0000
+ 201:     -	3800          	f9Floor:	EQU 0x3800
+ 202:     -	2800          	f9Trunc:	EQU 0x2800
+ 203:     -	2000          	f9Round:	EQU 0x2000
+ 204:     -	1800          	f9Movfl:	EQU 0x1800
+ 205:     -	1000          	f9Movlf:	EQU 0x1000
+ 206:     -	4000          	f9Movf:		EQU 0x4000
+ 207:     -	0800          	f9Lfsr:		EQU 0x0800
+ 208:     -	3000          	f9Sfsr:		EQU 0x3000
+ 209:				
+
+
+
+Statistics:
+
+     4	passes
+     0	jr promotions
+   139	symbols
+   202	bytes
+
+
+
+Symbol Table:
+
+acia0_data     =  11     
+acia0_status   =  10     
+acia1_data     =  13     
+acia1_status   =  12     
+altmon         = 400     
+bs             =   8     
+btfetch        = 3d0     
+btintack       = 3d4     
+btioread       = 3c8     
+btiowrite      = 3cc     
+btmemread      = 3c0     
+btmemwrite     = 3c4     
+bustraceoff    =   6     
+bustraceon     =   7     
+bustracer      = 3c0     
+cputraceoff    =   4     
+cputraceon     =   5     
+cr             =   d     
+cs             =  10     
+cursorcol      =ff82     
+cursorrow      =ff83     
+div_cycles      80a4     
+div_status      809e     
+dm             =   4     
+dr0            =   0     
+dr1            =8000     
+dr2            =   1     
+dr3            =8001     
+dr4            =   2     
+dr5            =8002     
+dr6            =   3     
+dr7            =8003     
+error           803b     
+f11abs         =3400     
+f11add         =   0     
+f11cmp         = 800     
+f11div         =2000     
+f11double      =   0     
+f11mul         =3000     
+f11neg         =2400     
+f11single      = 100     
+f11sub         =1000     
+f9byte         =   0     
+f9double       =   0     
+f9dword        = 200     
+f9floor        =3800     
+f9lfsr         = 800     
+f9mov          =   0     
+f9movf         =4000     
+f9movfl        =1800     
+f9movlf        =1000     
+f9round        =2000     
+f9sfsr         =3000     
+f9single       = 400     
+f9trunc        =2800     
+f9word         = 100     
+fminusonehi    =bf80     
+fminusonelo    =   0     
+fonehi         =3f80     
+format11       =  be     
+format9        =  3e     
+fpsr_cycles     80b0     
+fpsr_status     80aa     
+fpsrhi          80ae     
+fpsrlo          80ac     
+fpubase        =  f0     
+fpucycles      =  f8     
+fpudone        =  f0     
+fpuid          =  f0     
+fpuoperand1hi  =  f6     
+fpuoperand1lo  =  f4     
+fpuoperand2hi  =  fa     
+fpuoperand2lo  =  f8     
+fpuoperation   =  f2     
+fpuresulthi    =  f6     
+fpuresultlo    =  f4     
+fpustatus      =  f2     
+fpuwait         808b     
+ftenhi         =4120     
+ftenlo         =   0     
+heap           =ff80     
+hm             =   1     
+lf             =   a     
+mask_button0   =   1     
+mask_button1   =   2     
+mask_button2   =   4     
+mask_button3   =   8     
+mask_error     =  40     
+mask_intreq    =  80     
+mask_ready     =   2     
+mask_sw0       =   1     
+mask_sw1       =   2     
+mask_sw2       =   4     
+mask_sw3       =   8     
+mask_sw4       =  10     
+mask_sw5       =  20     
+mask_sw6       =  40     
+mask_sw7       =  80     
+mask_valid     =   1     
+md             =   6     
+ml             =   3     
+mr             =   4     
+mu             =   5     
+nl             =   d     
+noerror         803c     
+onelo          =   0     
+port0          =   0     
+port1          =   1     
+port2          =   2     
+port_col       =   3     
+port_row       =   3     
+rambottom      =fe00     
+readelapsed     8082     
+readresult      8071     
+readstatus      8064     
+resulthi        80a2     
+resultlo        80a0     
+sm             =  80     
+sr0            =   0     
+sr1            =   8     
+sr2            =  10     
+sr3            =  18     
+sr4            =  20     
+sr5            =  28     
+sr6            =  30     
+sr7            =  38     
+tb             =   9     
+temp_pc        =ff80     
+test_div        8092     
+test_sfsr       80a6     
+testfpu         8000     
+vdpbkcolor     = dff     
+vdpcols        = dfe     
+vdpfgcolor     = dfe     
+vdpram         = c00     
+vdprows        = dff     
+writeid         8041     
+writeoper       804a     
+writeoprand     8053     
+

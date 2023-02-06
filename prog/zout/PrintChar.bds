@@ -1,0 +1,557 @@
+binary-debuggable-source
+0000 0000 f PrintChar.asm
+0000 0000 s ;---------------------------------------------------------------------------
+0000 0000 s ; Anvyl hex kbd and TFT display test/demo  https://github.com/zpekic/sys9080
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2017, 2018
+0000 0000 s ;---------------------------------------------------------------------------
+0000 0000 s 
+0000 0000 s include ./sys9080.asm
+0000 0000 f ./sys9080.asm
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ; Common definitions for  Sys9080 project https://github.com/zpekic/sys9080
+0000 0000 s ; 		(c) zpekic@hotmail.com - 2017, 2018
+0000 0000 s ;--------------------------------------------------------------------------
+0000 0000 s ACIA0_STATUS	EQU 0x10; status read-only
+0000 0000 s ACIA0_DATA	EQU 0x11; data send/receive
+0000 0000 s ACIA1_STATUS	EQU 0x12; status read-only
+0000 0000 s ACIA1_DATA	EQU 0x13; data send/receive
+0000 0000 s PORT0		EQU 0x00; switches when reading, LEDs when writing
+0000 0000 s PORT1		EQU 0x01; buttons (3..0) when reading, LEDs when writing
+0000 0000 s PORT_COL	EQU 0x07; hex key colums 3..0 when writing
+0000 0000 s PORT_ROW	EQU 0x07; hex key rows 3..0 when reading
+0000 0000 s MASK_VALID	EQU 0x01; fields in UART status register
+0000 0000 s MASK_READY	EQU 0x02;
+0000 0000 s MASK_ERROR	EQU 0x40;
+0000 0000 s MASK_INTREQ	EQU 0x80;
+0000 0000 s 
+0000 0000 s MASK_BUTTON0	EQU 0x01;
+0000 0000 s MASK_BUTTON1	EQU 0x02;
+0000 0000 s MASK_BUTTON2	EQU 0x04;
+0000 0000 s MASK_BUTTON3	EQU 0x08;
+0000 0000 s MASK_SW0	EQU 0x01;
+0000 0000 s MASK_SW1	EQU 0x02;
+0000 0000 s MASK_SW2	EQU 0x04;
+0000 0000 s MASK_SW3	EQU 0x08;
+0000 0000 s MASK_SW4	EQU 0x10;
+0000 0000 s MASK_SW5	EQU 0x20;
+0000 0000 s MASK_SW6	EQU 0x40;
+0000 0000 s MASK_SW7	EQU 0x80;
+0000 0000 s 
+0000 0000 s ;-------------------------------------------------------------
+0000 0000 s AltMon		EQU 0x0400; Altmon is org'd to this location
+0000 0000 s 
+0000 0000 s ;-------------------------------------------------------------
+0000 0000 s VdpRam		EQU 0x0C00; text video memory, 512b
+0000 0000 s VdpFgColor	EQU VdpRam + 0x1FE	;write only, RRRGGGBB
+0000 0000 s VdpBkColor	EQU VdpRam + 0x1FF	;write only, RRRGGGBB
+0000 0000 s VdpCols		EQU VdpRam + 0x1FE	;read only, should be 30
+0000 0000 s VdpRows		EQU VdpRam + 0x1FF	;read only, should be 17
+0000 0000 s RamBottom	EQU 0xFE00
+0000 0000 s Heap		EQU RamBottom + 0x0180
+0000 0000 s Temp_PC		EQU Heap; can't use DW because the hex file maps to ROM only
+0000 0000 s CursorCol	EQU Heap + 2
+0000 0000 s CursorRow	EQU Heap + 3
+0000 0000 s 
+0000 0000 s ;Some ASCII codes with special handling during PrintCharText
+0000 0000 s CS 	EQU 16  ;CS: Clear Screen      
+0000 0000 s HM 	EQU 1   ;HM: HoMe cursor       
+0000 0000 s NL 	EQU 13  ;NL: New Line
+0000 0000 s CR 	EQU 13  ;CR: Carriage return == NL       
+0000 0000 s LF 	EQU 10  ;LF: Line Feed       
+0000 0000 s ML 	EQU  3  ;ML: Move cursor Left          
+0000 0000 s MR 	EQU  4  ;MR: Move cursor Right         
+0000 0000 s MU 	EQU  5  ;MU: Move cursor Up          
+0000 0000 s MD 	EQU  6  ;MD: Move cursor Down
+0000 0000 s TB 	EQU  9  ;TB: TaB        
+0000 0000 s BS 	EQU  8  ;BS: BackSpace  
+0000 0000 f PrintChar.asm
+0000 0000 s 
+8000 8000 s 		.ORG 0x8000
+8000 8000 s 
+8000 8000 d 3e01
+8000 8000 s 		MVI A, HM
+8002 8002 d cd3280
+8002 8002 s 		CALL DisplayChar
+8005 8005 d 216f81
+8005 8005 s KbdScan:	LXI H, KeyMap
+8008 8008 d 0efe
+8008 8008 s 		MVI C, 0xFE
+800a 800a d 16fe
+800a 800a s ColLoop:	MVI D, 0xFE
+800c 800c d 79
+800c 800c s 		MOV A, C
+800d 800d d d307
+800d 800d s 		OUT PORT_COL
+800f 800f d db07
+800f 800f s RowLoop:	IN PORT_ROW
+8011 8011 d ba
+8011 8011 s 		CMP D
+8012 8012 d c21e80
+8012 8012 s 		JNZ NotPressed
+8015 8015 d 00
+8015 8015 s 		NOP;RST 6
+8016 8016 d 7e
+8016 8016 s 		MOV A, M
+8017 8017 d b7
+8017 8017 s 		ORA A
+8018 8018 d ca0004
+8018 8018 s 		JZ AltMon
+801b 801b d cd3280
+801b 801b s 		CALL DisplayChar
+801e 801e d 23
+801e 801e s NotPressed:	INX H
+801f 801f d 7a
+801f 801f s 		MOV A, D
+8020 8020 d 07
+8020 8020 s 		RLC
+8021 8021 d 57
+8021 8021 s 		MOV D, A
+8022 8022 d feef
+8022 8022 s 		CPI 0xEF
+8024 8024 d c20f80
+8024 8024 s 		JNZ RowLoop
+8027 8027 d 79
+8027 8027 s 		MOV A, C
+8028 8028 d 07
+8028 8028 s 		RLC
+8029 8029 d 4f
+8029 8029 s 		MOV C, A
+802a 802a d feef
+802a 802a s 		CPI 0xEF
+802c 802c d c20a80
+802c 802c s 		JNZ ColLoop
+802f 802f d ca0580
+802f 802f s 		JZ KbdScan
+8032 8032 s 
+8032 8032 d e5
+8032 8032 s DisplayChar:	PUSH H
+8033 8033 d d5
+8033 8033 s 		PUSH D
+8034 8034 d c5
+8034 8034 s 		PUSH B
+8035 8035 d f5
+8035 8035 s 		PUSH PSW
+8036 8036 d fe10
+8036 8036 s 		CPI CS
+8038 8038 d cab480
+8038 8038 s 		JZ ClearScreen
+803b 803b d fe01
+803b 803b s 		CPI HM
+803d 803d d cac480
+803d 803d s 		JZ HomeScreen
+8040 8040 d fe0d
+8040 8040 s 		CPI CR	;CR and LF are handled the same
+8042 8042 d cacd80
+8042 8042 s 		JZ CrLf
+8045 8045 d fe0a
+8045 8045 s 		CPI LF	
+8047 8047 d cacd80
+8047 8047 s 		JZ CrLf
+804a 804a d fe03
+804a 804a s 		CPI ML	;Move cursor Left 
+804c 804c d ca6f80
+804c 804c s 		JZ MoveLeft         
+804f 804f d fe04
+804f 804f s 		CPI MR	;Move cursor Right
+8051 8051 d ca6780
+8051 8051 s 		JZ MoveRight         
+8054 8054 d fe05
+8054 8054 s 		CPI MU	;Move cursor Up
+8056 8056 d ca9f80
+8056 8056 s 		JZ MoveUp          
+8059 8059 d fe06
+8059 8059 s 		CPI MD	;Move cursor Down
+805b 805b d ca8680
+805b 805b s 		JZ MoveDown
+805e 805e s 		;CPI BS	;BackSpace  
+805e 805e d f5
+805e 805e s 		PUSH PSW
+805f 805f d 00
+805f 805f s 		NOP;
+8060 8060 d 00
+8060 8060 s 		NOP;
+8061 8061 d 00
+8061 8061 s 		NOP;RST 6
+8062 8062 d cdda80
+8062 8062 s 		CALL GetCursorAddr
+8065 8065 d f1
+8065 8065 s 		POP PSW
+8066 8066 d 77
+8066 8066 s 		MOV M, A
+8067 8067 d cdf880
+8067 8067 s MoveRight:	CALL AdvanceCursor
+806a 806a d f1
+806a 806a s RestoreRegs:	POP PSW
+806b 806b d c1
+806b 806b s 		POP B
+806c 806c d d1
+806c 806c s 		POP D
+806d 806d d e1
+806d 806d s 		POP H
+806e 806e d c9
+806e 806e s 		RET
+806f 806f s 
+806f 806f d 2afe0d
+806f 806f s MoveLeft:	LHLD VdpCols
+8072 8072 d eb
+8072 8072 s 		XCHG
+8073 8073 d 2a82ff
+8073 8073 s 		LHLD CursorCol
+8076 8076 d 2d
+8076 8076 s 		DCR L
+8077 8077 d f2c780
+8077 8077 s 		JP SetCursor
+807a 807a d 6b
+807a 807a s 		MOV L, E
+807b 807b d 2d
+807b 807b s 		DCR L
+807c 807c d 25
+807c 807c s 		DCR H
+807d 807d d f2c780
+807d 807d s 		JP SetCursor
+8080 8080 d cd4081
+8080 8080 s 		CALL ScrollDown
+8083 8083 d c3c480
+8083 8083 s 		JMP HomeScreen
+8086 8086 s 
+8086 8086 d 2afe0d
+8086 8086 s MoveDown:	LHLD VdpCols
+8089 8089 d eb
+8089 8089 s 		XCHG
+808a 808a d 2a82ff
+808a 808a s 		LHLD CursorCol
+808d 808d d 24
+808d 808d s 		INR H
+808e 808e d 7c
+808e 808e s 		MOV A, H
+808f 808f d ba
+808f 808f s 		CMP D
+8090 8090 d dac780
+8090 8090 s 		JC SetCursor
+8093 8093 d cd1281
+8093 8093 s 		CALL ScrollUp
+8096 8096 d 2afe0d
+8096 8096 s 		LHLD VdpCols
+8099 8099 d 25
+8099 8099 s 		DCR H
+809a 809a d 2e00
+809a 809a s 		MVI L, 0x00
+809c 809c d c3c780
+809c 809c s 		JMP SetCursor
+809f 809f s 
+809f 809f d 2afe0d
+809f 809f s MoveUp:		LHLD VdpCols
+80a2 80a2 d eb
+80a2 80a2 s 		XCHG
+80a3 80a3 d 2a82ff
+80a3 80a3 s 		LHLD CursorCol
+80a6 80a6 d 25
+80a6 80a6 s 		DCR H
+80a7 80a7 d f2c780
+80a7 80a7 s 		JP SetCursor
+80aa 80aa d e5
+80aa 80aa s 		PUSH H
+80ab 80ab d cd4081
+80ab 80ab s 		CALL ScrollDown
+80ae 80ae d e1
+80ae 80ae s 		POP H
+80af 80af d 2600
+80af 80af s 		MVI H, 0x00
+80b1 80b1 d c3c780
+80b1 80b1 s 		JMP SetCursor
+80b4 80b4 s 		
+80b4 80b4 d 21000c
+80b4 80b4 s ClearScreen:	LXI H, VdpRam
+80b7 80b7 d 01fe01
+80b7 80b7 s 		LXI B, 17*30
+80ba 80ba d 3e20
+80ba 80ba s ClearChar:	MVI A, ' '
+80bc 80bc d 77
+80bc 80bc s 		MOV M, A
+80bd 80bd d 23
+80bd 80bd s 		INX H
+80be 80be d 0b
+80be 80be s 		DCX B
+80bf 80bf d 79
+80bf 80bf s 		MOV A, C
+80c0 80c0 d b0
+80c0 80c0 s 		ORA B
+80c1 80c1 d c2ba80
+80c1 80c1 s 		JNZ ClearChar
+80c4 80c4 d 210000
+80c4 80c4 s HomeScreen:	LXI H, 0x0000
+80c7 80c7 d 2282ff
+80c7 80c7 s SetCursor:	SHLD CursorCol
+80ca 80ca d c36a80
+80ca 80ca s 		JMP RestoreRegs
+80cd 80cd s 
+80cd 80cd d 3afe0d
+80cd 80cd s CrLf:		LDA VdpCols
+80d0 80d0 d 3d
+80d0 80d0 s 		DCR A
+80d1 80d1 d 3282ff
+80d1 80d1 s 		STA CursorCol	
+80d4 80d4 d cdf880
+80d4 80d4 s 		CALL AdvanceCursor
+80d7 80d7 d c36a80
+80d7 80d7 s 		JMP RestoreRegs
+80da 80da s 
+80da 80da d 2a82ff
+80da 80da s GetCursorAddr:	LHLD CursorCol	;HL = CursorRow CursorCol
+80dd 80dd d 4c
+80dd 80dd s 		MOV C, H
+80de 80de d 2600
+80de 80de s 		MVI H, 0x00
+80e0 80e0 d 11000c
+80e0 80e0 s 		LXI D, VdpRam
+80e3 80e3 d 19
+80e3 80e3 s 		DAD D		;HL = VdpRam + CursorCol
+80e4 80e4 d 3afe0d
+80e4 80e4 s 		LDA VdpCols
+80e7 80e7 d 5f
+80e7 80e7 s 		MOV E, A
+80e8 80e8 d 1600
+80e8 80e8 s 		MVI D, 0x00	;DE = Cols
+80ea 80ea d 79
+80ea 80ea s NextRow:	MOV A, C	;A = CursorRow
+80eb 80eb d b1
+80eb 80eb s 		ORA C
+80ec 80ec d c8
+80ec 80ec s 		RZ
+80ed 80ed d 19
+80ed 80ed s 		DAD D
+80ee 80ee d 0d
+80ee 80ee s 		DCR C
+80ef 80ef d 7d
+80ef 80ef s 		MOV A, L
+80f0 80f0 d d300
+80f0 80f0 s 		OUT PORT0
+80f2 80f2 d 7c
+80f2 80f2 s 		MOV A, H
+80f3 80f3 d d301
+80f3 80f3 s 		OUT PORT1
+80f5 80f5 d c3ea80
+80f5 80f5 s 		JMP NextRow 
+80f8 80f8 s 		
+80f8 80f8 d 21fe0d
+80f8 80f8 s AdvanceCursor:	LXI H, VdpCols
+80fb 80fb d 3a82ff
+80fb 80fb s 		LDA CursorCol
+80fe 80fe d 3c
+80fe 80fe s 		INR A
+80ff 80ff d 3282ff
+80ff 80ff s 		STA CursorCol
+8102 8102 d be
+8102 8102 s 		CMP M
+8103 8103 d d8
+8103 8103 s 		RC
+8104 8104 d af
+8104 8104 s 		XRA A
+8105 8105 d 3282ff
+8105 8105 s 		STA CursorCol	;CursorCol = 0
+8108 8108 d 23
+8108 8108 s 		INX H		;points to VdpRows
+8109 8109 d 3a83ff
+8109 8109 s 		LDA CursorRow
+810c 810c d 3c
+810c 810c s 		INR A
+810d 810d d 3283ff
+810d 810d s 		STA CursorRow
+8110 8110 d be
+8110 8110 s 		CMP M
+8111 8111 d d8
+8111 8111 s 		RC
+8112 8112 s 		; continue with scroll up
+8112 8112 d 00
+8112 8112 s ScrollUp:	NOP;RST 6	
+8113 8113 d 01e001
+8113 8113 s 		LXI B, 16*30	;replace with dynamic calculation	
+8116 8116 d 2afe0d
+8116 8116 s 		LHLD VdpCols
+8119 8119 d 2600
+8119 8119 s 		MVI H, 0x00	;HL = VdpCols
+811b 811b d 11000c
+811b 811b s 		LXI D, VdpRam
+811e 811e d 19
+811e 811e s 		DAD D		;HL = VdpCols + VdpRam, DE = VdpRam
+811f 811f d 7e
+811f 811f s CopyNextChar:	MOV A, M
+8120 8120 d 12
+8120 8120 s 		STAX D		;(DE) <= (HL)
+8121 8121 d 23
+8121 8121 s 		INX H
+8122 8122 d 13
+8122 8122 s 		INX D
+8123 8123 d 79
+8123 8123 s 		MOV A, C
+8124 8124 d b0
+8124 8124 s 		ORA B
+8125 8125 d ca2c81
+8125 8125 s 		JZ ClearLastLine
+8128 8128 d 0b
+8128 8128 s 		DCX B
+8129 8129 d c31f81
+8129 8129 s 		JMP CopyNextChar
+812c 812c d 00
+812c 812c s ClearLastLine:	NOP;RST 6
+812d 812d d 3e20
+812d 812d s 		MVI A, ' '
+812f 812f d 2afe0d
+812f 812f s 		LHLD VdpCols
+8132 8132 d 12
+8132 8132 s ClearLastLC:	STAX D
+8133 8133 d 13
+8133 8133 s 		INX D
+8134 8134 d 2d
+8134 8134 s 		DCR L
+8135 8135 d c23281
+8135 8135 s 		JNZ ClearLastLC
+8138 8138 d 3aff0d
+8138 8138 s 		LDA VdpRows
+813b 813b d 3d
+813b 813b s 		DCR A
+813c 813c d 3283ff
+813c 813c s SetCursorRow:	STA CursorRow
+813f 813f d c9
+813f 813f s 		RET
+8140 8140 s 
+8140 8140 d 01e001
+8140 8140 s ScrollDown:	LXI B, 16*30
+8143 8143 d 21000c
+8143 8143 s 		LXI H, VdpRam
+8146 8146 d 09
+8146 8146 s 		DAD B
+8147 8147 d eb
+8147 8147 s 		XCHG	;DE = source
+8148 8148 d 2afe0d
+8148 8148 s 		LHLD VdpCols
+814b 814b d 7b
+814b 814b s 		MOV A, E
+814c 814c d 85
+814c 814c s 		ADD L
+814d 814d d 6f
+814d 814d s 		MOV L, A
+814e 814e d 7a
+814e 814e s 		MOV A, D
+814f 814f d ce00
+814f 814f s 		ACI 0x00
+8151 8151 d 67
+8151 8151 s 		MOV H, A;HL = dest
+8152 8152 d 1a
+8152 8152 s CopyPrevChar:	LDAX D
+8153 8153 d 77
+8153 8153 s 		MOV M, A
+8154 8154 d 2b
+8154 8154 s 		DCX H
+8155 8155 d 1b
+8155 8155 s 		DCX D
+8156 8156 d 79
+8156 8156 s 		MOV A, C
+8157 8157 d b0
+8157 8157 s 		ORA B
+8158 8158 d ca5f81
+8158 8158 s 		JZ ClearFirstLine
+815b 815b d 0b
+815b 815b s 		DCX B
+815c 815c d c35281
+815c 815c s 		JMP CopyPrevChar
+815f 815f d f7
+815f 815f s ClearFirstLine:	RST 6
+8160 8160 d 3e20
+8160 8160 s 		MVI A, ' '
+8162 8162 d 2afe0d
+8162 8162 s 		LHLD VdpCols
+8165 8165 d 12
+8165 8165 s ClearFirstLC:	STAX D
+8166 8166 d 13
+8166 8166 s 		INX D
+8167 8167 d 2d
+8167 8167 s 		DCR L
+8168 8168 d c26581
+8168 8168 s 		JNZ ClearFirstLC
+816b 816b d af
+816b 816b s 		XRA A
+816c 816c d c33c81
+816c 816c s 		JMP SetCursorRow
+816f 816f s 		
+816f 816f s 
+816f 816f d 31343730323538033336390400050610
+816f 816f s KeyMap:		DB "1", "4", "7", "0", "2", "5", "8", ML, "3", "6", "9", MR, 0x00, MU, MD, CS		
+817f 817f s 		
+817f 817f d 00
+817f 817f s LastByte:	DB	0x00
+0006 v md
+000a v lf
+0001 v hm
+0010 v cs
+000d v cr
+0009 v tb
+0003 v ml
+000d v nl
+0008 v bs
+0004 v mr
+0005 v mu
+ff80 v heap
+80cd a crlf
+0000 v port0
+0001 v port1
+816f a keymap
+0c00 v vdpram
+0400 v altmon
+809f a moveup
+8005 a kbdscan
+ff80 v temp_pc
+800a a colloop
+0dfe v vdpcols
+800f a rowloop
+0dff v vdprows
+80ea a nextrow
+0001 v mask_sw0
+0002 v mask_sw1
+0004 v mask_sw2
+0008 v mask_sw3
+0010 v mask_sw4
+0020 v mask_sw5
+0040 v mask_sw6
+0080 v mask_sw7
+0007 v port_col
+806f a moveleft
+817f a lastbyte
+8086 a movedown
+8112 a scrollup
+0007 v port_row
+80ba a clearchar
+0011 v acia0_data
+0013 v acia1_data
+fe00 v rambottom
+8067 a moveright
+ff82 v cursorcol
+80c7 a setcursor
+ff83 v cursorrow
+0001 v mask_valid
+0002 v mask_ready
+80c4 a homescreen
+0040 v mask_error
+0dfe v vdpfgcolor
+0dff v vdpbkcolor
+801e a notpressed
+8140 a scrolldown
+80b4 a clearscreen
+8132 a clearlastlc
+8032 a displaychar
+0080 v mask_intreq
+806a a restoreregs
+0010 v acia0_status
+0012 v acia1_status
+0001 v mask_button0
+0002 v mask_button1
+0004 v mask_button2
+0008 v mask_button3
+8165 a clearfirstlc
+8152 a copyprevchar
+811f a copynextchar
+813c a setcursorrow
+812c a clearlastline
+80f8 a advancecursor
+80da a getcursoraddr
+815f a clearfirstline
