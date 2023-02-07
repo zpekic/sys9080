@@ -136,6 +136,9 @@ component uart is
            nWR : in  STD_LOGIC;
            RS : in  STD_LOGIC;
            D : inout  STD_LOGIC_VECTOR (7 downto 0);
+			  ---
+			  debug: out std_logic_vector(15 downto 0);
+			  --- 
            TXD : out  STD_LOGIC;
            RXD : in  STD_LOGIC);
 end component;
@@ -245,7 +248,7 @@ signal reset_delay: std_logic_vector(3 downto 0) := "1111";
 signal IntReq, Hold, HoldAck, IntE: std_logic;
 
 -- other signals
---signal reset_delay: std_logic_vector(3 downto 0);
+signal debug: std_logic_vector(15 downto 0);
 
 signal switch: std_logic_vector(7 downto 0);
 alias sw_display_cpu: std_logic is switch(7);
@@ -273,7 +276,8 @@ begin
 	 --nReset <= '0' when (Reset = '1') or (reset_delay /= "0000") else '1'; 
 	 
 	 led_bus <= cpu_debug_bus when (sw_display_cpu = '1') else sys_debug_bus;
-	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
+--	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
+	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & debug; --address_bus(7 downto 0) & data_bus;
  
 	 showsegments <= sw_display_cpu when (control_bus = "11111") else '1';
 
@@ -307,7 +311,7 @@ begin
 clocks: clockgen Port map ( 
 		CLK => CLK, 				-- 50MHz on Mercury board
 		RESET => USR_BTN,
-		baudrate_sel => "101",	-- 57600
+		baudrate_sel => "111",	-- 57600
 		cpuclk_sel =>	 sw_clock_sel,
 		pulse => btn_ss,
 		cpu_clk => cpu_clk,
@@ -369,6 +373,7 @@ acia0: uart Port map (
 			nWR => nIOWrite,
 			RS => address_bus(0),
 			D => data_bus,
+			debug => debug,
 			TXD => PMOD_RXD,
 			RXD => PMOD_TXD
 		);

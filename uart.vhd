@@ -39,6 +39,9 @@ entity uart is
            nWR : in  STD_LOGIC;
            RS : in  STD_LOGIC;
            D : inout  STD_LOGIC_VECTOR (7 downto 0);
+			  ---
+			  debug: out std_logic_vector(15 downto 0);
+			  ---
            TXD : out  STD_LOGIC;
            RXD : in  STD_LOGIC);
 end uart;
@@ -66,23 +69,26 @@ component uart_ser2par is
 end component;
 
 signal d_out, rdr, status: std_logic_vector(7 downto 0);
-signal tdre, rdrf, rdr_ok, send: std_logic;
+signal tdre, rdrf, rdr_ok, send, init, ready, valid, error: std_logic;
 
 begin
+
+debug <= status & rdr;
 
 D <= d_out when ((nCS or nRD) = '0') else "ZZZZZZZZ"; 
 d_out <= rdr when (RS = '1') else status;
  
 status(7) <= '0';	-- no interrupt
-status(6) <= not rdr_ok;	-- parity error	
-status(5) <= not rdr_ok;	-- receiver overrun
-status(4) <= not rdr_ok;	-- framing error
+status(6) <= error;	-- parity error	
+status(5) <= error;	-- receiver overrun
+status(4) <= error;	-- framing error
 status(3) <= '0';				-- clear to send
 status(2) <= '0';				-- data carrier detected
 status(1) <= tdre;			-- transmit register empty
 status(0) <= rdrf;			-- receive data register full
   
 send <= RS and (not nCS) and (not nWR) and (not clk);
+init <= reset or (RS and (not nCS) and (not nRD) and (not clk));
  
 sender: uart_par2ser Port map (
 			reset => reset,
@@ -95,14 +101,27 @@ sender: uart_par2ser Port map (
 		);
 
 receiver: uart_ser2par Port map ( 
-			reset => reset, 
+			reset => init, 
 			rxd_clk => clk_rxd,
 			mode => "000", -- 8N2
 			char => rdr,
-			ready => rdrf,
-			valid => rdr_ok,
+			ready => ready,
+			valid => valid,
 			rxd => rxd
 		);
 
+on_ready: process(ready, init)
+begin
+	if (init = '1') then
+		rdrf <= '0';
+		error <= '0';
+	else
+		if (rising_edge(ready)) then
+			rdrf <= '1';
+			error <= not valid;
+		end if;
+	end if;
+end process;
+ 
 end Behavioral;
 
