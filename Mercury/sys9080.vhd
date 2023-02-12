@@ -143,26 +143,6 @@ component uart is
            RXD : in  STD_LOGIC);
 end component;
 
---component ACIA is Generic (
---			  BAUDRATE: integer := 115200 -- baud rate value
---			);
---		Port(
---           clk : in STD_LOGIC;
---           reset: in STD_LOGIC;
---			  D: inout STD_LOGIC_VECTOR(7 downto 0);
---			  A: in STD_LOGIC;
---           nRead: in STD_LOGIC;
---           nWrite: in STD_LOGIC;
---			  nSelect: in STD_LOGIC;
---			  IntReq: out STD_LOGIC;
---			  IntAck: in STD_LOGIC;
---			  txd: out STD_LOGIC;
---			  rxd: in STD_LOGIC;
---			  rts: out STD_LOGIC;
---			  cts: in STD_LOGIC
---			);
---end component;
-
 component simpleram is
 	 generic (
 		address_size: integer;
@@ -177,19 +157,16 @@ component simpleram is
            nSelect : in  STD_LOGIC);
 end component;
 
---component hexfilerom is
---	 Generic (
---			filename: string;
---			address_size: integer;
---			default_value: STD_LOGIC_VECTOR(7 downto 0)
---		);
---    Port (           
---			  D : out  STD_LOGIC_VECTOR (7 downto 0);
---           A : in  STD_LOGIC_VECTOR ((address_size - 1) downto 0);
---           nRead : in  STD_LOGIC;
---           nSelect : in  STD_LOGIC
---			 );
---end component;
+component byteport is
+    Port ( reset : in  STD_LOGIC;
+           clk : in  STD_LOGIC;
+           nCS : in  STD_LOGIC;
+           nRead : in  STD_LOGIC;
+           nWrite : in  STD_LOGIC;
+           D : inout  STD_LOGIC_VECTOR (7 downto 0);
+           i : in  STD_LOGIC_VECTOR (7 downto 0);
+           o : out  STD_LOGIC_VECTOR (7 downto 0));
+end component;
 
 component rom1k is
 	generic (
@@ -228,10 +205,14 @@ end component;
 
 -- Connect to PmodUSBUART 
 -- https://digilent.com/reference/pmod/pmodusbuart/reference-manual
-alias PMOD_RTS: std_logic is PMOD(0);	
-alias PMOD_RXD: std_logic is PMOD(1);
-alias PMOD_TXD: std_logic is PMOD(2);
-alias PMOD_CTS: std_logic is PMOD(3);	
+alias PMOD_RTS0: std_logic is PMOD(0);	
+alias PMOD_RXD0: std_logic is PMOD(1);
+alias PMOD_TXD0: std_logic is PMOD(2);
+alias PMOD_CTS0: std_logic is PMOD(3);	
+alias PMOD_RTS1: std_logic is PMOD(4);	
+alias PMOD_RXD1: std_logic is PMOD(5);
+alias PMOD_TXD1: std_logic is PMOD(6);
+alias PMOD_CTS1: std_logic is PMOD(7);	
 
 -- CPU buses
 signal data_bus: std_logic_vector(7 downto 0);
@@ -245,7 +226,7 @@ alias nMemWrite: std_logic is control_bus(0);
 
 signal Reset: std_logic;
 signal reset_delay: std_logic_vector(3 downto 0) := "1111";
-signal IntReq, Hold, HoldAck, IntE: std_logic;
+signal IntReq, Hold, HoldAck, IntE, Ready: std_logic;
 
 -- other signals
 signal debug: std_logic_vector(15 downto 0);
@@ -257,12 +238,14 @@ alias sw_displaycpu_reg: std_logic_vector(2 downto 0) is switch(5 downto 3);
 alias sw_bus_break: std_logic_vector(3 downto 0) is switch(6 downto 3);
 alias sw_clock_sel: std_logic_vector(2 downto 0) is switch(2 downto 0);
 
-signal button: std_logic_vector(3 downto 0);
+signal button: std_logic_vector(7 downto 0);
 alias btn_ss: std_logic is button(0);
 
+signal inport: std_logic_vector(7 downto 0);
 signal led_bus: std_logic_vector(19 downto 0);
 signal cpu_debug_bus, sys_debug_bus: std_logic_vector(19 downto 0);
-signal nIoEnable, nACIA0Enable, nACIA1Enable, nBootRomEnable, nMonRomEnable, nRamEnable: std_logic;
+signal nPort0Enable, nPort1Enable, nACIA0Enable, nACIA1Enable: std_logic;
+signal nBootRomEnable, nMonRomEnable, nRamEnable: std_logic;
 signal showsegments: std_logic;
 signal flash: std_logic;
 
@@ -273,7 +256,6 @@ signal debounce_clk, cpu_clk: std_logic;
 begin
    
 	 Reset <= '0' when (reset_delay = "0000") else '1';
-	 --nReset <= '0' when (Reset = '1') or (reset_delay /= "0000") else '1'; 
 	 
 	 led_bus <= cpu_debug_bus when (sw_display_cpu = '1') else sys_debug_bus;
 --	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
@@ -281,17 +263,16 @@ begin
  
 	 showsegments <= sw_display_cpu when (control_bus = "11111") else '1';
 
-	 Hold <= '0';--button(2);
 	 flash <= '1'; --HoldAck or freq1Hz; -- blink in hold bus mode!
 	 -- USE AUDIO FOR CASETTE OUTPUT
 	 --cassette_out <= freq1200 when PMOD(2) = '1' else freq2400;
 	 AUDIO_OUT_L <= '0'; --freq1200; --cassette_out; 
 	 AUDIO_OUT_R <= '0'; --freq2400; --cassette_out;
 	 -- DISPLAY
-	 LED(3) <= PMOD_CTS; --Reset;  
-	 LED(2) <= PMOD_RXD; --not nIntAck;  
-	 LED(1) <= PMOD_TXD; --HoldAck; 
-	 LED(0) <= PMOD_RTS; --cpu_clk;  
+	 LED(3) <= PMOD_CTS0; --Reset;  
+	 LED(2) <= PMOD_RXD0; --not nIntAck;  
+	 LED(1) <= PMOD_TXD0; --HoldAck; 
+	 LED(0) <= PMOD_RTS0; --cpu_clk;  
     led4x7: fourdigitsevensegled port map ( 
 			  -- inputs
 			  data => led_bus(15 downto 0),
@@ -306,12 +287,11 @@ begin
 			  segment(7) => DOT
 			 );
 
-   -- FREQUENCY GENERATOR
--- generate various frequencies
+-- FREQUENCY GENERATOR
 clocks: clockgen Port map ( 
 		CLK => CLK, 				-- 50MHz on Mercury board
 		RESET => USR_BTN,
-		baudrate_sel => "111",	-- 57600
+		baudrate_sel => "110",	-- 38400
 		cpuclk_sel =>	 sw_clock_sel,
 		pulse => btn_ss,
 		cpu_clk => cpu_clk,
@@ -338,8 +318,7 @@ clocks: clockgen Port map (
         reset => Reset,
 		  signal_raw(7 downto 4) => "0000",
         signal_raw(3 downto 0) => BTN,
-		  signal_debounced(7 downto 4) => open,
-        signal_debounced(3 downto 0) => button
+        signal_debounced => button
     );
 
 	-- delay to generate nReset 4 cycles after reset
@@ -354,14 +333,40 @@ clocks: clockgen Port map (
 		end if;
 	end process;
 	
-	nIoEnable <= (nIoRead and nIoWrite) when address_bus(7 downto 4) = "0000" else '1'; 		-- 0x00 - 0x0F
+--	nInPortEnable <= (nIoRead and nIoWrite) when address_bus(7 downto 0) = "00000000" else '1'; 		-- 0x00 - 0x0F
+--	nPort1Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 0) = "00000001" else '1'; 		-- 0x00 - 0x0F
 	nACIA0Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 1) = "0001000" else '1'; -- 0x10 - 0x11
 	nACIA1Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 1) = "0001001" else '1'; -- 0x12 - 0x13
-	nBootRomEnable <= nMemRead when address_bus(15 downto 10) = "000000" else '1'; -- 1k ROM (0000 - 03FF)
-	--nBootRomEnable <= nMemRead when address_bus(15 downto 9) = "0000000" else '1'; -- 512b ROM (0000 - 01FF)
-	nMonRomEnable <= nMemRead when address_bus(15 downto 10)  = "000001" else '1'; -- 1k ROM (0400 - 07FF)
-	nRamEnable <= (nMemRead and nMemWrite) when address_bus(15 downto 8) = "11111111" else '1'; -- 256b RAM (FF00 - FFFF)
-	--nRamEnable <= (nMemRead and nMemWrite) when address_bus(15 downto 7) = "111111111" else '1'; -- 128b RAM (FF80 - FFFF)
+
+	nBootRomEnable <= nMemRead when address_bus(15 downto 10) =					"000000" else '1'; -- 1k ROM (0000 - 03FF)
+	nMonRomEnable <= 	nMemRead when address_bus(15 downto 10) =					"000001" else '1'; -- 1k ROM (0400 - 07FF)
+	nRamEnable <= (nMemRead and nMemWrite) when address_bus(15 downto 8) =	"11111111" else '1'; -- 256b RAM (FF00 - FFFF)
+	
+-- I/O
+inport <= switch when (address_bus(0) = '0') else button;
+data_bus <= inport when (nIORead = '0' and nACIA0Enable = '1' and nACIA1Enable = '1') else "ZZZZZZZZ";
+
+--port0: byteport Port map ( 
+--			reset => Reset,
+--			clk => cpu_clk,
+--			nCS => nPort0Enable,
+--			nRead => nIORead,
+--			nWrite => nIOWrite,
+--			D => data_bus,
+--			i => switch,
+--			o => open
+--		);
+--
+--port1: byteport Port map ( 
+--			reset => Reset,
+--			clk => cpu_clk,
+--			nCS => nPort1Enable,
+--			nRead => nIORead,
+--			nWrite => nIOWrite,
+--			D => data_bus,
+--			i => button,
+--			o => open
+--		);
 	
 acia0: uart Port map (
 			reset => Reset,
@@ -373,49 +378,27 @@ acia0: uart Port map (
 			nWR => nIOWrite,
 			RS => address_bus(0),
 			D => data_bus,
-			debug => debug,
-			TXD => PMOD_RXD,
-			RXD => PMOD_TXD
+			debug => open,
+			TXD => PMOD_RXD0,
+			RXD => PMOD_TXD0
 		);
 	
---	acia0: ACIA Generic map(
---				BAUDRATE => 19200 -- baud rate value
---			)
---			port map(
---			  clk => CLK, -- this is the full 50MHz clock!
---			  reset => Reset,
---			  D => data_bus,
---			  A => address_bus(0),
---           nRead => nIORead,
---           nWrite => nIOWrite,
---			  nSelect => nAcia0Enable,
---			  IntReq => open,
---			  IntAck => '0',
---			  txd => PMOD_TXD,
---			  rxd => PMOD_RXD,
---			  rts => open,
---			  cts => '0'
---	);
---
---	acia1: ACIA Generic map(
---				BAUDRATE => 300 -- baud rate value
---			)
---			port map(
---			  clk => CLK, -- this is the full 50MHz clock!
---			  reset => Reset,
---			  D => data_bus,
---			  A => address_bus(0),
---			  nRead => nIORead,
---			  nWrite => nIOWrite,
---			  nSelect => nAcia1Enable,
---			  IntReq => open,
---			  IntAck => '0',
---			  txd => open,
---			  rxd => '1',				  
---			  rts => open,
---			  cts => '0'
---	);
-
+--acia1: uart Port map (
+--			reset => Reset,
+--			clk => cpu_clk,
+--			clk_txd => baudrate,
+--			clk_rxd => baudrate_x4,
+--			nCS => nACIA1Enable,
+--			nRD => nIORead,
+--			nWR => nIOWrite,
+--			RS => address_bus(0),
+--			D => data_bus,
+--			debug => debug,
+--			TXD => PMOD_RXD1,
+--			RXD => PMOD_TXD1
+--		);
+		
+-- ROM
 	bootrom: rom1k generic map(
 		filename => "..\prog\zout\boot.hex",
 		default_value => X"76" -- HLT
@@ -426,32 +409,6 @@ acia0: uart Port map (
 		nOE => nBootRomEnable
 	);
 	
---	bootrom: hexfilerom 
---		generic map(
---			filename => "../prog/zout/boot.hex",
---			address_size => 10,
---			default_value => X"FF" -- if executed, will be RST 7
---			)	
---		port map(
---			  D => data_bus,
---			  A => address_bus(9 downto 0),
---           nRead => nMemRead,
---			  nSelect => nBootRomEnable
---		);
-
---	monrom: hexfilerom 
---		generic map(
---			filename => "../prog/zout/altmon.hex",
---			address_size => 10,
---			default_value => X"FF" -- if executed, will be RST 7
---			)	
---		port map(
---			  D => data_bus,
---			  A => address_bus(9 downto 0),
---           nRead => nMemRead,
---			  nSelect => nMonRomEnable
---		);
-
 	monrom: rom1k generic map(
 		filename => "..\prog\zout\altmon.hex",
 		default_value => X"76" -- HLT
@@ -462,6 +419,7 @@ acia0: uart Port map (
 		nOE => nMonRomEnable
 	);
 	
+-- RAM
 	ram: simpleram 
 		generic map(
 			address_size => 8,
@@ -476,6 +434,11 @@ acia0: uart Port map (
 			  nSelect => nRamEnable
 		);
 		
+-- CPU
+	Hold <= '0';	-- TODO
+	IntReq <= '0';	-- TODO
+	Ready <= '1';	-- TODO
+	
 	cpu: Am9080a port map (
 			  DBUS => data_bus,
 			  ABUS => address_bus,
@@ -490,7 +453,7 @@ acia0: uart Port map (
            CLK => cpu_clk,
            nRESET => not Reset,
 			  INT => IntReq,
-			  READY => '1', -- TODO - use to implement single stepping per instruction, not cycle
+			  READY => Ready,
 			  HOLD => Hold, 
 			  -- debug port, not part of actual processor
            debug_sel => sw_displaycpu_seq,
