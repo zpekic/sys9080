@@ -38,26 +38,8 @@ entity sys9080 is
 				-- Master reset button on Mercury board
 				USR_BTN: in std_logic; 
 				-- Switches on baseboard
-				-- SW(1 downto 0) -- LED display selection
-				--   0	0  Sys9080 - A(7:0) & D(7:0) & io and memory r/w on dots
-				--   0   1  Sys9080 - OUT port 1 & port 0
-				--   1   0  Am9080 - microinstruction counter & instruction register
-				--   1   1  Am9080 - content of register as defined by SW5:2
-				-- SW(5 downto 2) -- 4 bit Am9080 register selector when inspecting register states in SS mode
-				-- SW(6 downto 5) -- system clock speed 
-				--   0   0	1Hz	(can be used with SS mode)
-				--   0   1	1024Hz (can be used with SS mode)
-				--   1   0  6.125MHz
-				--   1   1  25MHz
-				-- SW7
-				--   0   single step mode off (BTN3 should be pressed once to start the system)
-				--   1   single step mode on (use with BTN3)
 				SW: in std_logic_vector(7 downto 0); 
 				-- Push buttons on baseboard
-				-- BTN0 - generate RST 7 interrupt which will dump processor regs and memory they are pointing to over ACIA0
-				-- BTN1 - bypass ACIA Rx char input processing and dump received bytes and status to ACIA0
-				-- BTN2 - put processor into HOLD mode
-				-- BTN3 - single step clock cycle forward if in SS mode (NOTE: single press on this button is needed after reset to unlock SS circuit)
 				BTN: in std_logic_vector(3 downto 0); 
 				-- Stereo audio output on baseboard
 				AUDIO_OUT_L, AUDIO_OUT_R: out std_logic;
@@ -157,17 +139,6 @@ component simpleram is
            nSelect : in  STD_LOGIC);
 end component;
 
-component byteport is
-    Port ( reset : in  STD_LOGIC;
-           clk : in  STD_LOGIC;
-           nCS : in  STD_LOGIC;
-           nRead : in  STD_LOGIC;
-           nWrite : in  STD_LOGIC;
-           D : inout  STD_LOGIC_VECTOR (7 downto 0);
-           i : in  STD_LOGIC_VECTOR (7 downto 0);
-           o : out  STD_LOGIC_VECTOR (7 downto 0));
-end component;
-
 component rom1k is
 	generic (
 		filename: string := "";
@@ -196,6 +167,7 @@ component Am9080a is
 			  INT: in STD_LOGIC;
 			  READY: in STD_LOGIC;
 			  HOLD: in STD_LOGIC;
+			  M1: out STD_LOGIC;		-- indicates M1 machine cycle (instruction fetch)
 			  -- debug port, not part of actual processor
            debug_sel : in  STD_LOGIC;
 			  debug_reg : in STD_LOGIC_VECTOR(2 downto 0);
@@ -226,28 +198,36 @@ alias nMemWrite: std_logic is control_bus(0);
 
 signal Reset: std_logic;
 signal reset_delay: std_logic_vector(3 downto 0) := "1111";
-signal IntReq, Hold, HoldAck, IntE, Ready: std_logic;
+signal IntReq, Hold, HoldAck, IntE, Ready, m1: std_logic;
 
 -- other signals
 signal debug: std_logic_vector(15 downto 0);
 
 signal switch: std_logic_vector(7 downto 0);
-alias sw_display_cpu: std_logic is switch(7);
+-- display cpu or bus
+alias sw_display_bus: std_logic is switch(7);
+-- when displaying cpu
 alias sw_displaycpu_seq: std_logic is switch(6);
 alias sw_displaycpu_reg: std_logic_vector(2 downto 0) is switch(5 downto 3);
-alias sw_bus_break: std_logic_vector(3 downto 0) is switch(6 downto 3);
+-- when displaying bus
+alias sw_trigger_ioread: std_logic is switch(6);
+alias sw_trigger_iowrite: std_logic is switch(5);
+alias sw_trigger_memread: std_logic is switch(4);
+alias sw_trigger_memwrite: std_logic is switch(3);
+-- either
 alias sw_clock_sel: std_logic_vector(2 downto 0) is switch(2 downto 0);
 
 signal button: std_logic_vector(7 downto 0);
-alias btn_ss: std_logic is button(0);
+alias btn_ss: std_logic is button(3);
+alias btn_clk: std_logic is button(0);
 
 signal inport: std_logic_vector(7 downto 0);
-signal led_bus: std_logic_vector(19 downto 0);
+signal led_bus: std_logic_vector(23 downto 0);
 signal cpu_debug_bus, sys_debug_bus: std_logic_vector(19 downto 0);
 signal nPort0Enable, nPort1Enable, nACIA0Enable, nACIA1Enable: std_logic;
 signal nBootRomEnable, nMonRomEnable, nRamEnable: std_logic;
 signal showsegments: std_logic;
-signal flash: std_logic;
+signal trigger_ss, clk_ss: std_logic;
 
 -- clock
 signal freq1Hz, freq50Hz, freq100Hz, baudrate, baudrate_x4: std_logic; 
@@ -257,22 +237,21 @@ begin
    
 	 Reset <= '0' when (reset_delay = "0000") else '1';
 	 
-	 led_bus <= cpu_debug_bus when (sw_display_cpu = '1') else sys_debug_bus;
---	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
-	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & debug; --address_bus(7 downto 0) & data_bus;
+	 led_bus <= (cpu_clk & "00" & freq1Hz & cpu_debug_bus) when (sw_display_bus = '0') else (Ready & m1 & btn_ss & trigger_ss & sys_debug_bus);
+	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
+--	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & debug; --address_bus(7 downto 0) & data_bus;
  
-	 showsegments <= sw_display_cpu when (control_bus = "11111") else '1';
+	 showsegments <= (not sw_display_bus) when (control_bus = "11111") else '1';
 
-	 flash <= '1'; --HoldAck or freq1Hz; -- blink in hold bus mode!
+	 --flash <= '1'; --HoldAck or freq1Hz; -- blink in hold bus mode!
 	 -- USE AUDIO FOR CASETTE OUTPUT
 	 --cassette_out <= freq1200 when PMOD(2) = '1' else freq2400;
 	 AUDIO_OUT_L <= '0'; --freq1200; --cassette_out; 
 	 AUDIO_OUT_R <= '0'; --freq2400; --cassette_out;
+
 	 -- DISPLAY
-	 LED(3) <= PMOD_CTS0; --Reset;  
-	 LED(2) <= PMOD_RXD0; --not nIntAck;  
-	 LED(1) <= PMOD_TXD0; --HoldAck; 
-	 LED(0) <= PMOD_RTS0; --cpu_clk;  
+	 LED <= led_bus(23 downto 20);  
+	 
     led4x7: fourdigitsevensegled port map ( 
 			  -- inputs
 			  data => led_bus(15 downto 0),
@@ -291,9 +270,10 @@ begin
 clocks: clockgen Port map ( 
 		CLK => CLK, 				-- 50MHz on Mercury board
 		RESET => USR_BTN,
-		baudrate_sel => "110",	-- 38400
+--		baudrate_sel => "110",	-- 38400
+		baudrate_sel => "111",	-- 57600
 		cpuclk_sel =>	 sw_clock_sel,
-		pulse => btn_ss,
+		pulse => btn_clk,
 		cpu_clk => cpu_clk,
 		debounce_clk => debounce_clk,
 		vga_clk => open,
@@ -304,7 +284,6 @@ clocks: clockgen Port map (
 		freq1Hz => freq1Hz
 		);
 	
-
 	-- DEBOUNCE the 8 switches and 4 buttons (plus "Reset" on Mercury board)
     debouncer_sw: debouncer8channel port map (
         clock => debounce_clk,
@@ -340,34 +319,12 @@ clocks: clockgen Port map (
 
 	nBootRomEnable <= nMemRead when address_bus(15 downto 10) =					"000000" else '1'; -- 1k ROM (0000 - 03FF)
 	nMonRomEnable <= 	nMemRead when address_bus(15 downto 10) =					"000001" else '1'; -- 1k ROM (0400 - 07FF)
-	nRamEnable <= (nMemRead and nMemWrite) when address_bus(15 downto 8) =	"11111111" else '1'; -- 256b RAM (FF00 - FFFF)
+	nRamEnable <= (nMemRead and nMemWrite) when address_bus(15 downto 8) =	"11111111" else '1'; -- 1k RAM (FC00 - FFFF)
 	
 -- I/O
 inport <= switch when (address_bus(0) = '0') else button;
-data_bus <= inport when (nIORead = '0' and nACIA0Enable = '1' and nACIA1Enable = '1') else "ZZZZZZZZ";
+data_bus <= inport when (nIORead = '0' and (address_bus(7 downto 4) = "0000")) else "ZZZZZZZZ";
 
---port0: byteport Port map ( 
---			reset => Reset,
---			clk => cpu_clk,
---			nCS => nPort0Enable,
---			nRead => nIORead,
---			nWrite => nIOWrite,
---			D => data_bus,
---			i => switch,
---			o => open
---		);
---
---port1: byteport Port map ( 
---			reset => Reset,
---			clk => cpu_clk,
---			nCS => nPort1Enable,
---			nRead => nIORead,
---			nWrite => nIOWrite,
---			D => data_bus,
---			i => button,
---			o => open
---		);
-	
 acia0: uart Port map (
 			reset => Reset,
 			clk => cpu_clk,
@@ -437,7 +394,6 @@ acia0: uart Port map (
 -- CPU
 	Hold <= '0';	-- TODO
 	IntReq <= '0';	-- TODO
-	Ready <= '1';	-- TODO
 	
 	cpu: Am9080a port map (
 			  DBUS => data_bus,
@@ -455,10 +411,31 @@ acia0: uart Port map (
 			  INT => IntReq,
 			  READY => Ready,
 			  HOLD => Hold, 
+			  M1 => m1,
 			  -- debug port, not part of actual processor
-           debug_sel => sw_displaycpu_seq,
-			  debug_reg => sw_displaycpu_reg,
+           debug_sel => '0', --sw_displaycpu_seq,
+			  debug_reg => "101", --sw_displaycpu_reg,
            debug_out => cpu_debug_bus
 			);
+	 
+-- bus single stepper logic
+trigger_ss <= sw_display_bus and 
+				(
+					(sw_trigger_ioread and (not nIoRead)) or
+					(sw_trigger_iowrite and (not nIoWrite)) or 
+					(sw_trigger_memread and (not nMemRead)) or 
+					(sw_trigger_memwrite and (not nMemWrite))
+				);
+clk_ss <= btn_ss when (Ready = '0') else trigger_ss;
+on_clk_ss: process(clk_ss, reset)
+begin
+	if (Reset = '1') then
+		Ready <= '1';
+	else
+		if (rising_edge(clk_ss)) then
+			Ready <= not Ready;
+		end if;
+	end if;
+end process;
 	 
 end;

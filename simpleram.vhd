@@ -87,7 +87,7 @@ signal control: std_logic_vector(2 downto 0);
 
 signal ram: bytememory := (others => default_value);
 attribute ram_style: string;
-attribute ram_style of ram: signal is "distributed";
+attribute ram_style of ram: signal is "block";
 
 begin
 
