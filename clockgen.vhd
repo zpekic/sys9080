@@ -38,8 +38,7 @@ entity clockgen is
            cpu_clk : out  STD_LOGIC;
            debounce_clk : out  STD_LOGIC;
            vga_clk : out  STD_LOGIC;
-           baudrate_x4 : out  STD_LOGIC;
-           baudrate : out  STD_LOGIC;
+           baudrate : out  STD_LOGIC_VECTOR(11 downto 0);
            freq50Hz : out  STD_LOGIC;
 			  freq100Hz: out STD_LOGIC;
 			  freq1Hz: out STD_LOGIC);
@@ -47,11 +46,11 @@ end clockgen;
 
 architecture Behavioral of clockgen is
 
-component sn74hc4040 is
-    Port ( clock : in  STD_LOGIC;
-           reset : in  STD_LOGIC;
-           q : out  STD_LOGIC_VECTOR(11 downto 0));
-end component;
+--component sn74hc4040 is
+--    Port ( clock : in  STD_LOGIC;
+--           reset : in  STD_LOGIC;
+--           q : out  STD_LOGIC_VECTOR(11 downto 0));
+--end component;
 
 constant clk_board: integer := 50000000;	-- 50MHz
 
@@ -137,28 +136,25 @@ begin
 	end if;
 end process; 	
 
-baudgen: sn74hc4040 port map (
+baudgen: entity work.sn74hc4040 port map (
 			clock => baudrate_x8,
 			reset => RESET,
-			q(0) => baudrate_x4, 
-			q(1) => open,
-			q(2) => baudrate,
-			q(11 downto 3) => open		
+			q => baudrate 
 		);	
 
-clockgen: sn74hc4040 port map (
+clockgen: entity work.sn74hc4040 port map (
 			clock => CLK,	-- 50MHz crystal on Anvyl board
 			reset => RESET,
 			q => freq_25M
 		);
 
-powergen: sn74hc4040 port map (
+powergen: entity work.sn74hc4040 port map (
 			clock => freq4096,
 			reset => RESET,
 			q => freq_2048
 		);
 		
-mainsgen: sn74hc4040 port map (
+mainsgen: entity work.sn74hc4040 port map (
 			clock => freq3200,
 			reset => RESET,
 			q => freq_1600

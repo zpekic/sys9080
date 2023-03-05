@@ -71,16 +71,120 @@ end sys9080;
 
 architecture Structural of sys9080 is
 
+--component debouncer8channel is
+--    Port ( clock : in STD_LOGIC;
+--           reset : in STD_LOGIC;
+--           signal_raw : in STD_LOGIC_VECTOR (7 downto 0);
+--           signal_debounced : out STD_LOGIC_VECTOR (7 downto 0));
+--end component;
+--
+--component clockgen is
+--    Port ( CLK : in  STD_LOGIC;
+--           RESET : in  STD_LOGIC;
+--           baudrate_sel : in  STD_LOGIC_VECTOR (2 downto 0);
+--           cpuclk_sel : in  STD_LOGIC_VECTOR (2 downto 0);
+--			  pulse : in STD_LOGIC;
+--           cpu_clk : out  STD_LOGIC;
+--           debounce_clk : out  STD_LOGIC;
+--           vga_clk : out  STD_LOGIC;
+--           baudrate_x4 : out  STD_LOGIC;
+--           baudrate : out  STD_LOGIC;
+--           freq100Hz : out  STD_LOGIC;
+--           freq50Hz : out  STD_LOGIC;
+--			  freq1Hz : out STD_LOGIC);
+--end component;
+--
+--
+--component fourdigitsevensegled is
+--    Port ( -- inputs
+--			  data : in  STD_LOGIC_VECTOR (15 downto 0);
+--           digsel : in  STD_LOGIC_VECTOR (1 downto 0);
+--           showdigit : in  STD_LOGIC_VECTOR (3 downto 0);
+--           showdot : in  STD_LOGIC_VECTOR (3 downto 0);
+--           showsegments : in  STD_LOGIC;
+--			  -- outputs
+--           anode : out  STD_LOGIC_VECTOR (3 downto 0);
+--           segment : out  STD_LOGIC_VECTOR (7 downto 0)
+--			 );
+--end component;
+--
+--component uart is
+--    Port ( reset : in  STD_LOGIC;
+--			  clk: in STD_LOGIC;
+--           clk_txd : in  STD_LOGIC;
+--           clk_rxd : in  STD_LOGIC;
+--           nCS : in  STD_LOGIC;
+--           nRD : in  STD_LOGIC;
+--           nWR : in  STD_LOGIC;
+--           RS : in  STD_LOGIC;
+--           D : inout  STD_LOGIC_VECTOR (7 downto 0);
+--			  ---
+--			  debug: out std_logic_vector(15 downto 0);
+--			  --- 
+--           TXD : out  STD_LOGIC;
+--           RXD : in  STD_LOGIC);
+--end component;
+--
+--component simpleram is
+--	 generic (
+--		address_size: integer;
+--		default_value: STD_LOGIC_VECTOR(7 downto 0)
+--	  );
+--    Port (       
+--			  clk: in STD_LOGIC;
+--			  D : inout  STD_LOGIC_VECTOR (7 downto 0);
+--           A : in  STD_LOGIC_VECTOR ((address_size - 1) downto 0);
+--           nRead : in  STD_LOGIC;
+--           nWrite : in  STD_LOGIC;
+--           nSelect : in  STD_LOGIC);
+--end component;
+--
+--component rom1k is
+--	generic (
+--		filename: string := "";
+--		default_value: STD_LOGIC_VECTOR(7 downto 0) := X"00"
+--	);
+--	Port ( 
+--		A : in  STD_LOGIC_VECTOR (9 downto 0);
+--		nOE : in  STD_LOGIC;
+--		D : out  STD_LOGIC_VECTOR (7 downto 0)
+--	);
+--end component;
+--
+--component Am9080a is
+--    Port ( DBUS : inout  STD_LOGIC_VECTOR (7 downto 0);
+--			  ABUS : out STD_LOGIC_VECTOR (15 downto 0);
+--           WAITOUT : out  STD_LOGIC;
+--           nINTA : out  STD_LOGIC;
+--           nIOR : out  STD_LOGIC;
+--           nIOW : out  STD_LOGIC;
+--           nMEMR : out  STD_LOGIC;
+--           nMEMW : out  STD_LOGIC;
+--           HLDA : out  STD_LOGIC;
+--			  INTE : out STD_LOGIC;
+--           CLK : in  STD_LOGIC;
+--           nRESET : in  STD_LOGIC;
+--			  INT: in STD_LOGIC;
+--			  READY: in STD_LOGIC;
+--			  HOLD: in STD_LOGIC;
+--			  M1: out STD_LOGIC;		-- indicates M1 machine cycle (instruction fetch)
+--			  -- debug port, not part of actual processor
+--           debug_sel : in  STD_LOGIC;
+--			  debug_reg : in STD_LOGIC_VECTOR(2 downto 0);
+--           debug_out : out  STD_LOGIC_VECTOR (19 downto 0)
+--			);
+--end component;
+
 -- Connect to PmodUSBUART 
 -- https://digilent.com/reference/pmod/pmodusbuart/reference-manual
 alias PMOD_RTS0: std_logic is PMOD(0);	
 alias PMOD_RXD0: std_logic is PMOD(1);
 alias PMOD_TXD0: std_logic is PMOD(2);
 alias PMOD_CTS0: std_logic is PMOD(3);	
-alias PMOD_4: std_logic is PMOD(4);	-- RTS1
-alias PMOD_5: std_logic is PMOD(5);	-- RXD1
-alias PMOD_6: std_logic is PMOD(6);	-- TXD1
-alias PMOD_7: std_logic is PMOD(7);	-- CTS1
+alias PMOD_RTS1: std_logic is PMOD(4);	
+alias PMOD_RXD1: std_logic is PMOD(5);
+alias PMOD_TXD1: std_logic is PMOD(6);
+alias PMOD_CTS1: std_logic is PMOD(7);	
 
 -- CPU buses
 signal data_bus: std_logic_vector(7 downto 0);
@@ -113,9 +217,7 @@ alias sw_trigger_memwrite: std_logic is switch(3);
 -- either
 alias sw_clock_sel: std_logic_vector(2 downto 0) is switch(2 downto 0);
 
-alias sw_round: std_logic_vector(1 downto 0) is switch(1 downto 0);
-alias sw_avg: std_logic_vector(1 downto 0) is switch(3 downto 2);
-alias sw_icntsel: std_logic is switch(4);
+alias sw_tap_sel: std_logic_vector(4 downto 0) is switch(4 downto 0);
 alias sw_audio_sel: std_logic_vector(1 downto 0) is switch(6 downto 5);
 
 signal button: std_logic_vector(7 downto 0);
@@ -146,19 +248,19 @@ alias baud_1200: std_logic is baudrate(7);
 alias baud_600: std_logic is baudrate(8);
 alias baud_300: std_logic is baudrate(9);
 
-signal adc_done, audio_out, audio_in, freq_icnt, sum_start, sum_end: std_logic;
-signal adc_channel: std_logic_vector(2 downto 0) := "000";
+signal channel, adc_done, audio_out: std_logic;
 signal adc_dout: std_logic_vector(9 downto 0);
-signal dec: std_logic_vector(15 downto 0);
 
-signal cnt_in, cnt_out: std_logic_vector(31 downto 0);
+signal sr9, sr8, sr7, sr6, sr5, sr4, sr3, sr2, sr1, sr0: std_logic_vector(31 downto 0);
+signal cnt_value: std_logic_vector(31 downto 0);
+signal adc_cnt: std_logic_vector(5 downto 0);
+signal tap_now, now_tap, adc_now, adc_tap, delta, d_min, d_max: std_logic_vector(9 downto 0);
 
 begin
    
 	 Reset <= '0' when (reset_delay = "0000") else '1';
 	 
-	 led_bus <= cnt_out(23 downto 0) when (sw_display_bus = '0') else cnt_in(23 downto 0);
---	 led_bus <= cnt_out(23 downto 0) when (sw_display_bus = '0') else X"00" & pot;
+	 led_bus <= cnt_value(23 downto 0) when (sw_display_bus = '0') else ("0000" & d_max(9 downto 8) & d_min(9 downto 8) & d_max(7 downto 0) & d_min(7 downto 0));
 --	 led_bus <= (cpu_clk & "00" & freq1Hz & cpu_debug_bus) when (sw_display_bus = '0') else (Ready & m1 & btn_ss & trigger_ss & sys_debug_bus);
 	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
 --	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & debug; --address_bus(7 downto 0) & data_bus;
@@ -247,23 +349,21 @@ clocks: entity work.clockgen Port map (
 inport <= switch when (address_bus(0) = '0') else button;
 data_bus <= inport when (nIORead = '0' and (address_bus(7 downto 4) = "0000")) else "ZZZZZZZZ";
 
---acia0: entity work.uart Port map (
---			reset => Reset,
---			clk => cpu_clk,
---			clk_txd => baud_38400,	-- x1
---			clk_rxd => baud_153600,	-- x4
---			nCS => nACIA0Enable,
---			nRD => nIORead,
---			nWR => nIOWrite,
---			RS => address_bus(0),
---			D => data_bus,
---			loopback => '0',
---			--debug => led_bus(15 downto 0),
---			debug => open,
---			TXD => PMOD_RXD0,
---			RXD => PMOD_TXD0
---		);
-
+acia0: entity work.uart Port map (
+			reset => Reset,
+			clk => cpu_clk,
+			clk_txd => baud_38400,	-- x1
+			clk_rxd => baud_153600,	-- x4
+			nCS => nACIA0Enable,
+			nRD => nIORead,
+			nWR => nIOWrite,
+			RS => address_bus(0),
+			D => data_bus,
+			debug => open,
+			TXD => PMOD_RXD0,
+			RXD => PMOD_TXD0
+		);
+	
 --acia1: uart Port map (
 --			reset => Reset,
 --			clk => cpu_clk,
@@ -363,18 +463,19 @@ begin
 end process;
 	 
 -- ADC for cassette interface
---with sw_audio_sel select audio_out <=
---	baud_1200 when "00",
---	baud_2400 when "01",
---	baud_4800 when "10",
---	baud_9600 when others;
+with sw_audio_sel select audio_out <=
+	adc_cnt(2) when "00",
+	adc_cnt(3) when "01",
+	adc_cnt(4) when "10",
+	adc_cnt(5) when others;
 	
-audio_out <= baud_4800 when (PMOD_TXD0 = '0') else baud_2400;	
-freq_icnt <= freq1Hz when (sw_icntsel = '0') else baud_1200;
-
-PMOD_RXD0 <= not(cnt_in(1));-- and cnt_in(0);
-
-ocnt: entity work.freqcounter Port map (
+--with sw_trigger select trigger <=
+--	baud_19200 when "00",
+--	baud_38400 when "01",
+--	baud_76800 when "10",
+--	baud_153600 when others;
+	
+fcnt: entity work.freqcounter Port map (
 		reset => Reset,
 		clk => freq1Hz,
 		freq => audio_out,
@@ -382,27 +483,18 @@ ocnt: entity work.freqcounter Port map (
 		add => X"00000001",
 		cin => '1',
 		cout => open,
-		value => cnt_out
-	);
-
-icnt: entity work.freqcounter Port map (
-		reset => Reset,
-		clk => freq_icnt,
-		freq => audio_in,
-		bcd => '1',
-		add => X"00000001",
-		cin => '1',
-		cout => open,
-		value => cnt_in
+		value => cnt_value
 	);
 
   -- Mercury ADC component
   ADC : entity work.MercuryADC
     port map(
       clock    => CLK,
-      trigger  => baud_153600,
+      trigger  => baud_76800,
       diffn    => '0',
-		channel =>  adc_channel,	
+--    channel(2 downto 1)  => "00",
+--		channel(0) => channel,
+		channel => "000",
       Dout     => adc_dout,
       OutVal   => adc_done,
       adc_miso => ADC_MISO,
@@ -410,21 +502,64 @@ icnt: entity work.freqcounter Port map (
       adc_cs   => ADC_CSN,
       adc_clk  => ADC_SCK
       );
+		
+on_adc_done: process(adc_done)
+begin
+	if (rising_edge(adc_done)) then
+		adc_cnt <= std_logic_vector(unsigned(adc_cnt) + 1);
+		sr9 <= sr9(30 downto 0) & adc_dout(9);
+		sr8 <= sr8(30 downto 0) & adc_dout(8);
+		sr7 <= sr7(30 downto 0) & adc_dout(7);
+		sr6 <= sr6(30 downto 0) & adc_dout(6);
+		sr5 <= sr5(30 downto 0) & adc_dout(5);
+		sr4 <= sr4(30 downto 0) & adc_dout(4);
+		sr3 <= sr3(30 downto 0) & adc_dout(3);
+		sr2 <= sr2(30 downto 0) & adc_dout(2);
+		sr1 <= sr1(30 downto 0) & adc_dout(1);
+		sr0 <= sr0(30 downto 0) & adc_dout(0);
+	end if;
+	
+	if (falling_edge(adc_done)) then
+		if (switch = switch_previous) then
+			if (unsigned(delta) < unsigned(d_min)) then
+				d_min <= delta;
+			end if;
+			if (unsigned(delta) > unsigned(d_max)) then
+				d_max <= delta;
+			end if;
+		else
+			d_min <= (others => '1');
+			d_max <= (others => '0');
+		end if;
+		switch_previous <= switch;
+	end if;
+	
+end process;
 
-analogfreq: entity work.adc2freq port map (
-		adc_sample => adc_dout,
-		adc_done => adc_done,
-		avg_sel => sw_avg,
-		round_sel => sw_round,
-		sum_start => sum_start,
-		sum_end => sum_end,
-		freq_out => audio_in
-		);
-			
--- PropScope digital port
-PMOD_4 <= audio_out;
-PMOD_5 <= sum_start;
-PMOD_6 <= sum_end;
-PMOD_7 <= audio_in;
-				
+		adc_tap(9) <= sr9(to_integer(unsigned(sw_tap_sel)));
+		adc_tap(8) <= sr8(to_integer(unsigned(sw_tap_sel)));
+		adc_tap(7) <= sr7(to_integer(unsigned(sw_tap_sel)));
+		adc_tap(6) <= sr6(to_integer(unsigned(sw_tap_sel)));
+		adc_tap(5) <= sr5(to_integer(unsigned(sw_tap_sel)));
+		adc_tap(4) <= sr4(to_integer(unsigned(sw_tap_sel)));
+		adc_tap(3) <= sr3(to_integer(unsigned(sw_tap_sel)));
+		adc_tap(2) <= sr2(to_integer(unsigned(sw_tap_sel)));
+		adc_tap(1) <= sr1(to_integer(unsigned(sw_tap_sel)));
+		adc_tap(0) <= sr0(to_integer(unsigned(sw_tap_sel)));
+		
+		adc_now <= sr9(0) & sr8(0) & sr7(0) & sr6(0) & sr5(0) & sr4(0) & sr3(0) & sr2(0) & sr1(0) & sr0(0);
+------------------------
+		tap_now <= std_logic_vector(unsigned(adc_tap) - unsigned(adc_now));
+		now_tap <= std_logic_vector(unsigned(adc_now) - unsigned(adc_tap));
+------------------------
+		delta <= tap_now when (tap_now(9) = '0') else now_tap;
+
+--on_baud_2400: process(baud_2400, adc_tap, adc_now)
+--begin
+--	if (rising_edge(baud_2400)) then
+--		tap_now <= std_logic_vector(unsigned(adc_tap) - unsigned(adc_now));
+--		now_tap <= std_logic_vector(unsigned(adc_now) - unsigned(adc_tap));
+--	end if;
+--end process;
+		
 end;

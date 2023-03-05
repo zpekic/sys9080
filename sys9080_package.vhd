@@ -12,6 +12,26 @@ use ieee.std_logic_textio.all;
 
 package sys9080_package is
 
+type mem16x16 is array(0 to 15) of std_logic_vector(15 downto 0);
+constant decode4to16: mem16x16 := (
+	"1111111111111110",
+	"1111111111111101",
+	"1111111111111011",
+	"1111111111110111",
+	"1111111111101111",
+	"1111111111011111",
+	"1111111110111111",
+	"1111111101111111",
+	"1111111011111111",
+	"1111110111111111",
+	"1111101111111111",
+	"1111011111111111",
+	"1110111111111111",
+	"1101111111111111",
+	"1011111111111111",
+	"0111111111111111"
+);
+
 -- some handy i8080 instruction codes
 constant nop: std_logic_vector(7 downto 0) := X"00";
 constant hlt: std_logic_vector(7 downto 0) := X"76";

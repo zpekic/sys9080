@@ -40,6 +40,7 @@ entity uart is
            RS : in  STD_LOGIC;
            D : inout  STD_LOGIC_VECTOR (7 downto 0);
 			  ---
+			  loopback: in STD_LOGIC;
 			  debug: out std_logic_vector(15 downto 0);
 			  ---
            TXD : out  STD_LOGIC;
@@ -68,8 +69,8 @@ component uart_ser2par is
            rxd : in  STD_LOGIC);
 end component;
 
-signal d_out, rdr, status, control: std_logic_vector(7 downto 0);
-signal tdre, rdrf, rdr_ok, send, received, ready, valid: std_logic; 
+signal d_out, rdr, status, control, s_data: std_logic_vector(7 downto 0);
+signal tdre, rdrf, rdr_ok, send, received, ready, valid, s_send: std_logic; 
 signal err_parity, err_frame, err_overrun: std_logic;
 signal int_read, int_write, int_reset, int_txdclk, int_rxdclk: std_logic;
 signal txdcnt, rxdcnt: std_logic_vector(5 downto 0);
@@ -79,11 +80,11 @@ signal reset_receiver, reset_sender: std_logic;
 begin
 
 ----
-debug <= status & control;
+debug <= status & rdr when (loopback = '1') else status & control;
 ----
 int_read <= not (nCS or nRD);
 int_write <= not (nCS or nWR);
-int_reset <= control(1) and control(0);
+int_reset <= '0' when (loopback = '1') else (control(1) and control(0));
 send <= 		RS and int_write and (not clk);	-- trigger data register out
 received <= RS and int_read and (not clk);	-- ack data register in
  
@@ -111,12 +112,16 @@ reset_sender <= reset or int_reset;
 sender: uart_par2ser Port map (
 			reset => reset_sender,
 			txd_clk => int_txdclk,
-			send => send,
+			send => s_send,
 			mode => mode, 
-			data => D,
+			data => s_data,
 			ready => tdre,
 			txd => txd
 		);
+
+-- hook up loop-back
+s_send <= (not ready) when (loopback = '1') else send;
+s_data <= rdr when (loopback = '1') else D;
 
 reset_receiver <= reset or int_reset or received;
 receiver: uart_ser2par Port map ( 

@@ -69,13 +69,13 @@ begin
 			if (clk_prev = '0') then
 				cnt_0 <= sum;
 			else
-				cnt_0 <= (others => '0');
+				cnt_0 <= add;
 			end if;
 		else
 			if (clk_prev = '1') then
 				cnt_1 <= sum;
 			else
-				cnt_1 <= (others => '0');
+				cnt_1 <= add;
 			end if;
 		end if;
 		
