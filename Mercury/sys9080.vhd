@@ -59,10 +59,10 @@ entity sys9080 is
 				-- 5			Channel 5 (free)
 				-- 6			Channel 6 (free)
 				-- 7			Channel 7 (free)
-				ADC_MISO: in std_logic;
-				ADC_MOSI: out std_logic;
-				ADC_SCK: out std_logic;
-				ADC_CSN: out std_logic;
+				--ADC_MISO: in std_logic;
+				--ADC_MOSI: out std_logic;
+				--ADC_SCK: out std_logic;
+				--ADC_CSN: out std_logic;
 				--PMOD interface
 				PMOD: inout std_logic_vector(7 downto 0)
 
@@ -157,9 +157,9 @@ begin
    
 	 Reset <= '0' when (reset_delay = "0000") else '1';
 	 
-	 led_bus <= cnt_out(23 downto 0) when (sw_display_bus = '0') else cnt_in(23 downto 0);
+--	 led_bus <= cnt_out(23 downto 0) when (sw_display_bus = '0') else cnt_in(23 downto 0);
 --	 led_bus <= cnt_out(23 downto 0) when (sw_display_bus = '0') else X"00" & pot;
---	 led_bus <= (cpu_clk & "00" & freq1Hz & cpu_debug_bus) when (sw_display_bus = '0') else (Ready & m1 & btn_ss & trigger_ss & sys_debug_bus);
+	 led_bus <= (cpu_clk & "00" & freq1Hz & cpu_debug_bus) when (sw_display_bus = '0') else (Ready & m1 & btn_ss & trigger_ss & sys_debug_bus);
 	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
 --	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & debug; --address_bus(7 downto 0) & data_bus;
  
@@ -239,30 +239,28 @@ clocks: entity work.clockgen Port map (
 	nACIA0Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 1) = "0001000" else '1'; -- 0x10 - 0x11
 	nACIA1Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 1) = "0001001" else '1'; -- 0x12 - 0x13
 
-	nBootRomEnable <= nMemRead when address_bus(15 downto 10) =					"000000" else '1'; -- 1k ROM (0000 - 03FF)
-	nMonRomEnable <= 	nMemRead when address_bus(15 downto 10) =					"000001" else '1'; -- 1k ROM (0400 - 07FF)
-	nRamEnable <= (nMemRead and nMemWrite) when address_bus(15 downto 8) =	"11111111" else '1'; -- 1k RAM (FC00 - FFFF)
+	nBootRomEnable <= nMemRead when address_bus(15 downto 10) =	"000000" else '1'; -- 1k ROM (0000 - 03FF)
+	nMonRomEnable <= 	nMemRead when address_bus(15 downto 10) =	"000001" else '1'; -- 1k ROM (0400 - 07FF)
+	nRamEnable <= '1' 			when address_bus(15 downto 11) =	"00000" else (nMemRead and nMemWrite); -- 1k RAM (FC00 - FFFF)
 	
 -- I/O
 inport <= switch when (address_bus(0) = '0') else button;
 data_bus <= inport when (nIORead = '0' and (address_bus(7 downto 4) = "0000")) else "ZZZZZZZZ";
 
---acia0: entity work.uart Port map (
---			reset => Reset,
---			clk => cpu_clk,
---			clk_txd => baud_38400,	-- x1
---			clk_rxd => baud_153600,	-- x4
---			nCS => nACIA0Enable,
---			nRD => nIORead,
---			nWR => nIOWrite,
---			RS => address_bus(0),
---			D => data_bus,
---			loopback => '0',
---			--debug => led_bus(15 downto 0),
---			debug => open,
---			TXD => PMOD_RXD0,
---			RXD => PMOD_TXD0
---		);
+acia0: entity work.uart Port map (
+			reset => Reset,
+			clk => cpu_clk,
+			clk_txd => baud_38400,	-- x1
+			clk_rxd => baud_153600,	-- x4
+			nCS => nACIA0Enable,
+			nRD => nIORead,
+			nWR => nIOWrite,
+			RS => address_bus(0),
+			D => data_bus,
+			debug => open,
+			TXD => PMOD_RXD0,
+			RXD => PMOD_TXD0
+		);
 
 --acia1: uart Port map (
 --			reset => Reset,
@@ -274,31 +272,32 @@ data_bus <= inport when (nIORead = '0' and (address_bus(7 downto 4) = "0000")) e
 --			nWR => nIOWrite,
 --			RS => address_bus(0),
 --			D => data_bus,
---			debug => debug,
+--			debug => open,
 --			TXD => PMOD_RXD1,
 --			RXD => PMOD_TXD1
 --		);
 		
 -- ROM
---	bootrom: entity work.rom1k generic map(
---		filename => "..\prog\zout\boot.hex",
---		default_value => X"76" -- HLT
---	)	
---	port map(
---		D => data_bus,
---		A => address_bus(9 downto 0),
---		nOE => nBootRomEnable
---	);
+	bootrom: entity work.rom1k generic map(
+		filename => "..\prog\zout\boot.hex",
+		default_value => X"76" -- HLT
+	)	
+	port map(
+		D => data_bus,
+		A => address_bus(9 downto 0),
+		nOE => nBootRomEnable
+	);
 	
---	monrom: entity work.rom1k generic map(
---		filename => "..\prog\zout\altmon.hex",
---		default_value => X"76" -- HLT
---	)	
---	port map(
---		D => data_bus,
---		A => address_bus(9 downto 0),
---		nOE => nMonRomEnable
---	);
+	monrom: entity work.rom1k generic map(
+		depth => 1024,
+		filename => "..\prog\zout\altmon.hex",
+		default_value => X"76" -- HLT
+	)	
+	port map(
+		D => data_bus,
+		A => address_bus(9 downto 0),
+		nOE => nMonRomEnable
+	);
 	
 -- RAM
 	ram: entity work.simpleram 
@@ -369,57 +368,57 @@ end process;
 --	baud_4800 when "10",
 --	baud_9600 when others;
 	
-audio_out <= baud_4800 when (PMOD_TXD0 = '0') else baud_2400;	
-freq_icnt <= freq1Hz when (sw_icntsel = '0') else baud_1200;
+--audio_out <= baud_4800 when (PMOD_TXD0 = '0') else baud_2400;	
+--freq_icnt <= freq1Hz when (sw_icntsel = '0') else baud_1200;
 
-PMOD_RXD0 <= not(cnt_in(1));-- and cnt_in(0);
+--PMOD_RXD0 <= not(cnt_in(1));-- and cnt_in(0);
 
-ocnt: entity work.freqcounter Port map (
-		reset => Reset,
-		clk => freq1Hz,
-		freq => audio_out,
-		bcd => '1',
-		add => X"00000001",
-		cin => '1',
-		cout => open,
-		value => cnt_out
-	);
-
-icnt: entity work.freqcounter Port map (
-		reset => Reset,
-		clk => freq_icnt,
-		freq => audio_in,
-		bcd => '1',
-		add => X"00000001",
-		cin => '1',
-		cout => open,
-		value => cnt_in
-	);
+--ocnt: entity work.freqcounter Port map (
+--		reset => Reset,
+--		clk => freq1Hz,
+--		freq => audio_out,
+--		bcd => '1',
+--		add => X"00000001",
+--		cin => '1',
+--		cout => open,
+--		value => cnt_out
+--	);
+--
+--icnt: entity work.freqcounter Port map (
+--		reset => Reset,
+--		clk => freq_icnt,
+--		freq => audio_in,
+--		bcd => '1',
+--		add => X"00000001",
+--		cin => '1',
+--		cout => open,
+--		value => cnt_in
+--	);
 
   -- Mercury ADC component
-  ADC : entity work.MercuryADC
-    port map(
-      clock    => CLK,
-      trigger  => baud_153600,
-      diffn    => '0',
-		channel =>  adc_channel,	
-      Dout     => adc_dout,
-      OutVal   => adc_done,
-      adc_miso => ADC_MISO,
-      adc_mosi => ADC_MOSI,
-      adc_cs   => ADC_CSN,
-      adc_clk  => ADC_SCK
-      );
+--  ADC : entity work.MercuryADC
+--    port map(
+--      clock    => CLK,
+--      trigger  => baud_153600,
+--      diffn    => '0',
+--		channel =>  adc_channel,	
+--      Dout     => adc_dout,
+--      OutVal   => adc_done,
+--      adc_miso => ADC_MISO,
+--      adc_mosi => ADC_MOSI,
+--      adc_cs   => ADC_CSN,
+--      adc_clk  => ADC_SCK
+--      );
 
-analogfreq: entity work.adc2freq port map (
-		adc_sample => adc_dout,
-		adc_done => adc_done,
-		avg_sel => sw_avg,
-		round_sel => sw_round,
-		sum_start => sum_start,
-		sum_end => sum_end,
-		freq_out => audio_in
-		);
+--analogfreq: entity work.adc2freq port map (
+--		adc_sample => adc_dout,
+--		adc_done => adc_done,
+--		avg_sel => sw_avg,
+--		round_sel => sw_round,
+--		sum_start => sum_start,
+--		sum_end => sum_end,
+--		freq_out => audio_in
+--		);
 			
 -- PropScope digital port
 PMOD_4 <= audio_out;

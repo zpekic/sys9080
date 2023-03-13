@@ -32,6 +32,7 @@ use work.sys9080_package.all;
 
 entity rom1k is
 	generic (
+		depth: integer := 1024;
 		filename: string := "";
 		default_value: STD_LOGIC_VECTOR(7 downto 0) := X"00"
 	);
@@ -46,7 +47,7 @@ architecture Behavioral of rom1k is
 
 -- function defined in the package pulls in the content of the 
 -- hex file in generic parameter
-constant rom: mem1k8 := init_filememory(filename, 1024, default_value);
+constant rom: filemem(0 to depth - 1) := init_filememory(filename, depth, default_value);
 --constant bank0: mem1k8 := init_filememory("..\prog\fibonacci_code.hex", 1024, X"00");
 
 begin

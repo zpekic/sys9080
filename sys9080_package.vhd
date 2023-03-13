@@ -37,9 +37,9 @@ constant nop: std_logic_vector(7 downto 0) := X"00";
 constant hlt: std_logic_vector(7 downto 0) := X"76";
 constant rst_7: std_logic_vector(7 downto 0) := X"FF";
 
-type mem1k8 is array(0 to 1023) of std_logic_vector(7 downto 0);
+type filemem is array(natural range <>) of std_logic_vector(7 downto 0);
 
-impure function init_filememory(file_name : in string; depth: in integer; default_value: std_logic_vector(7 downto 0)) return mem1k8;
+impure function init_filememory(file_name : in string; depth: in integer; default_value: std_logic_vector(7 downto 0)) return filemem;
 impure function char2hex(char: in character) return integer;
 impure function get_string(value: in unsigned; len: in integer; base: in integer) return string;
 impure function parseBinary8(bin_str: in string) return std_logic_vector;
@@ -137,8 +137,8 @@ begin
 	return std_logic_vector(to_unsigned(intVal, 16));
 end parseHex16;
 
-impure function init_filememory(file_name : in string; depth: in integer; default_value: std_logic_vector(7 downto 0)) return mem1k8 is
-variable temp_mem : mem1k8;
+impure function init_filememory(file_name : in string; depth: in integer; default_value: std_logic_vector(7 downto 0)) return filemem is
+variable temp_mem : filemem(0 to (depth - 1));
 variable i, addr_start, addr_end: integer range 0 to (depth - 1);
 variable location: std_logic_vector(7 downto 0);
 file input_file : text open read_mode is file_name;

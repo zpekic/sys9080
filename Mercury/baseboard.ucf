@@ -39,14 +39,14 @@ NET "HSYNC"	LOC = "P16" | IOSTANDARD = LVTTL ;
 NET "VSYNC"     LOC = "P19" | IOSTANDARD = LVTTL ;
 
 # SWITCHES
-NET "SW<0>"  	LOC = "P59" | IOSTANDARD = LVTTL ;
-NET "SW<1>"     LOC = "P60" | IOSTANDARD = LVTTL ;
-NET "SW<2>"     LOC = "P61" | IOSTANDARD = LVTTL ;
-NET "SW<3>"     LOC = "P62" | IOSTANDARD = LVTTL ;
-NET "SW<4>"     LOC = "P64" | IOSTANDARD = LVTTL ;
-NET "SW<5>"     LOC = "P57" | IOSTANDARD = LVTTL ;
-NET "SW<6>"     LOC = "P56" | IOSTANDARD = LVTTL ;
-NET "SW<7>"     LOC = "P52" | IOSTANDARD = LVTTL ;
+NET "SW<0>"  	 LOC = "P59" | IOSTANDARD = LVTTL ; #memory_a<0>
+NET "SW<1>"     LOC = "P60" | IOSTANDARD = LVTTL ; #memory_a<1>
+NET "SW<2>"     LOC = "P61" | IOSTANDARD = LVTTL ; #memory_a<2>
+NET "SW<3>"     LOC = "P62" | IOSTANDARD = LVTTL ; #memory_a<3>
+NET "SW<4>"     LOC = "P64" | IOSTANDARD = LVTTL ; #memory_a<4>
+NET "SW<5>"     LOC = "P57" | IOSTANDARD = LVTTL ; #memory_a<5>
+NET "SW<6>"     LOC = "P56" | IOSTANDARD = LVTTL ; #memory_a<6>
+NET "SW<7>"     LOC = "P52" | IOSTANDARD = LVTTL ; #memory_a<7>
 
 # 7 SEG
 NET "AN<0>"      LOC = "P50" | IOSTANDARD = LVTTL ;

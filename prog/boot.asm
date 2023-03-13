@@ -3,7 +3,7 @@
 ; 		(c) zpekic@hotmail.com - 2017, 2018
 ;--------------------------------------------------------------------------
 
-include ./sys9080.asm
+;include ./sys9080.asm
 
 		ORG 0x0000	;-----RST0 == RESET
 		DI
@@ -185,8 +185,8 @@ Boot:			LXI H, 0000H
 				CALL TxInlineString
 TextGreet1:		DB CR, LF, "*** Sys9080 is ready. RAM @ ", 0x00
 				IN PORT0
-				ANI 01000000B
-				JZ TestRam		;if using "fast" clock then check RAM, otherwise skip
+				ANI 00000100B
+				JNZ TestRam		;if using "fast" clock then check RAM, otherwise skip
 				CALL TxInlineString
 				DB "(skipped)", 0x00
 				JMP TextPort
