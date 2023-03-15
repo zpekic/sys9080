@@ -44,30 +44,32 @@ signal all0, all1: std_logic;
 
 begin
 
-all0 <= '1' when shifter = "00000000" else '0';
-all1 <= '1' when shifter = "11111111" else '0';
+--all0 <= '1' when shifter = "00000000" else '0';
+--all1 <= '1' when shifter = "11111111" else '0';
 
 -- all 1 or all 0 in shift register surely mean 1 or 0, but anything else keeps last state
 --debounced <= (not all1 and not all0 and debounced) or 
 --				 (not all1 and all0 and '0') or 
 --				 (all1 and not all0 and '1') or 
 --				 (all1 and all1 and debounced);
-signal_out <= debounced; 
+--signal_out <= debounced; 
 
-debounce: process(clock, debounced)
-begin
-    if (rising_edge(clock)) then
-        if (all1 = '1') then
-            debounced <= '1'; 
-        else
-            if (all0 = '1') then
-                debounced <= '0';
-            else
-                debounced <= debounced;
-            end if;
-        end if;
-    end if;
-end process;
+signal_out <= '0' when (shifter = "00000000") else '1';
+
+--debounce: process(clock, debounced)
+--begin
+--    if (rising_edge(clock)) then
+--        if (all1 = '1') then
+--            debounced <= '1'; 
+--        else
+--            if (all0 = '1') then
+--                debounced <= '0';
+--            else
+--                debounced <= debounced;
+--            end if;
+--        end if;
+--    end if;
+--end process;
 
 sample: process(clock, reset, signal_in)
 begin

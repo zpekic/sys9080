@@ -39,8 +39,8 @@ entity clockgen is
            debounce_clk : out  STD_LOGIC;
            vga_clk : out  STD_LOGIC;
            baudrate : out  STD_LOGIC_VECTOR(11 downto 0);
-           freq50Hz : out  STD_LOGIC;
-			  freq100Hz: out STD_LOGIC;
+           freq64Hz : out  STD_LOGIC;
+			  freq128Hz: out STD_LOGIC;
 			  freq1Hz: out STD_LOGIC);
 end clockgen;
 
@@ -106,8 +106,8 @@ end process;
 	
 debounce_clk <= freq_25M(8);	-- 25MHz/256 = 97.65625 kHz
 vga_clk <= freq_25M(0);			-- 25MHz/1 = 25MHz
-freq50Hz <= freq_1600(5);		-- 1600/32 = 50Hz
-freq100Hz <= freq_1600(4);		-- 1600/16 = 100Hz
+freq128Hz <= freq_2048(4);		-- 2048/16 = 128Hz
+freq64Hz <= freq_2048(5);		-- 2048/32 = 64Hz
 freq1Hz <= freq_2048(11);		-- 2048/2048 = 1Hz
 	
 prescale: process(CLK, baudrate_x8, freq4096, freq3200, baudrate_sel)
@@ -124,15 +124,13 @@ begin
 			prescale_4096 <= (clk_board / (2 * 4096));
 		else
 			prescale_4096 <= prescale_4096 - 1;
-			--key_delayed <= key;
 		end if;
-		if (prescale_3200 = 0) then
-			freq3200 <= not freq3200;
-			prescale_3200 <= (clk_board / (2 * 3200));
-		else
-			prescale_3200 <= prescale_3200 - 1;
-			--key_delayed <= key;
-		end if;
+--		if (prescale_3200 = 0) then
+--			freq3200 <= not freq3200;
+--			prescale_3200 <= (clk_board / (2 * 3200));
+--		else
+--			prescale_3200 <= prescale_3200 - 1;
+--		end if;
 	end if;
 end process; 	
 
@@ -154,11 +152,11 @@ powergen: entity work.sn74hc4040 port map (
 			q => freq_2048
 		);
 		
-mainsgen: entity work.sn74hc4040 port map (
-			clock => freq3200,
-			reset => RESET,
-			q => freq_1600
-		);
+--mainsgen: entity work.sn74hc4040 port map (
+--			clock => freq3200,
+--			reset => RESET,
+--			q => freq_1600
+--		);
 
 
 end Behavioral;

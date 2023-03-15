@@ -43,8 +43,6 @@ architecture Behavioral of rom256x12 is
 constant uPrgAddress_nop: std_logic_vector(11 downto 0) := X"086";
 constant uPrgAddress_hlt: std_logic_vector(11 downto 0) := X"082";
 
---alias a8: std_logic_vector(7 downto 0) is address(7 downto 0);
-
 type t_mem256x12 is array(0 to 255) of std_logic_vector(11 downto 0);
 
 --impure function load_mem(mif_file_name : in string; depth: in integer; default_value: std_logic_vector(11 downto 0)) return rom_array is
@@ -253,15 +251,9 @@ end init_wordmemory;
 
 constant data_from_file: t_mem256x12 := init_wordmemory("../am9080/prom/mapper.mif", "../am9080/prom/mapper.hex", 256, uPrgAddress_nop);
 
---constant data_from_inline: rom_array :=
---(
---	0 => uPrgAddress_hlt, 
---	others => uPrgAddress_nop
---);
 
 begin
 	data <= data_from_file(to_integer(unsigned(address)));
---	data <= data_from_inline(to_integer(unsigned(a8)));
 
 end Behavioral;
 

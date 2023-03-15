@@ -126,12 +126,12 @@ signal inport: std_logic_vector(7 downto 0);
 signal led_bus: std_logic_vector(23 downto 0);
 signal cpu_debug_bus, sys_debug_bus: std_logic_vector(19 downto 0);
 signal nPort0Enable, nPort1Enable, nACIA0Enable, nACIA1Enable: std_logic;
-signal nBootRomEnable, nMonRomEnable, nRamEnable: std_logic;
+signal nTinyRomEnable, nBootRomEnable, nMonRomEnable, nRamEnable: std_logic;
 signal showsegments: std_logic;
 signal trigger_ss, clk_ss: std_logic;
 
 -- clock
-signal freq1Hz, freq50Hz, freq100Hz: std_logic; 
+signal freq1Hz, freq64Hz, freq128Hz: std_logic; 
 signal debounce_clk, cpu_clk: std_logic;
 
 signal baudrate: std_logic_vector(11 downto 0);
@@ -178,8 +178,8 @@ begin
     led4x7: entity work.fourdigitsevensegled port map ( 
 			  -- inputs
 			  data => led_bus(15 downto 0),
-           digsel(1) => freq50Hz,
-			  digsel(0) => freq100Hz,
+           digsel(1) => freq64Hz,
+			  digsel(0) => freq128Hz,
 			  showdigit => "1111",
            showdot => led_bus(19 downto 16),
            showsegments => showsegments,
@@ -201,26 +201,29 @@ clocks: entity work.clockgen Port map (
 		debounce_clk => debounce_clk,
 		vga_clk => open,
 		baudrate => baudrate,
-		freq100Hz => freq100Hz,
-		freq50Hz => freq50Hz,
+		freq128Hz => freq128Hz,
+		freq64Hz => freq64Hz,
 		freq1Hz => freq1Hz
 		);
 	
 	-- DEBOUNCE the 8 switches and 4 buttons (plus "Reset" on Mercury board)
-    debouncer_sw: entity work.debouncer8channel port map (
-        clock => debounce_clk,
-        reset => Reset,
-        signal_raw => SW,
-        signal_debounced => switch
-    );
+--    debouncer_sw: entity work.debouncer8channel port map (
+--        clock => debounce_clk,
+--        reset => Reset,
+--        signal_raw => SW,
+--        signal_debounced => switch
+--    );
 
-    debouncer_btn: entity work.debouncer8channel port map (
-        clock => debounce_clk,
-        reset => Reset,
-		  signal_raw(7 downto 4) => "0000",
-        signal_raw(3 downto 0) => BTN,
-        signal_debounced => button
-    );
+--    debouncer_btn: entity work.debouncer8channel port map (
+--        clock => debounce_clk,
+--        reset => Reset,
+--		  signal_raw(7 downto 4) => "0000",
+--        signal_raw(3 downto 0) => BTN,
+--        signal_debounced => button
+--    );
+
+switch <= SW;
+button <= "0000" & BTN;
 
 	-- delay to generate nReset 4 cycles after reset
 	generate_Reset: process (cpu_clk, USR_BTN)
@@ -234,16 +237,16 @@ clocks: entity work.clockgen Port map (
 		end if;
 	end process;
 	
---	nInPortEnable <= (nIoRead and nIoWrite) when address_bus(7 downto 0) = "00000000" else '1'; 		-- 0x00 - 0x0F
---	nPort1Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 0) = "00000001" else '1'; 		-- 0x00 - 0x0F
+-- Enable bus devices
 	nACIA0Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 1) = "0001000" else '1'; -- 0x10 - 0x11
 	nACIA1Enable <= (nIoRead and nIoWrite) when address_bus(7 downto 1) = "0001001" else '1'; -- 0x12 - 0x13
 
+	nTinyRomEnable <= nMemRead when address_bus(15 downto 11) =	"00000" else '1'; -- 2k ROM (0000 - 07FF)
 	nBootRomEnable <= nMemRead when address_bus(15 downto 10) =	"000000" else '1'; -- 1k ROM (0000 - 03FF)
 	nMonRomEnable <= 	nMemRead when address_bus(15 downto 10) =	"000001" else '1'; -- 1k ROM (0400 - 07FF)
-	nRamEnable <= '1' 			when address_bus(15 downto 11) =	"00000" else (nMemRead and nMemWrite); -- 1k RAM (FC00 - FFFF)
+	nRamEnable <= '1' 			when address_bus(15 downto 11) =	"00000" else (nMemRead and nMemWrite); -- RAM repeats everywhere outside ROM space
 	
--- I/O
+-- read switches and buttons as ports 0 and 1
 inport <= switch when (address_bus(0) = '0') else button;
 data_bus <= inport when (nIORead = '0' and (address_bus(7 downto 4) = "0000")) else "ZZZZZZZZ";
 
@@ -278,37 +281,50 @@ acia0: entity work.uart Port map (
 --		);
 		
 -- ROM
-	bootrom: entity work.rom1k generic map(
-		filename => "..\prog\zout\boot.hex",
+-- See http://cpuville.com/Code/tiny_basic_instructions.pdf
+	tinyrom: entity work.rom1k generic map(
+		address_size => 11,
+		filename => "..\prog\zout\tinybasic2dms.hex",
 		default_value => X"76" -- HLT
 	)	
 	port map(
 		D => data_bus,
-		A => address_bus(9 downto 0),
-		nOE => nBootRomEnable
+		A => address_bus(10 downto 0),
+		nOE => nTinyRomEnable
 	);
-	
-	monrom: entity work.rom1k generic map(
-		depth => 1024,
-		filename => "..\prog\zout\altmon.hex",
-		default_value => X"76" -- HLT
-	)	
-	port map(
-		D => data_bus,
-		A => address_bus(9 downto 0),
-		nOE => nMonRomEnable
-	);
+
+--	bootrom: entity work.rom1k generic map(
+--		address_size => 10,
+--		filename => "..\prog\zout\boot.hex",
+--		default_value => X"76" -- HLT
+--	)	
+--	port map(
+--		D => data_bus,
+--		A => address_bus(9 downto 0),
+--		nOE => nBootRomEnable
+--	);
+--	
+--	monrom: entity work.rom1k generic map(
+--		address_size => 10,
+--		filename => "..\prog\zout\altmon.hex",
+--		default_value => X"76" -- HLT
+--	)	
+--	port map(
+--		D => data_bus,
+--		A => address_bus(9 downto 0),
+--		nOE => nMonRomEnable
+--	);
 	
 -- RAM
 	ram: entity work.simpleram 
 		generic map(
-			address_size => 8,
+			address_size => 9,
 			default_value => X"76" -- if executed, will be HLT
 			)	
 		port map(
 			  clk => cpu_clk,
 			  D => data_bus,
-			  A => address_bus(7 downto 0),
+			  A => address_bus(8 downto 0),
            nRead => nMemRead,
 			  nWrite => nMemWrite,
 			  nSelect => nRamEnable
@@ -421,9 +437,9 @@ end process;
 --		);
 			
 -- PropScope digital port
-PMOD_4 <= audio_out;
-PMOD_5 <= sum_start;
-PMOD_6 <= sum_end;
-PMOD_7 <= audio_in;
+PMOD_4 <= button(0);--audio_out;
+PMOD_5 <= button(1);--sum_start;
+PMOD_6 <= button(2);--sum_end;
+PMOD_7 <= button(3);--audio_in;
 				
 end;

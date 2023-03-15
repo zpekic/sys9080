@@ -24,7 +24,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -43,31 +43,9 @@ end Am25LS153;
 
 architecture Behavioral of Am25LS153 is
 
-signal y1, y2: std_logic;
+begin 
 
-begin
-
-selection: process(sel, in1, in2)
-begin
-    case sel is
-        when "00" =>
-            y1 <= in1(0); 
-            y2 <= in2(0); 
-        when "01" =>
-            y1 <= in1(1); 
-            y2 <= in2(1); 
-        when "10" =>
-            y1 <= in1(2); 
-            y2 <= in2(2); 
-        when "11" =>
-            y1 <= in1(3); 
-            y2 <= in2(3); 
-        when others =>
-            null;
-    end case;
-end process;
-
-out1 <= y1 when (n1G = '0') else '0';
-out2 <= y2 when (n2G = '0') else '0';
+out1 <= (not n1G) and in1(to_integer(unsigned(sel)));
+out2 <= (not n1G) and in2(to_integer(unsigned(sel)));
 
 end Behavioral;

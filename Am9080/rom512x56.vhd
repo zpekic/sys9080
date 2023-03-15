@@ -307,6 +307,8 @@ begin
 end init_wordmemory;
 
 constant data_from_file: t_uinstruction512 := init_wordmemory("../am9080/prom/microcode.mif", "../am9080/prom/microcode.lst", 0, 512, uCode_default);
+attribute rom_style : string;
+attribute rom_style of data_from_file : constant is "block";
 
 begin
 	data <= data_from_file(to_integer(unsigned(a8)));

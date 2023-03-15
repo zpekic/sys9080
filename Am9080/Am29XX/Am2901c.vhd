@@ -202,7 +202,7 @@ ovr <= f1(5) xor f1(4); --'1' when (f1(5) /= f1(4)) else '0';
 y <= y_int when (oe = '0') else "ZZZZ";	 
 
 -- DEBUG PORT --
-debug_regval <= ram(to_integer(unsigned(debug_regsel)));
+--debug_regval <= ram(to_integer(unsigned(debug_regsel)));
 
 end Behavioral;
 

@@ -44,7 +44,7 @@ architecture Behavioral of Am25LS157 is
 signal y_internal: std_logic_vector(3 downto 0);
 
 begin
-
+	
 y_internal <= a when (s = '0') else b;
 y <= y_internal when (nG = '0') else "0000";
 

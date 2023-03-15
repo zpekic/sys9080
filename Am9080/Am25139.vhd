@@ -24,7 +24,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 -- Uncomment the following library declaration if using
 -- arithmetic functions with Signed or Unsigned values
---use IEEE.NUMERIC_STD.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 -- Uncomment the following library declaration if instantiating
 -- any Xilinx leaf cells in this code.
@@ -44,6 +44,14 @@ end Am25139;
 
 architecture Behavioral of Am25139 is
 
+type rom4x4 is array (0 to 3) of std_logic_vector(3 downto 0);
+
+constant decoder: rom4x4 := (
+	"1110",
+	"1101",
+	"1011",
+	"0111"
+);
 signal sel1, sel2: std_logic_vector(1 downto 0);
 
 begin
@@ -51,44 +59,47 @@ begin
 sel1 <= B1 & A1;
 sel2 <= B2 & A2;
 
-decoder1: process(nG1, sel1)
-begin
-    if (nG1 = '0') then
-        case sel1 is
-            when "00" =>
-                nY1 <= "1110"; -- 0
-            when "01" =>
-                nY1 <= "1101"; -- 1
-            when "10" =>
-                nY1 <= "1011"; -- 2
-            when "11" =>
-                nY1 <= "0111"; -- 3
-            when others =>
-					null;
-        end case;
-    else
-        nY1 <= "1111";
-    end if;
-end process;
+nY1 <= "1111" when (nG1 = '1') else decoder(to_integer(unsigned(sel1)));
+nY2 <= "1111" when (nG2 = '1') else decoder(to_integer(unsigned(sel2)));
 
-decoder2: process(nG2, sel2)
-begin
-    if (nG2 = '0') then
-        case sel2 is
-            when "00" =>
-                nY2 <= "1110"; -- 0
-            when "01" =>
-                nY2 <= "1101"; -- 1
-            when "10" =>
-                nY2 <= "1011"; -- 2
-            when "11" =>
-                nY2 <= "0111"; -- 3
-            when others =>
-					null;
-        end case;
-    else
-        nY2 <= "1111";
-    end if;
-end process;
+--decoder1: process(nG1, sel1)
+--begin
+--    if (nG1 = '0') then
+--        case sel1 is
+--            when "00" =>
+--                nY1 <= "1110"; -- 0
+--            when "01" =>
+--                nY1 <= "1101"; -- 1
+--            when "10" =>
+--                nY1 <= "1011"; -- 2
+--            when "11" =>
+--                nY1 <= "0111"; -- 3
+--            when others =>
+--					null;
+--        end case;
+--    else
+--        nY1 <= "1111";
+--    end if;
+--end process;
+--
+--decoder2: process(nG2, sel2)
+--begin
+--    if (nG2 = '0') then
+--        case sel2 is
+--            when "00" =>
+--                nY2 <= "1110"; -- 0
+--            when "01" =>
+--                nY2 <= "1101"; -- 1
+--            when "10" =>
+--                nY2 <= "1011"; -- 2
+--            when "11" =>
+--                nY2 <= "0111"; -- 3
+--            when others =>
+--					null;
+--        end case;
+--    else
+--        nY2 <= "1111";
+--    end if;
+--end process;
 
 end Behavioral;
