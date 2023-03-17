@@ -43,80 +43,64 @@ entity simpleram is
 end simpleram;
 
 -- Using RAM from Xilinx IPCore library
---architecture structural of simpleram is
---
---component ram4kx8 IS
---  PORT (
---    clka : IN STD_LOGIC;
---    ena : IN STD_LOGIC;
---    wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
---    addra : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
---    dina : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
---    douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
---  );
---end component;
---
---signal d_out: std_logic_vector(7 downto 0);
---signal ena: std_logic;
---signal wr: std_logic_vector(0 downto 0);
---
---begin
---
---ena <= not nSelect;
---wr <= "" & not nWrite;
---D <= d_out when (nRead = '0' and nSelect = '0') else "ZZZZZZZZ";
---
---inner_ram: ram4kx8 port map
---	(
---    clka => clk,
---    ena => ena,
---    wea => wr,
---    addra => A,
---    dina => D,
---    douta => d_out
---  );
---  
---end structural;
+architecture structural of simpleram is
+
+component ram1k IS
+  PORT (
+    clka : IN STD_LOGIC;
+    ena : IN STD_LOGIC;
+    wea : IN STD_LOGIC_VECTOR(0 DOWNTO 0);
+    addra : IN STD_LOGIC_VECTOR(10 DOWNTO 0);
+    dina : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    douta : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+  );
+END component;
+
+
+signal d_out: std_logic_vector(7 downto 0);
+signal rd: std_logic;
+signal wr: std_logic_vector(0 downto 0);
+
+begin
+
+rd <= not(nRead or nSelect);
+wr <= "" & not (nWrite or nSelect);
+D <= d_out when (rd = '1') else "ZZZZZZZZ";
+
+inner_ram: ram1k port map
+	(
+    clka => not clk,
+    ena => '1',
+    wea => wr,
+    addra => A,
+    dina => D,
+    douta => d_out
+  );
+  
+end structural;
   
 -- Using standard abstract VHDL  
-architecture Behavioral of simpleram is
-
-type bytememory is array(0 to (2 ** address_size) - 1) of std_logic_vector(7 downto 0);
-signal d_out: std_logic_vector(7 downto 0);
-signal control: std_logic_vector(2 downto 0);
-
-signal ram: bytememory := (others => default_value);
---attribute ram_style: string;
---attribute ram_style of ram: signal is "block";
-
-begin
-
---control <= nSelect & nRead & nWrite;
---D <= d_out when (nRead = '0' and nSelect = '0') else "ZZZZZZZZ";
+--architecture Behavioral of simpleram is
 --
---readwrite: process(clk, control, A, D, ram)
+--type bytememory is array(0 to (2 ** address_size) - 1) of std_logic_vector(7 downto 0);
+--signal d_out: std_logic_vector(7 downto 0);
+--signal control: std_logic_vector(2 downto 0);
+--
+--signal ram: bytememory := (others => default_value);
+----attribute ram_style: string;
+----attribute ram_style of ram: signal is "block";
+--
 --begin
---	case control is
---		when "010" => -- write 
---			if (rising_edge(clk)) then
---				ram(to_integer(unsigned(A))) <= D;
---			end if;
---		when "001" => -- read
---			d_out <= ram(to_integer(unsigned(A)));
---		when others =>
---			null;
---	end case;
+--
+--control <= nSelect & nRead & nWrite;
+--D <= ram(to_integer(unsigned(A))) when (control = "001") else "ZZZZZZZZ";
+--
+--on_clk: process(clk, control, A, D, ram)
+--begin
+--	if (falling_edge(clk) and control = "010") then
+--		ram(to_integer(unsigned(A))) <= D;
+--	end if;
 --end process;
 
-control <= nSelect & nRead & nWrite;
-D <= ram(to_integer(unsigned(A))) when (control = "001") else "ZZZZZZZZ";
-
-on_clk: process(clk, control, A, D, ram)
-begin
-	if (falling_edge(clk) and control = "010") then
-		ram(to_integer(unsigned(A))) <= D;
-	end if;
-end process;
-
-end Behavioral;
+--end Behavioral;
 

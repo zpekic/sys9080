@@ -77,10 +77,14 @@ alias PMOD_RTS0: std_logic is PMOD(0);
 alias PMOD_RXD0: std_logic is PMOD(1);
 alias PMOD_TXD0: std_logic is PMOD(2);
 alias PMOD_CTS0: std_logic is PMOD(3);	
-alias PMOD_4: std_logic is PMOD(4);	-- RTS1
-alias PMOD_5: std_logic is PMOD(5);	-- RXD1
-alias PMOD_6: std_logic is PMOD(6);	-- TXD1
-alias PMOD_7: std_logic is PMOD(7);	-- CTS1
+alias PMOD_RTS1: std_logic is PMOD(4);	-- RTS1
+alias PMOD_RXD1: std_logic is PMOD(5);	-- RXD1
+alias PMOD_TXD1: std_logic is PMOD(6);	-- TXD1
+alias PMOD_CTS1: std_logic is PMOD(7);	-- CTS1
+--alias PMOD_4: std_logic is PMOD(4);	-- RTS1
+--alias PMOD_5: std_logic is PMOD(5);	-- RXD1
+--alias PMOD_6: std_logic is PMOD(6);	-- TXD1
+--alias PMOD_7: std_logic is PMOD(7);	-- CTS1
 
 -- CPU buses
 signal data_bus: std_logic_vector(7 downto 0);
@@ -318,13 +322,13 @@ acia0: entity work.uart Port map (
 -- RAM
 	ram: entity work.simpleram 
 		generic map(
-			address_size => 9,
+			address_size => 11,
 			default_value => X"76" -- if executed, will be HLT
 			)	
 		port map(
 			  clk => cpu_clk,
 			  D => data_bus,
-			  A => address_bus(8 downto 0),
+			  A => address_bus(10 downto 0),
            nRead => nMemRead,
 			  nWrite => nMemWrite,
 			  nSelect => nRamEnable
@@ -357,25 +361,23 @@ acia0: entity work.uart Port map (
            debug_out => cpu_debug_bus
 			);
 	 
--- bus single stepper logic
-trigger_ss <= sw_display_bus and 
-				(
-					(sw_trigger_ioread and (not nIoRead)) or
-					(sw_trigger_iowrite and (not nIoWrite)) or 
-					(sw_trigger_memread and (not nMemRead)) or 
-					(sw_trigger_memwrite and (not nMemWrite))
-				);
-clk_ss <= btn_ss when (Ready = '0') else trigger_ss;
-on_clk_ss: process(clk_ss, reset)
-begin
-	if (Reset = '1') then
-		Ready <= '1';
-	else
-		if (rising_edge(clk_ss)) then
-			Ready <= not Ready;
-		end if;
-	end if;
-end process;
+	tracer: entity work.debugtracer Port map(
+			reset => reset,
+			clk => baud_38400,
+			enable => sw_display_bus,
+			continue => btn_ss,
+			ready => Ready,
+			txd => PMOD_RXD1,
+			nM1 => not m1,
+			nIOR => nIORead,
+			nIOW => nIOWrite,
+			nMEMR => nMemRead,
+			nMEMW => nMemWrite,
+			ABUS => address_bus,
+			DBUS => data_bus
+	);
+	 
+
 	 
 -- ADC for cassette interface
 --with sw_audio_sel select audio_out <=
@@ -437,9 +439,9 @@ end process;
 --		);
 			
 -- PropScope digital port
-PMOD_4 <= button(0);--audio_out;
-PMOD_5 <= button(1);--sum_start;
-PMOD_6 <= button(2);--sum_end;
-PMOD_7 <= button(3);--audio_in;
+--PMOD_4 <= button(0);--audio_out;
+--PMOD_5 <= button(1);--sum_start;
+--PMOD_6 <= button(2);--sum_end;
+--PMOD_7 <= button(3);--audio_in;
 				
 end;

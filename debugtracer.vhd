@@ -31,76 +31,30 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity debugtracer is
     Port ( reset : in  STD_LOGIC;
-           trace : in  STD_LOGIC;
+			  clk: in STD_LOGIC;
+           enable : in  STD_LOGIC;
+			  continue: in STD_LOGIC;
            ready : out  STD_LOGIC;
-           char : out  STD_LOGIC_VECTOR (7 downto 0);
-           char_sent : in  STD_LOGIC;
-           in0 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in1 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in2 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in3 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in4 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in5 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in6 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in7 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in8 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in9 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in10 : in  STD_LOGIC_VECTOR (3 downto 0);
-           in11 : in  STD_LOGIC_VECTOR (3 downto 0)
+           txd : out STD_LOGIC;
+           nM1 : in  STD_LOGIC;
+           nIOR : in  STD_LOGIC;
+           nIOW : in  STD_LOGIC;
+           nMEMR : in  STD_LOGIC;
+           nMEMW : in  STD_LOGIC;
+           ABUS : in  STD_LOGIC_VECTOR (15 downto 0);
+           DBUS : in  STD_LOGIC_VECTOR (7 downto 0)
 			  );
 end debugtracer;
 
 architecture Behavioral of debugtracer is
 
-type rom64x8 is array(0 to 63) of std_logic_vector(7 downto 0);
 type rom16x8 is array(0 to 15) of std_logic_vector(7 downto 0);
 
-constant char_NULL: std_logic_vector(7 downto 0) := X"00";
-constant char_CLEAR: std_logic_vector(7 downto 0) := X"01";
-constant char_HOME: std_logic_vector(7 downto 0) := X"02";
+--constant char_NULL: std_logic_vector(7 downto 0) := X"00";
+--constant char_CLEAR: std_logic_vector(7 downto 0) := X"01";
+--constant char_HOME: std_logic_vector(7 downto 0) := X"02";
 constant char_CR: std_logic_vector(7 downto 0) := X"0D";
 constant char_LF: std_logic_vector(7 downto 0) := X"0A";
-
--- 
-constant HEX: std_logic_vector(2 downto 0) := "000";
-constant RWF: std_logic_vector(2 downto 0) := "001";
-constant MPX: std_logic_vector(2 downto 0) := "010";
-
---
-constant trace_sequence: rom64x8 := 
-(
-   char_CLEAR, -- will write this only after reset, otherwise start at next location
-   char_CR,
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('P'), 8)),
-	'1' & RWF & X"9",
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS(' '), 8)),
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)),
-	'1' & RWF & X"8",
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS(' '), 8)),
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('A'), 8)),
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('='), 8)),
-	'1' & HEX & X"7",
-	'1' & HEX & X"6",
-	'1' & HEX & X"5",
-	'1' & HEX & X"4",
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS(' '), 8)),
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('D'), 8)),
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('='), 8)),
-	'1' & HEX & X"3",
-	'1' & HEX & X"2",
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS(' '), 8)),
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('Y'), 8)),
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('='), 8)),
-	'1' & HEX & X"1",
-	'1' & HEX & X"0",
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS(' '), 8)),
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('X'), 8)),
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('='), 8)),
-	'1' & HEX & X"B",
-	'1' & HEX & X"A",
-   char_LF,
-	others => char_NULL
-);
 
 --- convert nibble to hex char
 constant hex_lookup: rom16x8 := 
@@ -123,115 +77,122 @@ constant hex_lookup: rom16x8 :=
    STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('F'), 8))
 );	
 
---- convert ('1', '1', nMem, nIO) to hex char
-constant mpx_lookup: rom16x8 := 
-(
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('0'), 8)), -- 0000 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('1'), 8)), -- 0001 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('2'), 8)), -- 0010 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('3'), 8)), -- 0011 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('4'), 8)), -- 0100 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('5'), 8)), -- 0101 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('6'), 8)), -- 0110 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('7'), 8)), -- 0111 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('8'), 8)), -- 1000 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('9'), 8)), -- 1001 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('A'), 8)), -- 1010 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('B'), 8)), -- 1011 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('C'), 8)), -- 1100 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)), -- 1101 --- VALID
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('P'), 8)), -- 1110 --- VALID
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('-'), 8))  -- 1111 --- VALID
-);	
+signal trace, trigger_ss, clk_ss, trace_done: std_logic;
+signal reg_match, cbus: std_logic_vector(4 downto 0);
+signal counter: std_logic_vector(7 downto 0);
+alias chrSel: std_logic_vector(3 downto 0) is counter(7 downto 4);
+alias bitSel: std_logic_vector(3 downto 0) is counter(3 downto 0);
 
---- convert ('1', M1, nRD, nWR) to hex char
-constant rwf_lookup: rom16x8 := 
-(
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('0'), 8)), -- 0000 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('1'), 8)), -- 0001 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('2'), 8)), -- 0010 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('3'), 8)), -- 0011 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('4'), 8)), -- 0100 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('5'), 8)), -- 0101 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('6'), 8)), -- 0110 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('7'), 8)), -- 0111 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('8'), 8)), -- 1000 ---
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)), -- 1001 --- VALID
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)), -- 1010 --- VALID
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('-'), 8)), -- 1011 --- VALID
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('C'), 8)), -- 1100 --- 
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('F'), 8)), -- 1101 --- VALID
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('E'), 8)), -- 1110 ---  
-   STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8))  -- 1111 ---
-);	
-
-signal done, set_done: std_logic;
-signal sel_index: integer range 0 to 63;
-signal trace_i, trace_char, data_char: std_logic_vector(7 downto 0);
-signal nibble: std_logic_vector(3 downto 0);
+signal char_1, char_2, char_hex, char: std_logic_vector(7 downto 0);
+signal hex: std_logic_vector(3 downto 0);
 
 begin
 
--- keep ready high when not in active tracing
-ready <= '1' when (trace = '0') else done;
+ready <= not trace;
 
--- internal done is set when last "instruction" X"00" triggers it
-update_done: process(reset, trace, set_done)
+-- update bus match register
+-- responds to OUT 0xE0 (trace all) to OUT 0xFF (trace none)
+on_iow: process(reset, nIOW)
 begin
-	if (reset = '1' or trace = '0') then
-		done <= '0';
+	if (reset = '1') then 
+		reg_match <= "11111";
 	else
-		if (rising_edge(set_done)) then
-			done <= '1';
+		if (rising_edge(nIOW) and ABUS(7 downto 5) = "111") then
+			reg_match <= ABUS(4 downto 0);
 		end if;
 	end if;
 end process;
 
-update_sel_index: process(reset, trace, char_sent)
+-- trigger logic
+cbus <= nM1 & nIOR & nIOW & nMEMR & nMEMW;
+
+trigger_ss <= '0' when ((reg_match or cbus) = "11111") else enable;
+
+clk_ss <= (continue and trace_done) when (trace = '1') else trigger_ss;
+
+on_clk_ss: process(clk_ss, reset)
 begin
-	if (reset = '1' or trace = '0') then
-		if (reset = '1') then
-			sel_index <= 0; -- start at 0 when reset (e.g. clear screen)
-		else	
-			sel_index <= 1; -- start at 1 otherwise	
-		end if;
+	if (Reset = '1') then
+		trace <= '0';
 	else
-		if (rising_edge(char_sent)) then
-			sel_index <= sel_index + 1;
+		if (rising_edge(clk_ss)) then
+			trace <= not trace;
 		end if;
 	end if;
 end process;
 
--- current instruction
-trace_i <= trace_sequence(sel_index);
--- if zero, trigger done
-set_done <= '1' when (trace_i = char_NULL) else '0';
+-- main trace counter
+trace_done <= '1' when (counter = X"FF") else '0';
 
--- output data path
-char <= X"00" when (reset = '1' or trace = '0' or char_sent = '1') else trace_char;
+on_clk: process(clk, trace, trace_done)
+begin
+	if (trace = '0') then
+		counter <= (others => '0');
+	else
+		if (rising_edge(clk) and trace_done = '0') then
+			counter <= std_logic_vector(unsigned(counter) + 1);
+		end if;
+	end if;
+end process;
 
-trace_char <= trace_i when (trace_i(7) = '0') else data_char; 
+-- character generation
+with cbus select char_1 <= 
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "01101",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "11101",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "11110",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "10111",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "11011",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
-with trace_i(3 downto 0) select
-	nibble <= 	in0 when X"0",
-				in1 when X"1",
-				in2 when X"2",
-				in3 when X"3",
-				in4 when X"4",
-				in5 when X"5",
-				in6 when X"6",
-				in7 when X"7",
-				in8 when X"8",
-				in9 when X"9",
-				in10 when X"A",
-				in11 when X"B",
-				X"0" when others;
+with cbus select char_2 <= 
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('1'), 8)) when "01101",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)) when "11101",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "11110",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)) when "10111",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "11011",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
-with trace_i(6 downto 4) select
-	data_char <= 	hex_lookup(to_integer(unsigned(nibble))) when HEX,
-						rwf_lookup(to_integer(unsigned(nibble))) when RWF,
-						mpx_lookup(to_integer(unsigned(nibble))) when MPX,
-						STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
+with chrSel select hex <=
+	ABUS(15 downto 12) when X"4",	-- A
+	ABUS(11 downto 8) when X"5",	-- A
+	ABUS(7 downto 4) when X"6",	-- A
+	ABUS(3 downto 0) when X"7",	-- A
+	DBUS(7 downto 4) when X"9",	-- D
+	DBUS(3 downto 0) when X"A", 	-- D
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('*'), 8)) when others;
 
+char_hex <= hex_lookup(to_integer(unsigned(hex)));
+
+with chrSel select char <= 
+	char_1 when X"1",
+	char_2 when X"2",
+	char_hex when X"4",	-- A
+	char_hex when X"5",	-- A
+	char_hex when X"6",	-- A
+	char_hex when X"7",	-- A
+	char_hex when X"9",	-- D
+	char_hex when X"A", 	-- D
+	char_CR when X"E",
+	char_LF when X"F",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS(' '), 8)) when others;
+	
+-- serial output logic
+with bitSel select txd <= 		
+			'1'     when X"0", -- high while not busy
+			'1'	  when X"1", -- delay 1 (to sync with txd_clk)
+			'1'	  when X"2", -- delay 2 
+			'0' 	  when X"3", -- start bit
+			char(0) when X"4", -- data
+			char(1) when X"5",
+			char(2) when X"6",
+			char(3) when X"7",
+			char(4) when X"8",
+			char(5) when X"9",
+			char(6) when X"A",
+			char(7) when X"B",
+			'1'     when X"C",	-- parity or stop
+			'1' 	  when X"D",	-- stop
+			'1' when others;		-- delay
+			
 end Behavioral;
 

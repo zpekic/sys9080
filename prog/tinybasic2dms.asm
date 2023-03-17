@@ -776,6 +776,9 @@ XP18:   MOV  A,C                        ;SUBROUTINE FOR ALL
 EXPR2:  RST  1                          ;NEGATIVE SIGN?
         DB   '-'
         DB   XP21-$-1
+;-----------------------------
+		OUT 0EFH; TRACE M1
+;-----------------------------		
         LXI  H,0H                       ;YES, FAKE '0-'
         JMP  XP26                       ;TREAT LIKE SUBTRACT
 XP21:   RST  1                          ;POSITIVE SIGN? IGNORE
@@ -801,6 +804,9 @@ XP24:   XCHG                            ;2ND IN DE
 XP25:   RST  1                          ;SUBTRACT?
         DB   '-'
         DB   XP42-$-1
+;-----------------------------
+		OUT 0EFH; TRACE M1
+;-----------------------------		
 XP26:   PUSH H                          ;YES, SAVE 1ST <EXPR3>
         CALL EXPR3                      ;GET 2ND <EXPR3>
         CALL CHGSGN                     ;NEGATE
