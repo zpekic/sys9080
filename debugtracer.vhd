@@ -31,7 +31,8 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity debugtracer is
     Port ( reset : in  STD_LOGIC;
-			  clk: in STD_LOGIC;
+			  cpu_clk: in STD_LOGIC;
+			  txd_clk: in STD_LOGIC;
            enable : in  STD_LOGIC;
 			  continue: in STD_LOGIC;
            ready : out  STD_LOGIC;
@@ -77,7 +78,7 @@ constant hex_lookup: rom16x8 :=
    STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('F'), 8))
 );	
 
-signal trace, trigger_ss, clk_ss, trace_done: std_logic;
+signal trace_start, trace_done, trace_clk, trace: std_logic;
 signal reg_match, cbus: std_logic_vector(4 downto 0);
 signal counter: std_logic_vector(7 downto 0);
 alias chrSel: std_logic_vector(3 downto 0) is counter(7 downto 4);
@@ -89,54 +90,53 @@ signal hex: std_logic_vector(3 downto 0);
 begin
 
 ready <= not trace;
+cbus <= nM1 & nIOR & nIOW & nMEMR & nMEMW;
 
--- update bus match register
--- responds to OUT 0xE0 (trace all) to OUT 0xFF (trace none)
-on_iow: process(reset, nIOW)
+on_cpu_clk: process(reset, cpu_clk, ABUS, cbus, char)
 begin
 	if (reset = '1') then 
 		reg_match <= "11111";
-	else
-		if (rising_edge(nIOW) and ABUS(7 downto 5) = "111") then
-			reg_match <= ABUS(4 downto 0);
-		end if;
-	end if;
-end process;
-
--- trigger logic
-cbus <= nM1 & nIOR & nIOW & nMEMR & nMEMW;
-
-trigger_ss <= '0' when ((reg_match or cbus) = "11111") else enable;
-
-clk_ss <= (continue and trace_done) when (trace = '1') else trigger_ss;
-
-on_clk_ss: process(clk_ss, reset)
-begin
-	if (Reset = '1') then
 		trace <= '0';
 	else
-		if (rising_edge(clk_ss)) then
-			trace <= not trace;
+		if (rising_edge(cpu_clk)) then
+			-- update bus match register
+			-- responds to OUT 0xE0 (trace all) to OUT 0xFF (trace none)
+			if ((ABUS(7 downto 5) = "111") and (cbus(2) = '0')) then
+				reg_match <= ABUS(4 downto 0);
+			end if;
+		end if;
+		if (falling_edge(cpu_clk)) then
+			if (trace = '0') then 
+			-- check if needs to be turned on
+				if ((reg_match or cbus) /= "11111") then
+					trace <= enable;
+				end if;
+			else
+			-- check if needs to be turned off
+				if (char = X"00") then
+					trace <= not continue;
+				end if;
+			end if;
 		end if;
 	end if;
 end process;
 
--- main trace counter
-trace_done <= '1' when (counter = X"FF") else '0';
-
-on_clk: process(clk, trace, trace_done)
+---- main trace counter
+on_txd_clk: process(txd_clk, trace, char)
 begin
 	if (trace = '0') then
 		counter <= (others => '0');
 	else
-		if (rising_edge(clk) and trace_done = '0') then
-			counter <= std_logic_vector(unsigned(counter) + 1);
+		if (rising_edge(txd_clk)) then
+			if (char /= X"00") then
+				counter <= std_logic_vector(unsigned(counter) + 1);
+			end if;
 		end if;
 	end if;
 end process;
 
 -- character generation
-with cbus select char_1 <= 
+with cbus select char_1 <=
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "01101",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "11101",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "11110",
@@ -144,7 +144,7 @@ with cbus select char_1 <=
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "11011",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
-with cbus select char_2 <= 
+with cbus select char_2 <=
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('1'), 8)) when "01101",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)) when "11101",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "11110",
@@ -153,28 +153,30 @@ with cbus select char_2 <=
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
 with chrSel select hex <=
-	ABUS(15 downto 12) when X"4",	-- A
-	ABUS(11 downto 8) when X"5",	-- A
-	ABUS(7 downto 4) when X"6",	-- A
-	ABUS(3 downto 0) when X"7",	-- A
-	DBUS(7 downto 4) when X"9",	-- D
-	DBUS(3 downto 0) when X"A", 	-- D
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('*'), 8)) when others;
+	ABUS(15 downto 12) when X"3",	-- A
+	ABUS(11 downto 8) when X"4",	-- A
+	ABUS(7 downto 4) when X"5",	-- A
+	ABUS(3 downto 0) when X"6",	-- A
+	DBUS(7 downto 4) when X"8",	-- D
+	DBUS(3 downto 0) when others; 	-- D
 
 char_hex <= hex_lookup(to_integer(unsigned(hex)));
 
 with chrSel select char <= 
-	char_1 when X"1",
-	char_2 when X"2",
-	char_hex when X"4",	-- A
-	char_hex when X"5",	-- A
-	char_hex when X"6",	-- A
-	char_hex when X"7",	-- A
-	char_hex when X"9",	-- D
-	char_hex when X"A", 	-- D
-	char_CR when X"E",
-	char_LF when X"F",
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS(' '), 8)) when others;
+	char_1 when X"0",
+	char_2 when X"1",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS(','), 8)) when X"2",
+--	char_hex when X"3",	-- A
+--	char_hex when X"4",	-- A
+--	char_hex when X"5",	-- A
+--	char_hex when X"6",	-- A
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS(' '), 8)) when X"7",
+--	char_hex when X"8",	-- D
+--	char_hex when X"9", 	-- D
+	char_CR when X"A",
+	char_LF when X"B",
+	X"00" when X"C",
+	char_hex when others;
 	
 -- serial output logic
 with bitSel select txd <= 		

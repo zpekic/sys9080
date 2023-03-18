@@ -1065,6 +1065,9 @@ ENDCHK: RST  5                          ;*** ENDCHK ***
 QWHAT:  PUSH D                          ;*** QWHAT ***
 AWHAT:  LXI  D,WHAT                     ;*** AWHAT ***
 ERROR:  SUB  A                          ;*** ERROR ***
+;-------------------------------
+		OUT 0FFH;	-- TRACE OFF
+;-------------------------------		
         CALL PRTSTG                     ;PRINT 'WHAT?', 'HOW?'
         POP  D                          ;OR 'SORRY'
         LDAX D                          ;SAVE THE CHARACTER

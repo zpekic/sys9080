@@ -363,9 +363,10 @@ acia0: entity work.uart Port map (
 	 
 	tracer: entity work.debugtracer Port map(
 			reset => reset,
-			clk => baud_38400,
+			cpu_clk => cpu_clk,
+			txd_clk => baud_38400,
 			enable => sw_display_bus,
-			continue => btn_ss,
+			continue => '1', --btn_ss,
 			ready => Ready,
 			txd => PMOD_RXD1,
 			nM1 => not m1,
