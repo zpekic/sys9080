@@ -8,7 +8,9 @@
 -- Project Name: 
 -- Target Devices: 
 -- Tool Versions: 
--- Description: 
+-- Description:
+-- https://www.alldatasheet.com/datasheet-pdf/pdf/55448/AMD/AM2922.html 
+-- https://www.datasheetarchive.com/pdf/download.php?id=90d83ca1ef313fb69d6ff546c915cfcbcc12f4&type=M&term=Am25LS2535
 -- 
 -- Dependencies: 
 -- 

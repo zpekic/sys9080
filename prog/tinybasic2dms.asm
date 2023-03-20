@@ -777,7 +777,7 @@ EXPR2:  RST  1                          ;NEGATIVE SIGN?
         DB   '-'
         DB   XP21-$-1
 ;-----------------------------
-		OUT 0EFH; TRACE M1
+		OUT 0EFH						;TRACE M1
 ;-----------------------------		
         LXI  H,0H                       ;YES, FAKE '0-'
         JMP  XP26                       ;TREAT LIKE SUBTRACT
@@ -805,7 +805,7 @@ XP25:   RST  1                          ;SUBTRACT?
         DB   '-'
         DB   XP42-$-1
 ;-----------------------------
-		OUT 0EFH; TRACE M1
+		OUT 0EFH						;TRACE M1
 ;-----------------------------		
 XP26:   PUSH H                          ;YES, SAVE 1ST <EXPR3>
         CALL EXPR3                      ;GET 2ND <EXPR3>
@@ -986,8 +986,11 @@ CHGSGN: MOV  A,H                        ;*** CHGSGN ***
         INX  H
         POP  PSW
         XRA  H
-        JP   QHOW
-        MOV  A,B                        ;AND ALSO FLIP B
+		JM   FLIPB						;OK, OLD AND NEW SIGNS ARE DIFFERENT
+		MOV A,H
+		ORA L
+        JNZ   QHOW						;ERROR IF -(-32768)
+FLIPB:  MOV  A,B                        ;AND ALSO FLIP B
         XRI  80H
         MOV  B,A
         RET
@@ -1066,7 +1069,7 @@ QWHAT:  PUSH D                          ;*** QWHAT ***
 AWHAT:  LXI  D,WHAT                     ;*** AWHAT ***
 ERROR:  SUB  A                          ;*** ERROR ***
 ;-------------------------------
-		OUT 0FFH;	-- TRACE OFF
+		OUT 0FFH						;TRACE OFF
 ;-------------------------------		
         CALL PRTSTG                     ;PRINT 'WHAT?', 'HOW?'
         POP  D                          ;OR 'SORRY'

@@ -176,8 +176,11 @@ begin
 	 AUDIO_OUT_R <= audio_out;
 
 	 -- DISPLAY
-	 LED <= led_bus(23 downto 20);
-	 --LED <= "1111" when (adc_audio_left = adc_audio_right) else "0000";
+	 --LED <= led_bus(23 downto 20);
+	 LED(0) <= PMOD_RTS0;
+	 LED(1) <= PMOD_CTS0;
+	 LED(2) <= PMOD_RTS1;
+	 LED(3) <= PMOD_CTS1;
 	 
     led4x7: entity work.fourdigitsevensegled port map ( 
 			  -- inputs
@@ -365,7 +368,7 @@ acia0: entity work.uart Port map (
 			reset => reset,
 			cpu_clk => cpu_clk,
 			txd_clk => baud_38400,
-			enable => sw_display_bus,
+			enable => PMOD_RTS1,	-- Using this pin as we can flip it from host (TODO!)
 			continue => '1', --btn_ss,
 			ready => Ready,
 			txd => PMOD_RXD1,

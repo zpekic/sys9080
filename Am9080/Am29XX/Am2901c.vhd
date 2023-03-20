@@ -72,7 +72,8 @@ alias src: std_logic_vector(2 downto 0) is i(2 downto 0);
 alias fct: std_logic_vector(2 downto 0) is i(5 downto 3);
 alias dst: std_logic_vector(2 downto 0) is i(8 downto 6);
 signal r1, r1c, s1, nr1c, ns1c, f1: STD_LOGIC_VECTOR (5 downto 0);
-signal f, a_latch, b_latch, r, s, y_int: std_logic_vector(3 downto 0);
+alias f: STD_LOGIC_VECTOR(3 downto 0) is f1(4 downto 1);
+signal a_latch, b_latch, r, s, y_int: std_logic_vector(3 downto 0);
 
 signal q: std_logic_vector(3 downto 0);
 type ram_array is array(0 to 15) of std_logic_vector (3 downto 0);
@@ -160,7 +161,6 @@ begin
 end process;
 
 --- INTERNAL OUTPUTS --
-f <= f1(4 downto 1);
 y_int <= a_latch when (dst = rama) else f;
 
 --- INPUTS & OUTPUTS ---
@@ -183,7 +183,7 @@ with dst select qs3 <=
 --- OUTPUTS ---
 c_n4 <= f1(5);
 
-f_0 <= '1' when f = "0000" else '0'; -- not that these are "strong" signals, not open collector
+f_0 <= '1' when f = "0000" else '0'; -- note that these are "strong" signals, not open collector
 
 f3  <= f(3);	
 

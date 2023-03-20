@@ -6,10 +6,10 @@
 -- Design Name: 
 -- Module Name:    uart - Behavioral 
 -- Project Name: 
--- Target Devices: 
+-- Target Devices: (subset of) https://www.cpcwiki.eu/imgs/3/3f/MC6850.pdf
 -- Tool versions: 
--- Description: 
---
+-- Description: For full M6850 implementation, see
+-- https://www.volkerschatz.com/hardware/vhdocl-example/sources/acia6850.html
 -- Dependencies: 
 --
 -- Revision: 

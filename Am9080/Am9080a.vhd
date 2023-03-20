@@ -1084,14 +1084,14 @@ M1 <= not pl_instregenable;
 				);				
 
 		u91: Am25LS157 port map (
-					a(3) => u83_pin8, 
-					a(2) => am2901_f15, 
-					a(1) => u97_pin9, 
-					a(0) => am2901_f_is_0,
-					b(3) => u115_pin12, 
-					b(2) => u115_pin9, 
-					b(1) => u115_pin7, 
-					b(0) => u115_pin4,
+					a(3) => u83_pin8, 		--4A
+					a(2) => am2901_f15, 		--3A
+					a(1) => u97_pin9, 		--2A
+					a(0) => am2901_f_is_0,	--1A
+					b(3) => u115_pin12, 		--4B
+					b(2) => u115_pin9, 		--3B
+					b(1) => u115_pin7, 		--2B
+					b(0) => u115_pin4,		--1B
 					s => pl_updateorkeepflags(0),
 					nG => '0',
 					----------------
@@ -1102,14 +1102,14 @@ M1 <= not pl_instregenable;
 				);			
 
 		u115: Am25LS157 port map (
-					a(3) => flag_ac, 
-					a(2) => flag_s, 
-					a(1) => flag_p, 
-					a(0) => flag_z,
-					b(3) => bl(4), 
-					b(2) => bl(7), 
-					b(1) => bl(2), 
-					b(0) => bl(6),
+					a(3) => flag_ac,	--4A
+					a(2) => flag_s, 	--3A
+					a(1) => flag_p, 	--2A
+					a(0) => flag_z,	--1A
+					b(3) => bl(4), 	--4B
+					b(2) => bl(7), 	--3B
+					b(1) => bl(2), 	--2B
+					b(0) => bl(6),		--1B
 					s => u135_pin12,
 					nG => '0',
 					y(3) => u115_pin12, 
@@ -1117,7 +1117,6 @@ M1 <= not pl_instregenable;
 					y(1) => u115_pin7, 
 					y(0) => u115_pin4
 				);			
-				
-		
+						
 end structural;
 
