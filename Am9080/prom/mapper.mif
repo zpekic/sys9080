@@ -86,7 +86,7 @@
 0052   014;   MOVX.R   FF H#014   
 0053   014;   MOVX.R   FF H#014   
 0054   014;   MOVX.R   FF H#014   
-0055   014;   NOVX.R   FF H#014   
+0055   014;   MOVX.R   FF H#014   
 0056   018;   MOVD.M   FF H#018   
 0057   014;   MOVY.R   FF H#014   
 0058   014;   MOVY.R   FF H#014   
@@ -151,7 +151,7 @@
 0093   0AC;   SUBR:    FF H#0AC     
 0094   0AC;   SUBR:    FF H#0AC     
 0095   0AC;   SUBR:    FF H#0AC     
-0096   0AD;   SUBN:    FF H#0AD     
+0096   0AD;   SUBM:    FF H#0AD     
 0097   0AC;   SUBA:    FF H#0AC     
 0098   0B2;   SBBR:    FF H#0B2     
 0099   0B2;   SBBR:    FF H#0B2     
@@ -165,8 +165,8 @@
 00A1   09F;   ANAR:    FF H#09F     
 00A2   09F;   ANAR:    FF H#09F     
 00A3   09F;   ANAR:    FF H#09F     
-00A4   09F;   RNAR:    FF H#09F     
-00A5   09F;   RNAR:    FF H#09F     
+00A4   09F;   ANAR:    FF H#09F     
+00A5   09F;   ANAR:    FF H#09F     
 00A6   0B9;   ANAM:    FF H#089     
 00A7   09F;   ANAA:    FF H#09F     
 00A8   0A0;   XRAR:    FF H#0A0   
@@ -220,7 +220,7 @@
 00D8   122;   RC:      FF H#122     
 00D9   000;            FF 12X     
 00DA   11C;   JC:      FF H#11C     
-00DB   087;   IN:      FF H#087     
+00DB   087;   IN.:     FF H#087     
 00DC   11F;   CC:      FF H#11F     
 00DD   000;            FF 12X     
 00DE   0B7;   SBI:     FF H#0B7     

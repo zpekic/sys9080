@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
+using System.IO;
 using System.IO.Ports;
-using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Tracer
 {
@@ -14,12 +14,49 @@ namespace Tracer
         static SerialPort comPort;
         static Dictionary<string, string> traceDictionary = new Dictionary<string, string>();
 
-        static void Main(string[] args)
+        [STAThread]
+        static int Main(string[] args)
         {
             System.IO.StreamReader sourceFile;
-            string sourceFileName = args[0];
+            string sourceFileName;
+            string comPortName = "COM5";
             string rawLine;
+            int dummy;
 
+            // args: <filename> COM<n>
+            switch (args.Length)
+            {
+                case 0:
+                    sourceFileName = GetInteractiveFile(string.Empty);
+                    break;
+                case 1:
+                    sourceFileName = args[0];
+                    break;
+                default:
+                    sourceFileName = args[0];
+                    comPortName = args[1].ToUpper();
+                    break;
+            }
+            
+            // simple check
+            if (string.IsNullOrEmpty(sourceFileName))
+            {
+                Console.WriteLine($"Required argument not provided. Expected: tracer.exe lstFileName [COM<n>]");
+                return 1;
+            }
+            else
+            {
+                if (!File.Exists(sourceFileName))
+                {
+                    Console.WriteLine($"{sourceFileName} not found.");
+                    return 2;
+                }
+                if (!comPortName.StartsWith("COM") || !int.TryParse(comPortName.Substring(3), out dummy))
+                {
+                    Console.WriteLine($"{comPortName} is invalid (must be COM<n>).");
+                    return 2;
+                }
+            }
             sourceFile = new System.IO.StreamReader(sourceFileName);
             while ((rawLine = sourceFile.ReadLine()) != null)
             {
@@ -61,12 +98,13 @@ namespace Tracer
 
             Console.WriteLine($"{traceDictionary.Count} lines added from {sourceFileName}");
 
-            comPort = new SerialPort("COM5", 38400, Parity.None, 8, StopBits.One);
+            comPort = new SerialPort(comPortName, 38400, Parity.None, 8, StopBits.One);
             if (comPort.IsOpen)
             {
                 comPort.Close();
             }
-            Console.WriteLine($"Waiting for trace on {comPort.PortName} ({comPort.BaudRate},{comPort.DataBits},{comPort.Parity},{comPort.StopBits})(press x to exit)");
+            Console.WriteLine($"Waiting for trace on {comPort.PortName} ({comPort.BaudRate},{comPort.DataBits},{comPort.Parity},{comPort.StopBits})");
+            Console.WriteLine($"(Press 'x' to exit, <spacebar> to flip RTS pin)");
             comPort.DataReceived += Port_DataReceived;
             comPort.Handshake = Handshake.None;
             comPort.RtsEnable = true;
@@ -80,6 +118,7 @@ namespace Tracer
                 key = Console.ReadKey();
                 switch (key.KeyChar)
                 {
+                    // TODO: clear instruction counter on some key
                     case ' ':
                         comPort.RtsEnable = !comPort.RtsEnable;
                         break;
@@ -92,6 +131,8 @@ namespace Tracer
                 }
             }
             comPort.Close();
+
+            return 0;
         }
 
         static void Port_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
@@ -140,6 +181,27 @@ namespace Tracer
                     sbTraceRecord.Append(c);
                 }
             }
+        }
+
+        private static string GetInteractiveFile(string fileName)
+        {
+            using (OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.InitialDirectory = Directory.GetCurrentDirectory();
+                openFileDialog.Title = "Select assembly listing file for trace matching";
+                openFileDialog.FileName = fileName;
+                openFileDialog.Filter = "LST files (*.lst)|*.lst|All files (*.*)|*.*";
+                openFileDialog.FilterIndex = 0;
+                openFileDialog.RestoreDirectory = true;
+
+                if (openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    //Get the path of specified file
+                    return openFileDialog.FileName;
+                }
+            }
+
+            return null; // no file selected
         }
 
         static bool IsM1Cycle(char[] hexChar)
