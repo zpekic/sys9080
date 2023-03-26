@@ -33,10 +33,11 @@ entity debugtracer is
     Port ( reset : in  STD_LOGIC;
 			  cpu_clk: in STD_LOGIC;
 			  txd_clk: in STD_LOGIC;
-           enable : in  STD_LOGIC;
 			  continue: in STD_LOGIC;
            ready : out  STD_LOGIC;
            txd : out STD_LOGIC;
+			  load : in STD_LOGIC;							-- load trigger selection
+			  sel : in STD_LOGIC_VECTOR(4 downto 0);	-- 1 for signal that will trigger trace
            nM1 : in  STD_LOGIC;
            nIOR : in  STD_LOGIC;
            nIOW : in  STD_LOGIC;
@@ -78,7 +79,7 @@ constant hex_lookup: rom16x8 :=
    STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('F'), 8))
 );	
 
-signal trace_start, trace_done, trace_clk, trace: std_logic;
+signal trace_start, trace_done, trace_clk, trace, trace_enable: std_logic;
 signal reg_match, cbus: std_logic_vector(4 downto 0);
 signal counter: std_logic_vector(7 downto 0);
 alias chrSel: std_logic_vector(3 downto 0) is counter(7 downto 4);
@@ -95,21 +96,26 @@ cbus <= nM1 & nIOR & nIOW & nMEMR & nMEMW;
 on_cpu_clk: process(reset, cpu_clk, ABUS, cbus, char)
 begin
 	if (reset = '1') then 
-		reg_match <= "11111";
 		trace <= '0';
+		trace_enable <= '1';
+--		reg_match <= (others => '1');
+		reg_match <= not sel;
 	else
 		if (rising_edge(cpu_clk)) then
-			-- update bus match register
-			-- responds to OUT 0xE0 (trace all) to OUT 0xFF (trace none)
-			if ((ABUS(7 downto 5) = "111") and (cbus(2) = '0')) then
-				reg_match <= ABUS(4 downto 0);
+			-- update trace enable FF 
+			-- responds to OUT 0x00 (trace off) to OUT 0x01 (trace on)
+			if ((ABUS(7 downto 1) = "0000000") and (cbus(2) = '0')) then
+				trace_enable <= ABUS(0);
+			end if;
+			if (load = '1') then
+				reg_match <= not sel;
 			end if;
 		end if;
 		if (falling_edge(cpu_clk)) then
 			if (trace = '0') then 
 			-- check if needs to be turned on
 				if ((reg_match or cbus) /= "11111") then
-					trace <= enable;
+					trace <= trace_enable;
 				end if;
 			else
 			-- check if needs to be turned off

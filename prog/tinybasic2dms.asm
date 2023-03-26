@@ -776,9 +776,6 @@ XP18:   MOV  A,C                        ;SUBROUTINE FOR ALL
 EXPR2:  RST  1                          ;NEGATIVE SIGN?
         DB   '-'
         DB   XP21-$-1
-;-----------------------------
-		OUT 0EFH						;TRACE M1
-;-----------------------------		
         LXI  H,0H                       ;YES, FAKE '0-'
         JMP  XP26                       ;TREAT LIKE SUBTRACT
 XP21:   RST  1                          ;POSITIVE SIGN? IGNORE
@@ -804,9 +801,6 @@ XP24:   XCHG                            ;2ND IN DE
 XP25:   RST  1                          ;SUBTRACT?
         DB   '-'
         DB   XP42-$-1
-;-----------------------------
-		OUT 0EFH						;TRACE M1
-;-----------------------------		
 XP26:   PUSH H                          ;YES, SAVE 1ST <EXPR3>
         CALL EXPR3                      ;GET 2ND <EXPR3>
         CALL CHGSGN                     ;NEGATE
@@ -1068,9 +1062,6 @@ ENDCHK: RST  5                          ;*** ENDCHK ***
 QWHAT:  PUSH D                          ;*** QWHAT ***
 AWHAT:  LXI  D,WHAT                     ;*** AWHAT ***
 ERROR:  SUB  A                          ;*** ERROR ***
-;-------------------------------
-		OUT 0FFH						;TRACE OFF
-;-------------------------------		
         CALL PRTSTG                     ;PRINT 'WHAT?', 'HOW?'
         POP  D                          ;OR 'SORRY'
         LDAX D                          ;SAVE THE CHARACTER
@@ -1131,7 +1122,13 @@ ASORRY: LXI  D,SORRY                    ;*** ASORRY ***
 GETLN:  RST  2                          ;*** GETLN ***
         LXI  D,BUFFER                   ;PROMPT AND INIT.
 GL1:    CALL CHKIO                      ;CHECK KEYBOARD
+;------------------------------------------------------
+		OUT 00H;	TRACE OFF
+;------------------------------------------------------
         JZ   GL1                        ;NO INPUT, WAIT
+;------------------------------------------------------
+		OUT 01H;	TRACE ON
+;------------------------------------------------------
         CPI  7FH                        ;DELETE LAST CHARACTER?
         JZ   GL3                        ;YES
         RST  2                          ;INPUT, ECHO BACK
@@ -1426,7 +1423,13 @@ OC2:    JNZ  OC3                        ;IT IS ON
         RET                             ;RESTORE AF AND RETURN
 OC3:    IN   UART_STATUS                ;Check status
         ANI  UART_TX_EMPTY              ;STATUS BIT
+;----------------------------------------------------
+		OUT  00H	; TRACE OFF 
+;----------------------------------------------------
         JZ   OC3                        ;NOT READY, WAIT
+;----------------------------------------------------
+		OUT  01H	; TRACE ON 
+;----------------------------------------------------
         POP  PSW                        ;READY, GET OLD A BACK
         OUT  UART_DATA                  ;Out to data port
         CPI  CR                         ;WAS IT CR?

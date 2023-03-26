@@ -54,31 +54,26 @@ architecture structural of fourdigitsevensegled is
 
 signal internalseg: std_logic_vector(6 downto 0); -- 7th is the dot!
 signal dot: std_logic;
-signal hexdata: std_logic_vector(3 downto 0);
+signal displaybus: std_logic_vector(7 downto 0);
+alias hexdata: std_logic_vector(3 downto 0) is displaybus(3 downto 0);
 
 begin
----- select 1 of 4 hex digits
-	with digsel select hexdata <= 
-		data(3 downto 0) when "00",
-		data(7 downto 4) when "01",
-		data(11 downto 8) when "10",
-		data(15 downto 12) when others;
-		
+
+anode <= displaybus(7 downto 4);
+
 ---- DP for each digit individually
 	with digsel select dot <= 
 		not showdot(0) when "00",
 		not showdot(1) when "01",
 		not showdot(2) when "10",
-		not showdot(3) when "11",
-		'0' when others;
+		not showdot(3) when others;
 
----- decode position
-	with digsel select anode <= 	
-		("111" & not showdigit(0)) when "00",
-		("11" & not showdigit(1) & "1") when "01",
-		("1" & not showdigit(2) & "11") when "10",
-		(not showdigit(3) & "111") when "11",
-		"1111" when others;
+---- decode position and select 1 of 4 hex digits
+	with digsel select displaybus <= 	
+		("111" & not showdigit(0)) 		& data(3 downto 0) when "00",
+		("11" & not showdigit(1) & "1")  & data(7 downto 4) when "01",
+		("1" & not showdigit(2) & "11")  & data(11 downto 8) when "10",
+		(not showdigit(3) & "111")			& data(15 downto 12) when others;
 					
 ---- hook up the cathodes
 	with hexdata select internalseg <= 

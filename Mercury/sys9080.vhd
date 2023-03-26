@@ -8,8 +8,8 @@
 -- Project Name: Simple 8-bit system around microcode implemented Am9080 CPU
 -- Target Devices: https://www.micro-nova.com/mercury/ + Baseboard
 -- Tool Versions: ISE 14.7 (nt)
--- Description: 
--- 
+-- Description:	https://hackaday.io/project/190239-from-bit-slice-to-basic-and-symbolic-tracing
+-- 					https://github.com/zpekic/sys9080
 -- Dependencies: 
 -- 
 -- Revision:
@@ -17,7 +17,6 @@
 -- Additional Comments:
 -- https://en.wikichip.org/w/images/7/76/An_Emulation_of_the_Am9080A.pdf
 ----------------------------------------------------------------------------------
-
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -77,14 +76,10 @@ alias PMOD_RTS0: std_logic is PMOD(0);
 alias PMOD_RXD0: std_logic is PMOD(1);
 alias PMOD_TXD0: std_logic is PMOD(2);
 alias PMOD_CTS0: std_logic is PMOD(3);	
-alias PMOD_RTS1: std_logic is PMOD(4);	-- RTS1
-alias PMOD_RXD1: std_logic is PMOD(5);	-- RXD1
-alias PMOD_TXD1: std_logic is PMOD(6);	-- TXD1
-alias PMOD_CTS1: std_logic is PMOD(7);	-- CTS1
---alias PMOD_4: std_logic is PMOD(4);	-- RTS1
---alias PMOD_5: std_logic is PMOD(5);	-- RXD1
---alias PMOD_6: std_logic is PMOD(6);	-- TXD1
---alias PMOD_7: std_logic is PMOD(7);	-- CTS1
+alias PMOD_RTS1: std_logic is PMOD(4);
+alias PMOD_RXD1: std_logic is PMOD(5);
+alias PMOD_TXD1: std_logic is PMOD(6);
+alias PMOD_CTS1: std_logic is PMOD(7);
 
 -- CPU buses
 signal data_bus: std_logic_vector(7 downto 0);
@@ -95,35 +90,28 @@ alias nIORead: std_logic is control_bus(3);
 alias nIOWrite: std_logic is control_bus(2); 
 alias nMemRead: std_logic is control_bus(1); 
 alias nMemWrite: std_logic is control_bus(0);
-
 signal Reset: std_logic;
-signal reset_delay: std_logic_vector(3 downto 0) := "1111";
 signal IntReq, Hold, HoldAck, IntE, Ready, m1: std_logic;
 
 -- other signals
 signal debug: std_logic_vector(15 downto 0);
+signal reset_delay: std_logic_vector(3 downto 0) := "1111";
 
-signal switch, switch_previous: std_logic_vector(7 downto 0);
+-- 8 baseboard on/off switches
+signal switch: std_logic_vector(7 downto 0);
 -- display cpu or bus
 alias sw_display_bus: std_logic is switch(7);
 -- when displaying cpu
 alias sw_displaycpu_seq: std_logic is switch(6);
 alias sw_displaycpu_reg: std_logic_vector(2 downto 0) is switch(5 downto 3);
 -- when displaying bus
-alias sw_trigger_ioread: std_logic is switch(6);
-alias sw_trigger_iowrite: std_logic is switch(5);
-alias sw_trigger_memread: std_logic is switch(4);
-alias sw_trigger_memwrite: std_logic is switch(3);
+alias sw_tracesel: std_logic_vector(4 downto 0) is switch(7 downto 3);
 -- either
 alias sw_clock_sel: std_logic_vector(2 downto 0) is switch(2 downto 0);
 
-alias sw_round: std_logic_vector(1 downto 0) is switch(1 downto 0);
-alias sw_avg: std_logic_vector(1 downto 0) is switch(3 downto 2);
-alias sw_icntsel: std_logic is switch(4);
-alias sw_audio_sel: std_logic_vector(1 downto 0) is switch(6 downto 5);
-
+-- 4 baseboard push buttons (1 when pressed)
 signal button: std_logic_vector(7 downto 0);
-alias btn_ss: std_logic is button(3);
+alias btn_traceload: std_logic is button(3);
 alias btn_clk: std_logic is button(0);
 
 signal inport: std_logic_vector(7 downto 0);
@@ -132,7 +120,7 @@ signal cpu_debug_bus, sys_debug_bus: std_logic_vector(19 downto 0);
 signal nPort0Enable, nPort1Enable, nACIA0Enable, nACIA1Enable: std_logic;
 signal nTinyRomEnable, nBootRomEnable, nMonRomEnable, nRamEnable: std_logic;
 signal showsegments: std_logic;
-signal trigger_ss, clk_ss: std_logic;
+signal rts1_delay, rts1_pulse, continue: std_logic;
 
 -- clock
 signal freq1Hz, freq64Hz, freq128Hz: std_logic; 
@@ -150,28 +138,20 @@ alias baud_1200: std_logic is baudrate(7);
 alias baud_600: std_logic is baudrate(8);
 alias baud_300: std_logic is baudrate(9);
 
-signal adc_done, audio_out, audio_in, freq_icnt, sum_start, sum_end: std_logic;
-signal adc_channel: std_logic_vector(2 downto 0) := "000";
-signal adc_dout: std_logic_vector(9 downto 0);
-signal dec: std_logic_vector(15 downto 0);
-
-signal cnt_in, cnt_out: std_logic_vector(31 downto 0);
+-- not used
+signal audio_out: std_logic;
 
 begin
    
 	 Reset <= '0' when (reset_delay = "0000") else '1';
 	 
---	 led_bus <= cnt_out(23 downto 0) when (sw_display_bus = '0') else cnt_in(23 downto 0);
---	 led_bus <= cnt_out(23 downto 0) when (sw_display_bus = '0') else X"00" & pot;
-	 led_bus <= (cpu_clk & "00" & freq1Hz & cpu_debug_bus) when (sw_display_bus = '0') else (Ready & m1 & btn_ss & trigger_ss & sys_debug_bus);
+	 led_bus <= (cpu_clk & "00" & freq1Hz & cpu_debug_bus) when (sw_display_bus = '0') else (Ready & "00" & m1 & sys_debug_bus);
 	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
---	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & debug; --address_bus(7 downto 0) & data_bus;
  
-	 showsegments <= '1'; --(not sw_display_bus) when (control_bus = "11111") else '1';
+	 -- flash 7seg when stopped due to READY low
+	 showsegments <= freq1Hz when (Ready = '0') else '1';
 
-	 --flash <= '1'; --HoldAck or freq1Hz; -- blink in hold bus mode!
 	 -- USE AUDIO FOR CASETTE OUTPUT
-	 --cassette_out <= freq1200 when PMOD(2) = '1' else freq2400;
 	 AUDIO_OUT_L <= audio_out; 
 	 AUDIO_OUT_R <= audio_out;
 
@@ -212,25 +192,10 @@ clocks: entity work.clockgen Port map (
 		freq64Hz => freq64Hz,
 		freq1Hz => freq1Hz
 		);
-	
-	-- DEBOUNCE the 8 switches and 4 buttons (plus "Reset" on Mercury board)
---    debouncer_sw: entity work.debouncer8channel port map (
---        clock => debounce_clk,
---        reset => Reset,
---        signal_raw => SW,
---        signal_debounced => switch
---    );
 
---    debouncer_btn: entity work.debouncer8channel port map (
---        clock => debounce_clk,
---        reset => Reset,
---		  signal_raw(7 downto 4) => "0000",
---        signal_raw(3 downto 0) => BTN,
---        signal_debounced => button
---    );
-
-switch <= SW;
-button <= "0000" & BTN;
+-- debouncers removed due to lack of FPGA space :-(
+	switch <= SW;
+	button <= "0000" & BTN;
 
 	-- delay to generate nReset 4 cycles after reset
 	generate_Reset: process (cpu_clk, USR_BTN)
@@ -240,6 +205,7 @@ button <= "0000" & BTN;
 		else
 			if (rising_edge(cpu_clk)) then
 				reset_delay <= reset_delay(2 downto 0) & USR_BTN;
+				rts1_delay <= PMOD_RTS1;
 			end if;
 		end if;
 	end process;
@@ -287,7 +253,7 @@ acia0: entity work.uart Port map (
 --			RXD => PMOD_TXD1
 --		);
 		
--- ROM
+-- ROM 2k at 0000H to 07FFH
 -- See http://cpuville.com/Code/tiny_basic_instructions.pdf
 	tinyrom: entity work.rom1k generic map(
 		address_size => 11,
@@ -322,7 +288,7 @@ acia0: entity work.uart Port map (
 --		nOE => nMonRomEnable
 --	);
 	
--- RAM
+-- RAM 2k (repeated across 64k address space where no ROM is present)
 	ram: entity work.simpleram 
 		generic map(
 			address_size => 11,
@@ -337,9 +303,9 @@ acia0: entity work.uart Port map (
 			  nSelect => nRamEnable
 		);
 		
--- CPU
-	Hold <= '0';	-- TODO
-	IntReq <= '0';	-- TODO
+-- CPU (Intel 8080 compatible)
+	Hold <= '0';	-- Not used
+	IntReq <= '0';	-- Not used
 	
 	cpu: entity work.Am9080a port map (
 			  DBUS => data_bus,
@@ -359,19 +325,24 @@ acia0: entity work.uart Port map (
 			  HOLD => Hold, 
 			  M1 => m1,
 			  -- debug port, not part of actual processor
-           debug_sel => '0', --sw_displaycpu_seq,
-			  debug_reg => "101", --sw_displaycpu_reg,
-           debug_out => cpu_debug_bus
+           debug_sel => sw_displaycpu_seq,	-- allows inspection of microcode counter and instruction register
+			  debug_reg => sw_displaycpu_reg,	-- allows inspection of any register pair
+			  -- connecting this breaks the design as the modest FPGA is overmapped
+           debug_out => open --cpu_debug_bus
 			);
 	 
+-- Tracer watches system bus activity and if signal match is detected, freezes the CPU in 
+-- the cycle by asserting low READY signal, and outputing the trace record to serial port
+-- After that, cycle will continue if continue signal is high, or stop there.	 
 	tracer: entity work.debugtracer Port map(
 			reset => reset,
 			cpu_clk => cpu_clk,
 			txd_clk => baud_38400,
-			enable => PMOD_RTS1,	-- Using this pin as we can flip it from host (TODO!)
-			continue => '1', --btn_ss,
-			ready => Ready,
-			txd => PMOD_RXD1,
+			continue => continue,  
+			ready => ready,			-- freezes CPU when low
+			txd => PMOD_RXD1,			-- output trace (to any TTY of special tracer running on the host
+			load => btn_traceload,	-- load mask register if high
+			sel => sw_tracesel,		-- set mask register: M1 MEMW MEMR IOW IOR
 			nM1 => not m1,
 			nIOR => nIORead,
 			nIOW => nIOWrite,
@@ -381,71 +352,19 @@ acia0: entity work.uart Port map (
 			DBUS => data_bus
 	);
 	 
-
-	 
--- ADC for cassette interface
---with sw_audio_sel select audio_out <=
---	baud_1200 when "00",
---	baud_2400 when "01",
---	baud_4800 when "10",
---	baud_9600 when others;
-	
---audio_out <= baud_4800 when (PMOD_TXD0 = '0') else baud_2400;	
---freq_icnt <= freq1Hz when (sw_icntsel = '0') else baud_1200;
-
---PMOD_RXD0 <= not(cnt_in(1));-- and cnt_in(0);
-
---ocnt: entity work.freqcounter Port map (
---		reset => Reset,
---		clk => freq1Hz,
---		freq => audio_out,
---		bcd => '1',
---		add => X"00000001",
---		cin => '1',
---		cout => open,
---		value => cnt_out
---	);
---
---icnt: entity work.freqcounter Port map (
---		reset => Reset,
---		clk => freq_icnt,
---		freq => audio_in,
---		bcd => '1',
---		add => X"00000001",
---		cin => '1',
---		cout => open,
---		value => cnt_in
---	);
-
-  -- Mercury ADC component
---  ADC : entity work.MercuryADC
---    port map(
---      clock    => CLK,
---      trigger  => baud_153600,
---      diffn    => '0',
---		channel =>  adc_channel,	
---      Dout     => adc_dout,
---      OutVal   => adc_done,
---      adc_miso => ADC_MISO,
---      adc_mosi => ADC_MOSI,
---      adc_cs   => ADC_CSN,
---      adc_clk  => ADC_SCK
---      );
-
---analogfreq: entity work.adc2freq port map (
---		adc_sample => adc_dout,
---		adc_done => adc_done,
---		avg_sel => sw_avg,
---		round_sel => sw_round,
---		sum_start => sum_start,
---		sum_end => sum_end,
---		freq_out => audio_in
---		);
-			
--- PropScope digital port
---PMOD_4 <= button(0);--audio_out;
---PMOD_5 <= button(1);--sum_start;
---PMOD_6 <= button(2);--sum_end;
---PMOD_7 <= button(3);--audio_in;
-				
+-- Tracer works best when the output is intercepted on the host and resolved using symbolic .lst file
+-- In addition, host is able to flip RTS pin to start/stop tracing 
+-- See https://github.com/zpekic/sys9080/blob/master/Tracer/Tracer/Program.cs
+rts1_pulse <= PMOD_RTS1 xor rts1_delay;
+on_rts1_pulse: process(reset, rts1_pulse)
+begin
+	if ((reset or btn_clk) = '1') then
+		continue <= '1';
+	else
+		if (rising_edge(rts1_pulse)) then
+			continue <= not continue;
+		end if;
+	end if;
+end process;
+ 	 
 end;

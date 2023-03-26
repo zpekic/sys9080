@@ -13,6 +13,7 @@ namespace Tracer
         static StringBuilder sbTraceRecord = new StringBuilder();
         static SerialPort comPort;
         static Dictionary<string, string> traceDictionary = new Dictionary<string, string>();
+        static Dictionary<string, int> profilerDictionary = new Dictionary<string, int>();
 
         [STAThread]
         static int Main(string[] args)
@@ -22,6 +23,8 @@ namespace Tracer
             string comPortName = "COM5";
             string rawLine;
             int dummy;
+
+            PrintBanner();
 
             // args: <filename> COM<n>
             switch (args.Length)
@@ -88,13 +91,19 @@ namespace Tracer
                             int keyIndex = rawLine.IndexOf(m1key);
                             m1key = m1key.Substring(0, 4) + " " + m1key.Substring(6, 2);
                             // only add text from the found instruction record onwards
-                            traceDictionary.Add(m1key, rawLine.Substring(keyIndex));
-
+                            string keyValue = rawLine.Substring(keyIndex);
+                            traceDictionary.Add(m1key, keyValue);
+                            // if this is a label, also add to the "profiler"
+                            if (keyValue.IndexOf(":") > 0)
+                            {
+                                profilerDictionary.Add(m1key, 0);
+                            }
                             found = true;
                         }
                     }
                 }
             }
+            sourceFile.Close();
 
             Console.WriteLine($"{traceDictionary.Count} lines added from {sourceFileName}");
 
@@ -124,8 +133,11 @@ namespace Tracer
                         break;
                     case 'x':
                     case 'X':
+                        // leave it in enabled state 
                         exit = true;
-                    break;
+                        comPort.RtsEnable = true;
+                        GenerateProfilerReport();
+                        break;
                     default:
                         break;
                 }
@@ -160,6 +172,11 @@ namespace Tracer
                                 Console.ForegroundColor = ConsoleColor.Yellow;  // YELLOW for unmatched record
                                 Console.WriteLine(traceRecord);
                             }
+                            if (profilerDictionary.ContainsKey(traceValuePair[1]))
+                            {   
+                                // increment hit count
+                                profilerDictionary[traceValuePair[1]]++;
+                            }
                             break;
                         case "MR":  // read memory (except M1)
                         case "MW":  // write memory
@@ -181,6 +198,44 @@ namespace Tracer
                     sbTraceRecord.Append(c);
                 }
             }
+        }
+
+        private static void GenerateProfilerReport()
+        {
+            int totalHits = 0;
+            List<string> topHitsList = new List<string>();
+
+            // get total number of label hits
+            foreach (string key in profilerDictionary.Keys)
+            {
+                totalHits += profilerDictionary[key];
+            }
+
+            Console.WriteLine($"------------------------------------------------");
+          //Console.WriteLine($"123 1234567890 123 -----------------------------");
+            Console.WriteLine($"  # Hit  count   % Label");
+            Console.WriteLine($"------------------------------------------------");
+
+            // Find and print top ten hitters (TODO: make it command line parameter)
+            for (int i = 1; i <= 10; i++)
+            {
+                int topHits = 0;
+                string topKey = string.Empty;
+
+                foreach (string key in profilerDictionary.Keys)
+                {
+                    if (!topHitsList.Contains(key) && (profilerDictionary[key] >= topHits))
+                    {
+                        topHits = profilerDictionary[key];
+                        topKey = key;
+                    }
+                }
+
+                topHitsList.Add(topKey);
+                Console.WriteLine($"{i,3} {topHits,10} {(100*topHits)/totalHits,3}% {traceDictionary[topKey]}");
+            }
+
+            Console.WriteLine($"---Total hits: {totalHits} --------------------------------------");
         }
 
         private static string GetInteractiveFile(string fileName)
@@ -228,6 +283,16 @@ namespace Tracer
                 }
             }
             return true;
+        }
+
+        static void PrintBanner()
+        {
+            Console.WriteLine($"----------------------------------------------------------------");
+            Console.WriteLine($" i8080 compatible symbolic tracer utility (c) zpekic@hotmail.com");
+            Console.WriteLine($"----------------------------------------------------------------");
+            Console.WriteLine($" https://hackaday.io/project/190239-from-bit-slice-to-basic-and-symbolic-tracing");
+            Console.WriteLine($" Sources: https://github.com/zpekic/sys9080");
+            Console.WriteLine($"----------------------------------------------------------------");
         }
     }
 }
