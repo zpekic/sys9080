@@ -98,7 +98,6 @@ begin
 	if (reset = '1') then 
 		trace <= '0';
 		trace_enable <= '1';
---		reg_match <= (others => '1');
 		reg_match <= not sel;
 	else
 		if (rising_edge(cpu_clk)) then
@@ -148,6 +147,7 @@ with cbus select char_1 <=
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "11110",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "10111",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "11011",
+	--X"00" when others;
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
 with cbus select char_2 <=
@@ -156,6 +156,7 @@ with cbus select char_2 <=
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "11110",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)) when "10111",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "11011",
+	--X"00" when others;
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
 with chrSel select hex <=

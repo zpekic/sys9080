@@ -374,7 +374,7 @@ debug_register(15 downto 0) <= am2901_dbg_val(15 downto 8) & (flag_s & flag_z & 
 -- combine current microinstruction with CPU opcode
 debug_microcode <= ma & current_instruction;
 
-debug_out <= debug_register when (debug_sel = '0') else debug_microcode; 
+debug_out <= debug_microcode when (debug_sel = '1') else debug_register; 
 -- if debugging register, feed NOP/OR/ZA to Am2901 instead of one coming from microcode ("pl" fields)
 -- note that this interferes with the CPU operation, so the debug_ena must be explicitly enabled!
 --debug_alu_destination <= "001" when (is_debug_register_mode = '1') else pl_alu_destination; -- NOP

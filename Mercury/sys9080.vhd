@@ -145,22 +145,23 @@ begin
    
 	 Reset <= '0' when (reset_delay = "0000") else '1';
 	 
-	 led_bus <= (cpu_clk & "00" & freq1Hz & cpu_debug_bus) when (sw_display_bus = '0') else (Ready & "00" & m1 & sys_debug_bus);
+	 led_bus <= (cpu_clk & "00" & freq1Hz 			& cpu_debug_bus) when (sw_display_bus = '0') else 
+					(cpu_clk & Ready & continue & m1 & sys_debug_bus);
 	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
  
 	 -- flash 7seg when stopped due to READY low
-	 showsegments <= freq1Hz when (Ready = '0') else '1';
+	 showsegments <= freq1Hz or Ready;
 
 	 -- USE AUDIO FOR CASETTE OUTPUT
 	 AUDIO_OUT_L <= audio_out; 
 	 AUDIO_OUT_R <= audio_out;
 
 	 -- DISPLAY
-	 --LED <= led_bus(23 downto 20);
-	 LED(0) <= PMOD_RTS0;
-	 LED(1) <= PMOD_CTS0;
-	 LED(2) <= PMOD_RTS1;
-	 LED(3) <= PMOD_CTS1;
+	 LED <= led_bus(23 downto 20);
+	 --LED(0) <= PMOD_RTS0;
+	 --LED(1) <= PMOD_CTS0;
+	 --LED(2) <= PMOD_RTS1;
+	 --LED(3) <= PMOD_CTS1;
 	 
     led4x7: entity work.fourdigitsevensegled port map ( 
 			  -- inputs
@@ -358,7 +359,7 @@ acia0: entity work.uart Port map (
 rts1_pulse <= PMOD_RTS1 xor rts1_delay;
 on_rts1_pulse: process(reset, rts1_pulse)
 begin
-	if ((reset or btn_clk) = '1') then
+	if ((USR_BTN or btn_clk) = '1') then
 		continue <= '1';
 	else
 		if (rising_edge(rts1_pulse)) then

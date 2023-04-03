@@ -211,31 +211,38 @@ namespace Tracer
                 totalHits += profilerDictionary[key];
             }
 
-            Console.WriteLine($"------------------------------------------------");
-          //Console.WriteLine($"123 1234567890 123 -----------------------------");
-            Console.WriteLine($"  # Hit  count   % Label");
-            Console.WriteLine($"------------------------------------------------");
-
-            // Find and print top ten hitters (TODO: make it command line parameter)
-            for (int i = 1; i <= 10; i++)
+            if (totalHits > 0)
             {
-                int topHits = 0;
-                string topKey = string.Empty;
+                Console.WriteLine($"------------------------------------------------");
+                //Console.WriteLine($"123 1234567890 123 -----------------------------");
+                Console.WriteLine($"  # Hit  count   % Label");
+                Console.WriteLine($"------------------------------------------------");
 
-                foreach (string key in profilerDictionary.Keys)
+                // Find and print top ten hitters (TODO: make it command line parameter)
+                for (int i = 1; i <= 10; i++)
                 {
-                    if (!topHitsList.Contains(key) && (profilerDictionary[key] >= topHits))
+                    int topHits = 0;
+                    string topKey = string.Empty;
+
+                    foreach (string key in profilerDictionary.Keys)
                     {
-                        topHits = profilerDictionary[key];
-                        topKey = key;
+                        if (!topHitsList.Contains(key) && (profilerDictionary[key] >= topHits))
+                        {
+                            topHits = profilerDictionary[key];
+                            topKey = key;
+                        }
                     }
+
+                    topHitsList.Add(topKey);
+                    Console.WriteLine($"{i,3} {topHits,10} {(100 * topHits) / totalHits,3}% {traceDictionary[topKey]}");
                 }
 
-                topHitsList.Add(topKey);
-                Console.WriteLine($"{i,3} {topHits,10} {(100*topHits)/totalHits,3}% {traceDictionary[topKey]}");
+                Console.WriteLine($"---Total hits: {totalHits} --------------------------------------");
             }
-
-            Console.WriteLine($"---Total hits: {totalHits} --------------------------------------");
+            else
+            {
+                Console.WriteLine($"---No hits in profiler dictionary -------------------------------");
+            }
         }
 
         private static string GetInteractiveFile(string fileName)
