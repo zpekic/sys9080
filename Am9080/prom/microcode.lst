@@ -261,7 +261,7 @@
 00EC - - 00B R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_HL RAMF  OR    DZ 
 00ED - - 00D C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
 00EE - - 00A C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 R_SP RAMF  OR    DZ 
-00EF - - 01D C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
+00EF - - 00D C/SBR  - RDY  0 MEMR   -- ADDR 0 11 0 1 16 R_PC R_PC RAMF  ADD   ZA 
 00F0 - - 00B R/F    - HOLD 0 NOC    -- ---- 0 11 0 1 8  RAS1 R_SP RAMF  OR    DZ 
 00F1 - - 00A C/SBR  ! HOLD 0 NOC    -- ---- 0 11 0 1 16 RAS1 R_DE RAMF  ADD   ZB 
 00F2 - - 00B R/F    - HOLD 0 NOC    -- ---- 0 11 1 1 16 R_DE R_ED RAMA  OR    DZ 

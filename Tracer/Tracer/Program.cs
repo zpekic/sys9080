@@ -14,6 +14,14 @@ namespace Tracer
         static SerialPort comPort;
         static Dictionary<string, string> traceDictionary = new Dictionary<string, string>();
         static Dictionary<string, int> profilerDictionary = new Dictionary<string, int>();
+        // these track the "imagined" external memory space as updated and read by the CPU
+        static Dictionary<int, byte> memReadDictionary = new Dictionary<int, byte>();
+        static Dictionary<int, byte> memWriteDictionary = new Dictionary<int, byte>();
+        static Dictionary<int, byte> memDiffDictionary = new Dictionary<int, byte>(); 
+        // these track the "imagined" external memory space as updated and read by the CPU
+        static Dictionary<int, byte> ioReadDictionary = new Dictionary<int, byte>();
+        static Dictionary<int, byte> ioWriteDictionary = new Dictionary<int, byte>();
+        static Dictionary<int, byte> ioDiffDictionary = new Dictionary<int, byte>();
 
         [STAThread]
         static int Main(string[] args)
@@ -159,29 +167,44 @@ namespace Tracer
                     string traceRecord = sbTraceRecord.ToString(0, sbTraceRecord.Length - 1);
                     string[] traceValuePair = traceRecord.Split(',');
                     string recordType = traceValuePair[0].ToUpperInvariant();
+                    string recordValue = traceValuePair[1].ToUpperInvariant();
                     switch (recordType)
                     {
                         // see https://github.com/zpekic/sys9080/blob/master/debugtracer.vhd
                         case "M1":  // instruction fetch
-                            if (traceDictionary.ContainsKey(traceValuePair[1]))
+                            if (traceDictionary.ContainsKey(recordValue))
                             {
-                                Console.WriteLine(traceDictionary[traceValuePair[1]]);
+                                Console.WriteLine(traceDictionary[recordValue]);
                             }
                             else
                             { 
                                 Console.ForegroundColor = ConsoleColor.Yellow;  // YELLOW for unmatched record
                                 Console.WriteLine(traceRecord);
                             }
-                            if (profilerDictionary.ContainsKey(traceValuePair[1]))
+                            if (profilerDictionary.ContainsKey(recordValue))
                             {   
                                 // increment hit count
-                                profilerDictionary[traceValuePair[1]]++;
+                                profilerDictionary[recordValue]++;
                             }
+                            UpdateDictionary(memReadDictionary, memWriteDictionary, memDiffDictionary, recordValue.Split(' '));
                             break;
                         case "MR":  // read memory (except M1)
+                            UpdateDictionary(memReadDictionary, memWriteDictionary, memDiffDictionary, recordValue.Split(' '));
+                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
+                            Console.WriteLine(traceRecord);
+                            break;
                         case "MW":  // write memory
+                            UpdateDictionary(memWriteDictionary, null, null, recordValue.Split(' '));
+                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
+                            Console.WriteLine(traceRecord);
+                            break;
                         case "IR":  // read port
+                            UpdateDictionary(ioReadDictionary, ioWriteDictionary, ioDiffDictionary, recordValue.Split(' '));
+                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
+                            Console.WriteLine(traceRecord);
+                            break;
                         case "IW":  // write port
+                            UpdateDictionary(ioWriteDictionary, null, null, recordValue.Split(' '));
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
                             break;
@@ -197,6 +220,44 @@ namespace Tracer
                 {
                     sbTraceRecord.Append(c);
                 }
+            }
+        }
+
+        private static void UpdateDictionary(Dictionary<int, byte> dataDictionary, Dictionary<int, byte> checkDictionary, Dictionary<int, byte> diffDictionary, string[] addressDataPair)
+        {
+            Assert(dataDictionary != null, "Missing data dictionary");
+            Assert(checkDictionary == null ? true : (diffDictionary != null), "Missing diff dictionary as check dictionary is specified");
+            Assert(addressDataPair.Length == 2, "Bad address / data record");
+
+            int address = int.Parse(addressDataPair[0], System.Globalization.NumberStyles.HexNumber);
+            Assert((address >= 0) && (address < 65536), "Address out of range");
+
+            int data = int.Parse(addressDataPair[1], System.Globalization.NumberStyles.HexNumber);
+            Assert((data >= 0) && (data < 256), "Data out of range");
+
+            AddOrUpdateEntry(dataDictionary, address, (byte)data);
+
+            // check if expected but let it go
+            if ((checkDictionary != null) && (checkDictionary.ContainsKey(address)))
+            {
+                byte expected = checkDictionary[address];
+
+                if (data != expected)
+                {
+                    AddOrUpdateEntry(diffDictionary, address, expected);
+                }
+            }
+        }
+
+        private static void AddOrUpdateEntry(Dictionary<int, byte> dict, int address, byte data)
+        {
+            if (dict.ContainsKey(address))
+            {
+                dict[address] = data;
+            }
+            else
+            {
+                dict.Add(address, data);
             }
         }
 
@@ -300,6 +361,14 @@ namespace Tracer
             Console.WriteLine($" https://hackaday.io/project/190239-from-bit-slice-to-basic-and-symbolic-tracing");
             Console.WriteLine($" Sources: https://github.com/zpekic/sys9080");
             Console.WriteLine($"----------------------------------------------------------------");
+        }
+
+        private static void Assert(bool condition, string exceptionMessage)
+        {
+            if (!condition)
+            {
+                throw new ApplicationException(exceptionMessage, null);
+            }
         }
     }
 }

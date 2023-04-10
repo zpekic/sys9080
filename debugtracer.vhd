@@ -80,7 +80,7 @@ constant hex_lookup: rom16x8 :=
 );	
 
 signal trace_start, trace_done, trace_clk, trace, trace_enable: std_logic;
-signal reg_match, cbus: std_logic_vector(4 downto 0);
+signal reg_match, cbus, isel: std_logic_vector(4 downto 0);
 signal counter: std_logic_vector(7 downto 0);
 alias chrSel: std_logic_vector(3 downto 0) is counter(7 downto 4);
 alias bitSel: std_logic_vector(3 downto 0) is counter(3 downto 0);
@@ -92,22 +92,24 @@ begin
 
 ready <= not trace;
 cbus <= nM1 & nIOR & nIOW & nMEMR & nMEMW;
+isel <= sel xor "11111";
 
 on_cpu_clk: process(reset, cpu_clk, ABUS, cbus, char)
 begin
 	if (reset = '1') then 
 		trace <= '0';
-		trace_enable <= '1';
-		reg_match <= not sel;
+		trace_enable <= '0';
+		reg_match <= isel;
 	else
 		if (rising_edge(cpu_clk)) then
 			-- update trace enable FF 
 			-- responds to OUT 0x00 (trace off) to OUT 0x01 (trace on)
+			if (load = '1') then
+				reg_match <= isel;
+				trace_enable <= '1';
+			end if;
 			if ((ABUS(7 downto 1) = "0000000") and (cbus(2) = '0')) then
 				trace_enable <= ABUS(0);
-			end if;
-			if (load = '1') then
-				reg_match <= not sel;
 			end if;
 		end if;
 		if (falling_edge(cpu_clk)) then
@@ -147,8 +149,8 @@ with cbus select char_1 <=
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "11110",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "10111",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "11011",
-	--X"00" when others;
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
+	"010" & cbus when others;
+	--STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
 with cbus select char_2 <=
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('1'), 8)) when "01101",
@@ -156,8 +158,8 @@ with cbus select char_2 <=
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "11110",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)) when "10111",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "11011",
-	--X"00" when others;
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
+	"010" & cbus when others;
+	--STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
 with chrSel select hex <=
 	ABUS(15 downto 12) when X"3",	-- A

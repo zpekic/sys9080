@@ -246,7 +246,7 @@ end component;
 signal current_instruction: std_logic_vector(7 downto 0);
 signal instruction_startaddress: std_logic_vector(11 downto 0);
 
-signal ma: std_logic_vector(11 downto 0);		-- microcode address
+signal ma: std_logic_vector(8 downto 0);		-- microcode address
 
 signal u: std_logic_vector(55 downto 0);		-- microcode output 
 signal pl: std_logic_vector(55 downto 0);		-- microcode register
@@ -372,7 +372,7 @@ debug_register(19 downto 16) <= am2901_dbg_sel;
 -- map F register (flags) to LSB of AF
 debug_register(15 downto 0) <= am2901_dbg_val(15 downto 8) & (flag_s & flag_z & '0' & flag_ac & '0' & flag_p & '1' & flag_cy) when (debug_reg = "000") else am2901_dbg_val;
 -- combine current microinstruction with CPU opcode
-debug_microcode <= ma & current_instruction;
+debug_microcode <= "000" & ma & current_instruction;
 
 debug_out <= debug_microcode when (debug_sel = '1') else debug_register; 
 -- if debugging register, feed NOP/OR/ZA to Am2901 instead of one coming from microcode ("pl" fields)
@@ -421,7 +421,8 @@ M1 <= not pl_instregenable;
 		CN => '1', 
 		CLK => CLK,
 		-- Output ports
-		Y	=> ma,
+		Y(11 downto 9) => open,
+		Y(8 downto 0)	=> ma,
 		C4	=> open
 	);
 	
@@ -540,7 +541,7 @@ M1 <= not pl_instregenable;
 
    --- microcode rom ---	
    microcode_rom: rom512x56 Port map ( 
-        address => ma(8 downto 0),
+        address => ma,
         data => u
   );
   

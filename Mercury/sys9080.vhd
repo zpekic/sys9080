@@ -343,7 +343,7 @@ acia0: entity work.uart Port map (
 			ready => ready,			-- freezes CPU when low
 			txd => PMOD_RXD1,			-- output trace (to any TTY of special tracer running on the host
 			load => btn_traceload,	-- load mask register if high
-			sel => sw_tracesel,		-- set mask register: M1 MEMW MEMR IOW IOR
+			sel => sw_tracesel,		-- set mask register: M1 & IOR & IOW & MEMR & MEMW;
 			nM1 => not m1,
 			nIOR => nIORead,
 			nIOW => nIOWrite,
