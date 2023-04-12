@@ -22,6 +22,7 @@ namespace Tracer
         static Dictionary<int, byte> ioReadDictionary = new Dictionary<int, byte>();
         static Dictionary<int, byte> ioWriteDictionary = new Dictionary<int, byte>();
         static Dictionary<int, byte> ioDiffDictionary = new Dictionary<int, byte>();
+        static InspectorForm inspector = null;
 
         [STAThread]
         static int Main(string[] args)
@@ -38,7 +39,7 @@ namespace Tracer
             switch (args.Length)
             {
                 case 0:
-                    sourceFileName = GetInteractiveFile(string.Empty);
+                    sourceFileName = GetInteractiveFile(@"C:\Users\zoltanp\Documents\HexCalc\sys9080\prog\zout");
                     break;
                 case 1:
                     sourceFileName = args[0];
@@ -120,8 +121,10 @@ namespace Tracer
             {
                 comPort.Close();
             }
-            Console.WriteLine($"Waiting for trace on {comPort.PortName} ({comPort.BaudRate},{comPort.DataBits},{comPort.Parity},{comPort.StopBits})");
-            Console.WriteLine($"(Press 'x' to exit, <spacebar> to flip RTS pin)");
+
+            string comInfo = $"{comPort.PortName} ({comPort.BaudRate},{comPort.DataBits},{comPort.Parity},{comPort.StopBits})";
+            Console.WriteLine($"Waiting for trace on {comInfo}");
+            Console.WriteLine($"(Press 'x' to exit, 'i' to show inspector, <spacebar> to flip RTS pin)");
             comPort.DataReceived += Port_DataReceived;
             comPort.Handshake = Handshake.None;
             comPort.RtsEnable = true;
@@ -139,6 +142,20 @@ namespace Tracer
                     case ' ':
                         comPort.RtsEnable = !comPort.RtsEnable;
                         break;
+                    case 'i':
+                    case 'I':
+                        if (inspector == null)
+                        {
+                            inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}");
+
+                            System.Threading.Thread formShower = new System.Threading.Thread(ShowForm);
+                            formShower.Start(inspector);
+                        }
+                        else
+                        {
+                            inspector.BringToFront();
+                        }
+                        break;
                     case 'x':
                     case 'X':
                         // leave it in enabled state 
@@ -151,6 +168,12 @@ namespace Tracer
                 }
             }
             comPort.Close();
+
+            if (inspector != null)
+            {
+                inspector.Dispose();
+                inspector = null;
+            }
 
             return 0;
         }
@@ -306,13 +329,13 @@ namespace Tracer
             }
         }
 
-        private static string GetInteractiveFile(string fileName)
+        private static string GetInteractiveFile(string initialDirectory)
         {
             using (OpenFileDialog openFileDialog = new OpenFileDialog())
             {
-                openFileDialog.InitialDirectory = Directory.GetCurrentDirectory();
+                openFileDialog.InitialDirectory = string.IsNullOrEmpty(initialDirectory) ? Directory.GetCurrentDirectory() : initialDirectory;
                 openFileDialog.Title = "Select assembly listing file for trace matching";
-                openFileDialog.FileName = fileName;
+                //openFileDialog.FileName = fileName;
                 openFileDialog.Filter = "LST files (*.lst)|*.lst|All files (*.*)|*.*";
                 openFileDialog.FilterIndex = 0;
                 openFileDialog.RestoreDirectory = true;
@@ -361,6 +384,20 @@ namespace Tracer
             Console.WriteLine($" https://hackaday.io/project/190239-from-bit-slice-to-basic-and-symbolic-tracing");
             Console.WriteLine($" Sources: https://github.com/zpekic/sys9080");
             Console.WriteLine($"----------------------------------------------------------------");
+        }
+
+        private static void ShowForm(object form)
+        {
+            Application.ApplicationExit += Application_ApplicationExit;
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run((InspectorForm) form);
+        }
+
+        private static void Application_ApplicationExit(object sender, EventArgs e)
+        {
+            inspector.Dispose();
+            inspector = null;
         }
 
         private static void Assert(bool condition, string exceptionMessage)
