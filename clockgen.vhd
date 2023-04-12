@@ -46,12 +46,6 @@ end clockgen;
 
 architecture Behavioral of clockgen is
 
---component sn74hc4040 is
---    Port ( clock : in  STD_LOGIC;
---           reset : in  STD_LOGIC;
---           q : out  STD_LOGIC_VECTOR(11 downto 0));
---end component;
-
 constant clk_board: integer := 50000000;	-- 50MHz
 
 type prescale_lookup is array (0 to 7) of integer range 0 to 65535;

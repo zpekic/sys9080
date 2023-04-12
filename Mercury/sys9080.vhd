@@ -37,8 +37,27 @@ entity sys9080 is
 				-- Master reset button on Mercury board
 				USR_BTN: in std_logic; 
 				-- Switches on baseboard
+				-- SW(7 downto 3) ... load trace register at RESET or BTN(3) press
+				-- SW(7) ... M1
+				-- SW(6) ... IOR
+				-- SW(5) ... IOW
+				-- SW(4) ... MEMR
+				-- SW(3) ... MEMW
+				-- SW(2 downto 0) ... CPU clock frequency
+				-- 000	... single step (press BTN(0))
+				-- 001	... 4Hz
+				-- 010	... 16Hz
+				-- 011	... 64Hz
+				-- 100	... 1.5625MHz
+				-- 101	... 3.125MHz (closest to 8080A-1)
+				-- 110	... 6.25MHz
+				-- 111	... 25MHz
 				SW: in std_logic_vector(7 downto 0); 
 				-- Push buttons on baseboard
+				-- BTN(0) ... press to single step when SW(2 downto 0) is 000
+				-- BTN(1) ... not used
+				-- BTN(2) ... not used
+				-- BTN(3) ... press to load trace match register at any time
 				BTN: in std_logic_vector(3 downto 0); 
 				-- Stereo audio output on baseboard
 				AUDIO_OUT_L, AUDIO_OUT_R: out std_logic;
@@ -64,7 +83,6 @@ entity sys9080 is
 				--ADC_CSN: out std_logic;
 				--PMOD interface
 				PMOD: inout std_logic_vector(7 downto 0)
-
           );
 end sys9080;
 
@@ -158,10 +176,6 @@ begin
 
 	 -- DISPLAY
 	 LED <= led_bus(23 downto 20);
-	 --LED(0) <= PMOD_RTS0;
-	 --LED(1) <= PMOD_CTS0;
-	 --LED(2) <= PMOD_RTS1;
-	 --LED(3) <= PMOD_CTS1;
 	 
     led4x7: entity work.fourdigitsevensegled port map ( 
 			  -- inputs

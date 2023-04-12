@@ -3,7 +3,7 @@
 -- Engineer: zpekic@hotmail.com
 -- 
 -- Create Date:    21:42:37 10/25/2017 
--- Design Name: 
+-- Design Name: 	 https://hackaday.io/project/190239-from-bit-slice-to-basic-and-symbolic-tracing
 -- Module Name:    Am9080a - Structural
 -- Project Name: 	 Sys9080
 -- Target Devices: https://www.micro-nova.com/mercury
@@ -297,7 +297,6 @@ alias pl_instregenable: std_logic is pl(55);
 
 signal sequence: std_logic_vector(4 downto 0); -- sequencer output (U14)
 
---signal u21_pin24, u22_pin24: std_logic;
 signal u62_pin2, u62_pin4, u62_pin6, u62_pin10, u62_pin12: std_logic;
 signal u63_pin7, u63_pin9: std_logic;
 signal u64_pin4: std_logic;
