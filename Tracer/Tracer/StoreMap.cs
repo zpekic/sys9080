@@ -50,7 +50,7 @@ namespace Tracer
         {
             Address = i.ToString("X4");
             Ascii = "????????????????";
-            Descriptor = "????????????????";
+            Descriptor = "A????????????????H";
             x0 = "??";
             x1 = "??";
             x2 = "??";
@@ -70,10 +70,27 @@ namespace Tracer
         }
     }
 
+    public class StoreUpdatedEventArgs : EventArgs
+    {
+        public int Address;
+        public byte Data;
+        public char Descriptor;
+
+        public StoreUpdatedEventArgs(int address, byte data, char descriptor)
+        {
+            this.Address = address;
+            this.Data = data;
+            this.Descriptor = descriptor;
+        }
+    }
+
     class StoreMap<T>
     {
         public readonly int Size = -1;
         public readonly bool ShowAscii = false;
+
+        public event EventHandler<StoreUpdatedEventArgs> StoreUpdatedEvent;
+        
         private List<StoreMapColumn> columns = new List<StoreMapColumn>();
         // these track the "imagined" external memory / IO space as seen by the CPU
         private Dictionary<int, byte> readDictionary = new Dictionary<int, byte>();
@@ -128,7 +145,7 @@ namespace Tracer
             char asciiChar;
             char descriptorChar;
             StringBuilder sbAscii = new StringBuilder();
-            StringBuilder sbDescriptor = new StringBuilder();
+            StringBuilder sbDescriptor = new StringBuilder("A");    // have a description for address column too
 
             for (int i = 0; i < 16; i++)
             {
@@ -199,6 +216,8 @@ namespace Tracer
                 }
             }
 
+            sbDescriptor.Append('H');   // ASCII column is for 'H'umans :-)
+
             smr.Ascii = sbAscii.ToString();
             smr.Descriptor = sbDescriptor.ToString();
 
@@ -217,7 +236,7 @@ namespace Tracer
                 // TODO: are we executing self-modified code?
                 writeDictionary.Remove(address);
             }
-            AddOrUpdateEntry(fetchDictionary, address, data);
+            AddOrUpdateEntry(fetchDictionary, address, data, 'F');
         }
 
         public void UpdateRead(int address, byte data)
@@ -232,7 +251,7 @@ namespace Tracer
                 // TODO: check if same, warning otherwise
                 writeDictionary.Remove(address);
             }
-            AddOrUpdateEntry(readDictionary, address, data);
+            AddOrUpdateEntry(readDictionary, address, data, 'R');
         }
 
         public void UpdateWrite(int address, byte data)
@@ -246,41 +265,46 @@ namespace Tracer
                 // TODO: are we updating code?
                 fetchDictionary.Remove(address);
             }
-            AddOrUpdateEntry(writeDictionary, address, data);
+            AddOrUpdateEntry(writeDictionary, address, data, 'W');
         }
 
-        private static void AddOrUpdateEntry(Dictionary<int, byte> dict, int address, byte data)
+        private void AddOrUpdateEntry(Dictionary<int, byte> dict, int address, byte data, char descriptor)
         {
+            EventHandler<StoreUpdatedEventArgs> raiseEvent = StoreUpdatedEvent;
+            StoreUpdatedEventArgs eventArgs = null;
+
             if (dict.ContainsKey(address))
             {
                 if (dict[address] != data)
                 {
                     dict[address] = data;
-                    // TODO: raise event
+                    eventArgs = new StoreUpdatedEventArgs(address, data, descriptor);
                 }
             }
             else
             {
                 dict.Add(address, data);
-                // TODO: raise event
+                eventArgs = new StoreUpdatedEventArgs(address, data, descriptor);
+            }
+
+            // raise event if something changed and we have a subscriber
+            if ((raiseEvent != null) & (eventArgs != null))
+            {
+                raiseEvent(this, eventArgs);
             }
         }
 
         private bool GetDataFromDictionary(Dictionary<int, byte> dict, int address, char descriptor, out string byteValue, out char asciiChar, out char descriptorChar)
         {
             byteValue = "??";
-            asciiChar = '?';
+            asciiChar = '.';
             descriptorChar = '?';
 
             if (dict.ContainsKey(address))
             {
                 descriptorChar = descriptor;
                 byte data = dict[address];
-                if ((data < 32) || (data > 126))
-                {
-                    asciiChar = '.';
-                }
-                else
+                if ((data > 31) && (data < 127))
                 {
                     asciiChar = Convert.ToChar(data);
                 }

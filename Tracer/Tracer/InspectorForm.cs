@@ -84,34 +84,15 @@ namespace Tracer
             this.dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
 
             // Set the row count, including the row for new records.
-            this.dataGridView1.RowCount = memoryMap.Size / 16;
+            this.dataGridView1.RowCount = (memoryMap.Size >> 4);
 
-            // populate rows
-            /*
-            for (int i = 0; i < this.dataGridView1.RowCount; i++)
-            {
-                StoreMapRow smr = memoryMap.GetStoreMapRow(i << 4);
+            // subscribe to store map changes!
+            this.memoryMap.StoreUpdatedEvent += MemoryMap_StoreUpdatedEvent;
+        }
 
-                this.dataGridView1.Rows.Add(smr);
-                for (int j = 0; j < 16; j++)
-                {
-                    switch (smr.Descriptor[j])
-                    {
-                        case 'F':
-                            this.dataGridView1.Rows[i].Cells[j + 1].Style.BackColor = Color.Aqua;
-                            break;
-                        case 'R':
-                            this.dataGridView1.Rows[i].Cells[j + 1].Style.BackColor = Color.Blue;
-                            break;
-                        case 'W':
-                            this.dataGridView1.Rows[i].Cells[j + 1].Style.BackColor = Color.Bisque;
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-            */
+        private void MemoryMap_StoreUpdatedEvent(object sender, StoreUpdatedEventArgs e)
+        {
+            this.dataGridView1.InvalidateRow(e.Address >> 4);
         }
 
         private void dataGridView1_CellValueNeeded(object sender,
@@ -129,13 +110,37 @@ namespace Tracer
             }
             else
             {
-//                smrTmp = (StoreMapRow) memoryMap[e.RowIndex];
                 smrTmp = memoryMap.GetStoreMapRow(e.RowIndex << 4);
             }
 
             // Set the cell value to paint using the Customer object retrieved.
             // get property name by reflection
-            e.Value = (string) smrTmp[this.dataGridView1.Columns[e.ColumnIndex].Name];
+            e.Value = (string)smrTmp[this.dataGridView1.Columns[e.ColumnIndex].Name];
+            PaintCell(e.RowIndex, e.ColumnIndex, smrTmp.Descriptor[e.ColumnIndex]);
+        }
+
+        private void PaintCell(int row, int col, char descriptor)
+        { 
+            switch (descriptor)
+            {
+                case 'F':
+                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.Aqua;
+                    break;
+                case 'R':
+                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.Blue;
+                    break;
+                case 'W':
+                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.Bisque;
+                    break;
+                case 'A':
+                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.Pink;
+                    break;
+                case 'H':
+                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.CornflowerBlue;
+                    break;
+                default:
+                    break;
+            }
         }
 
         private void dataGridView1_CellValuePushed(object sender,

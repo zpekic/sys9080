@@ -9,7 +9,9 @@
          <ClosedNodesVersion>2</ClosedNodesVersion>
          <ClosedNode>/ACIA - Behavioral C:|Users|zoltanp|Documents|HexCalc|sys9080|acia.vhd</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|sys9080|Mercury|sys9080.vhd/acia0 - ACIA - Behavioral</ClosedNode>
+         <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|sys9080|Mercury|sys9080.vhd/acia0 - uart - Behavioral</ClosedNode>
          <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|sys9080|Mercury|sys9080.vhd/acia1 - uart - Behavioral</ClosedNode>
+         <ClosedNode>/sys9080 - Structural C:|Users|zoltanp|Documents|HexCalc|sys9080|Mercury|sys9080.vhd/ram - simpleram - structural</ClosedNode>
       </ClosedNodes>
       <SelectedItems>
          <SelectedItem>sys9080 - Structural (C:/Users/zoltanp/Documents/HexCalc/sys9080/Mercury/sys9080.vhd)</SelectedItem>
@@ -31,13 +33,13 @@
          <ClosedNode>User Constraints</ClosedNode>
       </ClosedNodes>
       <SelectedItems>
-         <SelectedItem>Design Summary/Reports</SelectedItem>
+         <SelectedItem>Generate Programming File</SelectedItem>
       </SelectedItems>
-      <ScrollbarPosition orientation="vertical" >0</ScrollbarPosition>
+      <ScrollbarPosition orientation="vertical" >4</ScrollbarPosition>
       <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
-      <ViewHeaderState orientation="horizontal" >000000ff00000000000000010000000100000000000000000000000000000000000000000000000132000000010000000100000000000000000000000064ffffffff000000810000000000000001000001320000000100000000</ViewHeaderState>
+      <ViewHeaderState orientation="horizontal" >000000ff0000000000000001000000010000000000000000000000000000000000000000000000014a000000010000000100000000000000000000000064ffffffff0000008100000000000000010000014a0000000100000000</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
-      <CurrentItem>Design Summary/Reports</CurrentItem>
+      <CurrentItem>Generate Programming File</CurrentItem>
    </ItemView>
    <ItemView guiview="File" >
       <ClosedNodes>
@@ -46,7 +48,7 @@
       <SelectedItems>
          <SelectedItem>C:\Users\zoltanp\Documents\HexCalc\sys9080\sys9080_package.vhd</SelectedItem>
       </SelectedItems>
-      <ScrollbarPosition orientation="vertical" >0</ScrollbarPosition>
+      <ScrollbarPosition orientation="vertical" >4</ScrollbarPosition>
       <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
       <ViewHeaderState orientation="horizontal" >000000ff00000000000000010000000000000000010000000000000000000000000000000000000365000000040101000100000000000000000000000064ffffffff000000810000000000000004000001ce0000000100000000000000d700000001000000000000006600000001000000000000005a0000000100000000</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
@@ -55,12 +57,13 @@
    <ItemView guiview="Library" >
       <ClosedNodes>
          <ClosedNodesVersion>1</ClosedNodesVersion>
-         <ClosedNode>work</ClosedNode>
       </ClosedNodes>
-      <SelectedItems/>
+      <SelectedItems>
+         <SelectedItem>work</SelectedItem>
+      </SelectedItems>
       <ScrollbarPosition orientation="vertical" >0</ScrollbarPosition>
       <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
-      <ViewHeaderState orientation="horizontal" >000000ff00000000000000010000000000000000010000000000000000000000000000000000000109000000010001000100000000000000000000000064ffffffff000000810000000000000001000001090000000100000000</ViewHeaderState>
+      <ViewHeaderState orientation="horizontal" >000000ff0000000000000001000000000000000001000000000000000000000000000000000000014a000000010001000100000000000000000000000064ffffffff0000008100000000000000010000014a0000000100000000</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
       <CurrentItem>work</CurrentItem>
    </ItemView>
@@ -69,14 +72,14 @@
          <ClosedNodesVersion>1</ClosedNodesVersion>
       </ClosedNodes>
       <SelectedItems>
-         <SelectedItem></SelectedItem>
+         <SelectedItem/>
       </SelectedItems>
       <ScrollbarPosition orientation="vertical" >0</ScrollbarPosition>
       <ScrollbarPosition orientation="horizontal" >0</ScrollbarPosition>
       <ViewHeaderState orientation="horizontal" >000000ff00000000000000010000000100000000000000000000000000000000000000000000000152000000010000000100000000000000000000000064ffffffff000000810000000000000001000001520000000100000000</ViewHeaderState>
       <UserChangedColumnWidths orientation="horizontal" >false</UserChangedColumnWidths>
-      <CurrentItem></CurrentItem>
+      <CurrentItem/>
    </ItemView>
-   <SourceProcessView>000000ff00000000000000020000011b0000011b01000000050100000002</SourceProcessView>
+   <SourceProcessView>000000ff00000000000000020000013b0000008301000000050100000002</SourceProcessView>
    <CurrentView>Implementation</CurrentView>
 </Project>
