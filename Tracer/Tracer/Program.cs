@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.IO.Ports;
+using System.Globalization;
 using System.Windows.Forms;
 
 namespace Tracer
@@ -14,15 +15,13 @@ namespace Tracer
         static SerialPort comPort;
         static Dictionary<string, string> traceDictionary = new Dictionary<string, string>();
         static Dictionary<string, int> profilerDictionary = new Dictionary<string, int>();
-        // these track the "imagined" external memory space as updated and read by the CPU
-        static Dictionary<int, byte> memReadDictionary = new Dictionary<int, byte>();
-        static Dictionary<int, byte> memWriteDictionary = new Dictionary<int, byte>();
-        static Dictionary<int, byte> memDiffDictionary = new Dictionary<int, byte>(); 
-        // these track the "imagined" external memory space as updated and read by the CPU
-        static Dictionary<int, byte> ioReadDictionary = new Dictionary<int, byte>();
-        static Dictionary<int, byte> ioWriteDictionary = new Dictionary<int, byte>();
-        static Dictionary<int, byte> ioDiffDictionary = new Dictionary<int, byte>();
+        static StoreMap<StoreMapRow> memoryMap, ioMap;
         static InspectorForm inspector = null;
+
+        // these track the "imagined" external memory space as updated and read by the CPU
+        private Dictionary<int, byte> ioReadDictionary = new Dictionary<int, byte>();
+        private Dictionary<int, byte> ioWriteDictionary = new Dictionary<int, byte>();
+        private Dictionary<int, byte> ioDiffDictionary = new Dictionary<int, byte>();
 
         [STAThread]
         static int Main(string[] args)
@@ -32,7 +31,7 @@ namespace Tracer
             string comPortName = "COM5";
             string rawLine;
             int dummy;
-
+            
             PrintBanner();
 
             // args: <filename> COM<n>
@@ -130,6 +129,10 @@ namespace Tracer
             comPort.RtsEnable = true;
             comPort.Open();
 
+            // create maps for memory and I/O
+            memoryMap = new StoreMap<StoreMapRow>(1 << 16, true);
+            ioMap = new StoreMap<StoreMapRow>(1 << 8, false);
+
             ConsoleKeyInfo key;
             bool exit = false;
 
@@ -146,7 +149,7 @@ namespace Tracer
                     case 'I':
                         if (inspector == null)
                         {
-                            inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}");
+                            inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap);
 
                             System.Threading.Thread formShower = new System.Threading.Thread(ShowForm);
                             formShower.Start(inspector);
@@ -180,6 +183,8 @@ namespace Tracer
 
         static void Port_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
         {
+            int address;
+            byte data;
             string received = comPort.ReadExisting();
 
             foreach (char c in received)
@@ -195,6 +200,10 @@ namespace Tracer
                     {
                         // see https://github.com/zpekic/sys9080/blob/master/debugtracer.vhd
                         case "M1":  // instruction fetch
+                            if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data))
+                            {
+                                memoryMap.UpdateFetch(address, data);
+                            }
                             if (traceDictionary.ContainsKey(recordValue))
                             {
                                 Console.WriteLine(traceDictionary[recordValue]);
@@ -209,25 +218,38 @@ namespace Tracer
                                 // increment hit count
                                 profilerDictionary[recordValue]++;
                             }
-                            UpdateDictionary(memReadDictionary, memWriteDictionary, memDiffDictionary, recordValue.Split(' '));
                             break;
                         case "MR":  // read memory (except M1)
-                            UpdateDictionary(memReadDictionary, memWriteDictionary, memDiffDictionary, recordValue.Split(' '));
+                            if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data))
+                            {
+                                memoryMap.UpdateRead(address, data);
+                            }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
                             break;
                         case "MW":  // write memory
-                            UpdateDictionary(memWriteDictionary, null, null, recordValue.Split(' '));
+                            if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data))
+                            {
+                                memoryMap.UpdateWrite(address, data);
+                            }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
                             break;
                         case "IR":  // read port
-                            UpdateDictionary(ioReadDictionary, ioWriteDictionary, ioDiffDictionary, recordValue.Split(' '));
+                            if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data))
+                            {
+                                // TODO: coerce 16-bit address to 8-bit??
+                                ioMap.UpdateRead(address, data);
+                            }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
                             break;
                         case "IW":  // write port
-                            UpdateDictionary(ioWriteDictionary, null, null, recordValue.Split(' '));
+                            if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data))
+                            {
+                                // TODO: coerce 16-bit address to 8-bit??
+                                ioMap.UpdateWrite(address, data);
+                            }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
                             break;
@@ -246,43 +268,51 @@ namespace Tracer
             }
         }
 
-        private static void UpdateDictionary(Dictionary<int, byte> dataDictionary, Dictionary<int, byte> checkDictionary, Dictionary<int, byte> diffDictionary, string[] addressDataPair)
+
+        private static bool CheckRecipientAndRecord(StoreMap<StoreMapRow> sm, string[] addressDataPair, out int address, out byte data)
         {
-            Assert(dataDictionary != null, "Missing data dictionary");
-            Assert(checkDictionary == null ? true : (diffDictionary != null), "Missing diff dictionary as check dictionary is specified");
-            Assert(addressDataPair.Length == 2, "Bad address / data record");
+            address = 0;
+            data = 0;
 
-            int address = int.Parse(addressDataPair[0], System.Globalization.NumberStyles.HexNumber);
-            Assert((address >= 0) && (address < 65536), "Address out of range");
-
-            int data = int.Parse(addressDataPair[1], System.Globalization.NumberStyles.HexNumber);
-            Assert((data >= 0) && (data < 256), "Data out of range");
-
-            AddOrUpdateEntry(dataDictionary, address, (byte)data);
-
-            // check if expected but let it go
-            if ((checkDictionary != null) && (checkDictionary.ContainsKey(address)))
+            if (sm == null)
             {
-                byte expected = checkDictionary[address];
-
-                if (data != expected)
-                {
-                    AddOrUpdateEntry(diffDictionary, address, expected);
-                }
-            }
-        }
-
-        private static void AddOrUpdateEntry(Dictionary<int, byte> dict, int address, byte data)
-        {
-            if (dict.ContainsKey(address))
-            {
-                dict[address] = data;
+                return false;
             }
             else
-            {
-                dict.Add(address, data);
+            { 
+                if (addressDataPair != null && addressDataPair.Length == 2)
+                {
+                    if (int.TryParse(addressDataPair[0], System.Globalization.NumberStyles.HexNumber, CultureInfo.InvariantCulture, out address) && (address >=0) && (address < (1 << 16)))
+                    {
+                        int d;
+
+                        if (int.TryParse(addressDataPair[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out d) && (d >= 0) && (d < (1 << 8)))
+                        {
+                            data = (byte)d;
+                            return true;
+                        }
+                        else
+                        {
+                            Console.ForegroundColor = ConsoleColor.Yellow;     // YELLOW for recoverable mess
+                            Console.WriteLine("Bad data in trace record from target device");
+                        }
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;     // YELLOW for recoverable mess
+                        Console.WriteLine("Bad address in trace record from target device");
+                    }
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;     // YELLOW for recoverable mess
+                    Console.WriteLine("Malformed trace record from target device");
+                }
             }
+
+            return false;
         }
+
 
         private static void GenerateProfilerReport()
         {
@@ -396,8 +426,11 @@ namespace Tracer
 
         private static void Application_ApplicationExit(object sender, EventArgs e)
         {
-            inspector.Dispose();
-            inspector = null;
+            if (inspector != null)
+            {
+                inspector.Dispose();
+                inspector = null;
+            }
         }
 
         private static void Assert(bool condition, string exceptionMessage)

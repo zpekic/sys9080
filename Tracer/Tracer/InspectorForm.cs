@@ -13,15 +13,13 @@ namespace Tracer
 {
     public partial class InspectorForm : Form
     {
+        private StoreMap<StoreMapRow> memoryMap; 
+        private StoreMap<StoreMapRow> ioMap;
         private string codeFile = string.Empty;
         private DataGridView dataGridView1 = new DataGridView();
 
-        // Declare an ArrayList to serve as the data store.
-        private System.Collections.ArrayList customers =
-            new System.Collections.ArrayList();
-
         // Declare a Customer object to store data for a row being edited.
-        private Customer customerInEdit;
+        private StoreMapRow smrInEdit;
 
         // Declare a variable to store the index of a row being edited.
         // A value of -1 indicates that there is no row currently in edit.
@@ -31,7 +29,7 @@ namespace Tracer
         // Set this value to false to use cell-level commit scope.
         private bool rowScopeCommit = true;
 
-        public InspectorForm(string codeFile, string caption)
+        internal InspectorForm(string codeFile, string caption, StoreMap<StoreMapRow> memoryMap, StoreMap<StoreMapRow> ioMap)
         {
             InitializeComponent();
 
@@ -41,6 +39,8 @@ namespace Tracer
             this.Text = caption;
             this.tabPageMem.Controls.Add(dataGridView1);
             this.codeFile = codeFile;
+            this.memoryMap = memoryMap;
+            this.ioMap = ioMap;
         }
 
         private void InspectorForm_Load(object sender, EventArgs e)
@@ -74,29 +74,44 @@ namespace Tracer
                 DataGridViewRowCancelEventHandler(dataGridView1_UserDeletingRow);
 
             // Add columns to the DataGridView.
-            DataGridViewTextBoxColumn companyNameColumn = new
-                DataGridViewTextBoxColumn();
-            companyNameColumn.HeaderText = "Company Name";
-            companyNameColumn.Name = "Company Name";
-            DataGridViewTextBoxColumn contactNameColumn = new
-                DataGridViewTextBoxColumn();
-            contactNameColumn.HeaderText = "Contact Name";
-            contactNameColumn.Name = "Contact Name";
-            this.dataGridView1.Columns.Add(companyNameColumn);
-            this.dataGridView1.Columns.Add(contactNameColumn);
-            this.dataGridView1.AutoSizeColumnsMode =
-                DataGridViewAutoSizeColumnsMode.DisplayedCells;
-
-            // Add some sample entries to the data store.
-            this.customers.Add(new Customer(
-                "Bon app'", "Laurence Lebihan"));
-            this.customers.Add(new Customer(
-                "Bottom-Dollar Markets", "Elizabeth Lincoln"));
-            this.customers.Add(new Customer(
-                "B's Beverages", "Victoria Ashworth"));
+            foreach (StoreMapColumn smc in memoryMap.Columns)
+            {
+                DataGridViewTextBoxColumn tbc = new DataGridViewTextBoxColumn();
+                tbc.HeaderText = smc.Text;
+                tbc.Name = smc.Name;
+                this.dataGridView1.Columns.Add(tbc);
+            }
+            this.dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
 
             // Set the row count, including the row for new records.
-            this.dataGridView1.RowCount = 4;
+            this.dataGridView1.RowCount = memoryMap.Size / 16;
+
+            // populate rows
+            /*
+            for (int i = 0; i < this.dataGridView1.RowCount; i++)
+            {
+                StoreMapRow smr = memoryMap.GetStoreMapRow(i << 4);
+
+                this.dataGridView1.Rows.Add(smr);
+                for (int j = 0; j < 16; j++)
+                {
+                    switch (smr.Descriptor[j])
+                    {
+                        case 'F':
+                            this.dataGridView1.Rows[i].Cells[j + 1].Style.BackColor = Color.Aqua;
+                            break;
+                        case 'R':
+                            this.dataGridView1.Rows[i].Cells[j + 1].Style.BackColor = Color.Blue;
+                            break;
+                        case 'W':
+                            this.dataGridView1.Rows[i].Cells[j + 1].Style.BackColor = Color.Bisque;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+            */
         }
 
         private void dataGridView1_CellValueNeeded(object sender,
@@ -105,63 +120,46 @@ namespace Tracer
             // If this is the row for new records, no values are needed.
             if (e.RowIndex == this.dataGridView1.RowCount - 1) return;
 
-            Customer customerTmp = null;
+            StoreMapRow smrTmp = new StoreMapRow(0);
 
             // Store a reference to the Customer object for the row being painted.
             if (e.RowIndex == rowInEdit)
             {
-                customerTmp = this.customerInEdit;
+                smrTmp = this.smrInEdit;
             }
             else
             {
-                customerTmp = (Customer)this.customers[e.RowIndex];
+//                smrTmp = (StoreMapRow) memoryMap[e.RowIndex];
+                smrTmp = memoryMap.GetStoreMapRow(e.RowIndex << 4);
             }
 
             // Set the cell value to paint using the Customer object retrieved.
-            switch (this.dataGridView1.Columns[e.ColumnIndex].Name)
-            {
-                case "Company Name":
-                    e.Value = customerTmp.CompanyName;
-                    break;
-
-                case "Contact Name":
-                    e.Value = customerTmp.ContactName;
-                    break;
-            }
+            // get property name by reflection
+            e.Value = (string) smrTmp[this.dataGridView1.Columns[e.ColumnIndex].Name];
         }
 
         private void dataGridView1_CellValuePushed(object sender,
             System.Windows.Forms.DataGridViewCellValueEventArgs e)
         {
-            Customer customerTmp = null;
+            StoreMapRow smrTmp = new StoreMapRow(0);
 
-            // Store a reference to the Customer object for the row being edited.
-            if (e.RowIndex < this.customers.Count)
-            {
-                // If the user is editing a new row, create a new Customer object.
-                this.customerInEdit = new Customer(
-                    ((Customer)this.customers[e.RowIndex]).CompanyName,
-                    ((Customer)this.customers[e.RowIndex]).ContactName);
-                customerTmp = this.customerInEdit;
-                this.rowInEdit = e.RowIndex;
-            }
-            else
-            {
-                customerTmp = this.customerInEdit;
-            }
+            //// Store a reference to the Customer object for the row being edited.
+            //if (e.RowIndex < this.customers.Count)
+            //{
+            //    // If the user is editing a new row, create a new Customer object.
+            //    this.smrInEdit = new StoreMapRow(0);
+            //    smrTmp = this.smrInEdit;
+            //    this.rowInEdit = e.RowIndex;
+            //}
+            //else
+            //{
+            //    smrTmp = this.smrInEdit;
+            //}
 
-            // Set the appropriate Customer property to the cell value entered.
-            String newValue = e.Value as String;
-            switch (this.dataGridView1.Columns[e.ColumnIndex].Name)
-            {
-                case "Company Name":
-                    customerTmp.CompanyName = newValue;
-                    break;
-
-                case "Contact Name":
-                    customerTmp.ContactName = newValue;
-                    break;
-            }
+            //// Set the appropriate Customer property to the cell value entered.
+            //String newValue = e.Value as String;
+            //// set property name by reflection
+            //smrTmp[this.dataGridView1.Columns[e.ColumnIndex].Name] = newValue;
         }
 
         private void dataGridView1_NewRowNeeded(object sender,
@@ -169,7 +167,7 @@ namespace Tracer
         {
             // Create a new Customer object when the user edits
             // the row for new records.
-            this.customerInEdit = new Customer();
+            this.smrInEdit = new StoreMapRow(0);
             this.rowInEdit = this.dataGridView1.Rows.Count - 1;
         }
 
@@ -178,27 +176,27 @@ namespace Tracer
         {
             // Save row changes if any were made and release the edited
             // Customer object if there is one.
-            if (e.RowIndex >= this.customers.Count &&
-                e.RowIndex != this.dataGridView1.Rows.Count - 1)
-            {
-                // Add the new Customer object to the data store.
-                this.customers.Add(this.customerInEdit);
-                this.customerInEdit = null;
-                this.rowInEdit = -1;
-            }
-            else if (this.customerInEdit != null &&
-                e.RowIndex < this.customers.Count)
-            {
-                // Save the modified Customer object in the data store.
-                this.customers[e.RowIndex] = this.customerInEdit;
-                this.customerInEdit = null;
-                this.rowInEdit = -1;
-            }
-            else if (this.dataGridView1.ContainsFocus)
-            {
-                this.customerInEdit = null;
-                this.rowInEdit = -1;
-            }
+            //if (e.RowIndex >= this.customers.Count &&
+            //    e.RowIndex != this.dataGridView1.Rows.Count - 1)
+            //{
+            //    // Add the new Customer object to the data store.
+            //    this.customers.Add(this.customerInEdit);
+            //    this.customerInEdit = null;
+            //    this.rowInEdit = -1;
+            //}
+            //else if (this.customerInEdit != null &&
+            //    e.RowIndex < this.customers.Count)
+            //{
+            //    // Save the modified Customer object in the data store.
+            //    this.customers[e.RowIndex] = this.customerInEdit;
+            //    this.customerInEdit = null;
+            //    this.rowInEdit = -1;
+            //}
+            //else if (this.dataGridView1.ContainsFocus)
+            //{
+            //    this.customerInEdit = null;
+            //    this.rowInEdit = -1;
+            //}
         }
 
         private void dataGridView1_RowDirtyStateNeeded(object sender,
@@ -215,80 +213,39 @@ namespace Tracer
         private void dataGridView1_CancelRowEdit(object sender,
             System.Windows.Forms.QuestionEventArgs e)
         {
-            if (this.rowInEdit == this.dataGridView1.Rows.Count - 2 &&
-                this.rowInEdit == this.customers.Count)
-            {
-                // If the user has canceled the edit of a newly created row,
-                // replace the corresponding Customer object with a new, empty one.
-                this.customerInEdit = new Customer();
-            }
-            else
-            {
-                // If the user has canceled the edit of an existing row,
-                // release the corresponding Customer object.
-                this.customerInEdit = null;
-                this.rowInEdit = -1;
-            }
+            //if (this.rowInEdit == this.dataGridView1.Rows.Count - 2 &&
+            //    this.rowInEdit == this.customers.Count)
+            //{
+            //    // If the user has canceled the edit of a newly created row,
+            //    // replace the corresponding Customer object with a new, empty one.
+            //    this.smrInEdit = new StoreMapRow(0);
+            //}
+            //else
+            //{
+            //    // If the user has canceled the edit of an existing row,
+            //    // release the corresponding Customer object.
+            //    this.smrInEdit = new StoreMapRow(0);
+            //    this.rowInEdit = -1;
+            //}
         }
 
         private void dataGridView1_UserDeletingRow(object sender,
             System.Windows.Forms.DataGridViewRowCancelEventArgs e)
         {
-            if (e.Row.Index < this.customers.Count)
-            {
-                // If the user has deleted an existing row, remove the
-                // corresponding Customer object from the data store.
-                this.customers.RemoveAt(e.Row.Index);
-            }
+            //if (e.Row.Index < this.customers.Count)
+            //{
+            //    // If the user has deleted an existing row, remove the
+            //    // corresponding Customer object from the data store.
+            //    this.customers.RemoveAt(e.Row.Index);
+            //}
 
-            if (e.Row.Index == this.rowInEdit)
-            {
-                // If the user has deleted a newly created row, release
-                // the corresponding Customer object.
-                this.rowInEdit = -1;
-                this.customerInEdit = null;
-            }
-        }
-    }
-
-    public class Customer
-    {
-        private String companyNameValue;
-        private String contactNameValue;
-
-        public Customer()
-        {
-            // Leave fields empty.
-        }
-
-        public Customer(String companyName, String contactName)
-        {
-            companyNameValue = companyName;
-            contactNameValue = contactName;
-        }
-
-        public String CompanyName
-        {
-            get
-            {
-                return companyNameValue;
-            }
-            set
-            {
-                companyNameValue = value;
-            }
-        }
-
-        public String ContactName
-        {
-            get
-            {
-                return contactNameValue;
-            }
-            set
-            {
-                contactNameValue = value;
-            }
+            //if (e.Row.Index == this.rowInEdit)
+            //{
+            //    // If the user has deleted a newly created row, release
+            //    // the corresponding Customer object.
+            //    this.rowInEdit = -1;
+            //    this.smrInEdit = new StoreMapRow(0);
+            //}
         }
     }
 }
