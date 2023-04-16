@@ -17,13 +17,15 @@ namespace Tracer
         private StoreMap<StoreMapRow> ioMap;
         private string codeFile = string.Empty;
         private DataGridView dataGridView1 = new DataGridView();
+        private DataGridView dataGridView2 = new DataGridView();
 
-        // Declare a Customer object to store data for a row being edited.
-        private StoreMapRow smrInEdit;
+        // Declare store map rows to store data for a row being edited (not used!)
+        private StoreMapRow memSMRInEdit, ioSMRInEdit;
 
         // Declare a variable to store the index of a row being edited.
         // A value of -1 indicates that there is no row currently in edit.
-        private int rowInEdit = -1;
+        private int memRowInEdit = -1;
+        private int ioRowInEdit = -1;
 
         // Declare a variable to indicate the commit scope.
         // Set this value to false to use cell-level commit scope.
@@ -33,18 +35,30 @@ namespace Tracer
         {
             InitializeComponent();
 
-            this.dataGridView1.Dock = DockStyle.Fill;
-            this.dataGridView1.ReadOnly = true;
             this.Load += new EventHandler(InspectorForm_Load);
             this.Text = caption;
             this.tabPageMem.Controls.Add(dataGridView1);
+            this.tabPageIO.Controls.Add(dataGridView2);
             this.codeFile = codeFile;
             this.memoryMap = memoryMap;
             this.ioMap = ioMap;
         }
 
+        public void SelectTab(char tabSel)
+        {
+            for(int i = 0; i < this.tabControl1.TabCount; i++)
+            {
+                if (this.tabControl1.TabPages[i].Tag.ToString().Contains(tabSel))
+                {
+                    this.tabControl1.SelectTab(i);
+                    return;
+                }
+            }
+        }
+
         private void InspectorForm_Load(object sender, EventArgs e)
         {
+            // 1st tab contains code text
             if (!string.IsNullOrEmpty(codeFile))
             {
                 string fileNameAndExtension = codeFile.Substring(codeFile.LastIndexOf("\\") + 1);
@@ -54,40 +68,52 @@ namespace Tracer
                 tabControl1.TabPages["tabPageCode"].Text = $"Code ({fileNameAndExtension})";
             }
 
-            // Enable virtual mode.
-            this.dataGridView1.VirtualMode = true;
-
+            // 2nd tab contains Memory data grid
+            InitGridView(this.dataGridView1, memoryMap);
             // Connect the virtual-mode events to event handlers.
-            this.dataGridView1.CellValueNeeded += new
-                DataGridViewCellValueEventHandler(dataGridView1_CellValueNeeded);
-            this.dataGridView1.CellValuePushed += new
-                DataGridViewCellValueEventHandler(dataGridView1_CellValuePushed);
-            this.dataGridView1.NewRowNeeded += new
-                DataGridViewRowEventHandler(dataGridView1_NewRowNeeded);
-            this.dataGridView1.RowValidated += new
-                DataGridViewCellEventHandler(dataGridView1_RowValidated);
-            this.dataGridView1.RowDirtyStateNeeded += new
-                QuestionEventHandler(dataGridView1_RowDirtyStateNeeded);
-            this.dataGridView1.CancelRowEdit += new
-                QuestionEventHandler(dataGridView1_CancelRowEdit);
-            this.dataGridView1.UserDeletingRow += new
-                DataGridViewRowCancelEventHandler(dataGridView1_UserDeletingRow);
+            this.dataGridView1.CellValueNeeded += new DataGridViewCellValueEventHandler(dataGridView1_CellValueNeeded);
+            this.dataGridView1.NewRowNeeded += new DataGridViewRowEventHandler(dataGridView1_NewRowNeeded);
+            this.dataGridView1.RowDirtyStateNeeded += new QuestionEventHandler(dataGridView1_RowDirtyStateNeeded);
+            // subscribe to store map changes!
+            this.memoryMap.StoreUpdatedEvent += MemoryMap_StoreUpdatedEvent;
+
+            // 3rd tab contains IO data grid
+            InitGridView(this.dataGridView2, ioMap);
+            // Connect the virtual-mode events to event handlers.
+            this.dataGridView2.CellValueNeeded += new DataGridViewCellValueEventHandler(dataGridView2_CellValueNeeded);
+            this.dataGridView2.NewRowNeeded += new DataGridViewRowEventHandler(dataGridView2_NewRowNeeded);
+            this.dataGridView2.RowDirtyStateNeeded += new QuestionEventHandler(dataGridView2_RowDirtyStateNeeded);
+            // subscribe to store map changes!
+            this.ioMap.StoreUpdatedEvent += IoMap_StoreUpdatedEvent;
+        }
+
+        private void InitGridView(DataGridView dgv, StoreMap<StoreMapRow> sm)
+        {
+            // Enable virtual mode.
+            dgv.VirtualMode = true;
+
+            // styling
+            dgv.RowsDefaultCellStyle.Font = new Font(FontFamily.GenericMonospace, 8);
 
             // Add columns to the DataGridView.
-            foreach (StoreMapColumn smc in memoryMap.Columns)
+            foreach (StoreMapColumn smc in sm.Columns)
             {
                 DataGridViewTextBoxColumn tbc = new DataGridViewTextBoxColumn();
                 tbc.HeaderText = smc.Text;
                 tbc.Name = smc.Name;
-                this.dataGridView1.Columns.Add(tbc);
+                dgv.Columns.Add(tbc);
             }
-            this.dataGridView1.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
+            dgv.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells;
+            dgv.Dock = DockStyle.Fill;
+ 
+            // Set the row count, no new records will be added
+            dgv.RowCount = (sm.Size >> 4) + 1;
+            dgv.ReadOnly = true;
+        }
 
-            // Set the row count, including the row for new records.
-            this.dataGridView1.RowCount = (memoryMap.Size >> 4);
-
-            // subscribe to store map changes!
-            this.memoryMap.StoreUpdatedEvent += MemoryMap_StoreUpdatedEvent;
+        private void IoMap_StoreUpdatedEvent(object sender, StoreUpdatedEventArgs e)
+        {
+            this.dataGridView2.InvalidateRow(e.Address >> 4);
         }
 
         private void MemoryMap_StoreUpdatedEvent(object sender, StoreUpdatedEventArgs e)
@@ -95,6 +121,32 @@ namespace Tracer
             this.dataGridView1.InvalidateRow(e.Address >> 4);
         }
 
+
+        private void PaintCell(DataGridView dgv, int row, int col, char descriptor)
+        { 
+            switch (descriptor)
+            {
+                case 'F':
+                    dgv.Rows[row].Cells[col].Style.BackColor = Color.Blue;
+                    break;
+                case 'R':
+                    dgv.Rows[row].Cells[col].Style.BackColor = Color.Aqua;
+                    break;
+                case 'W':
+                    dgv.Rows[row].Cells[col].Style.BackColor = Color.Bisque;
+                    break;
+                case 'A':
+                    dgv.Rows[row].Cells[col].Style.BackColor = Color.Pink;
+                    break;
+                case 'H':
+                    dgv.Rows[row].Cells[col].Style.BackColor = Color.CornflowerBlue;
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        #region Mem grid event handlers
         private void dataGridView1_CellValueNeeded(object sender,
             System.Windows.Forms.DataGridViewCellValueEventArgs e)
         {
@@ -104,9 +156,9 @@ namespace Tracer
             StoreMapRow smrTmp = new StoreMapRow(0);
 
             // Store a reference to the Customer object for the row being painted.
-            if (e.RowIndex == rowInEdit)
+            if (e.RowIndex == memRowInEdit)
             {
-                smrTmp = this.smrInEdit;
+                smrTmp = this.memSMRInEdit;
             }
             else
             {
@@ -116,55 +168,7 @@ namespace Tracer
             // Set the cell value to paint using the Customer object retrieved.
             // get property name by reflection
             e.Value = (string)smrTmp[this.dataGridView1.Columns[e.ColumnIndex].Name];
-            PaintCell(e.RowIndex, e.ColumnIndex, smrTmp.Descriptor[e.ColumnIndex]);
-        }
-
-        private void PaintCell(int row, int col, char descriptor)
-        { 
-            switch (descriptor)
-            {
-                case 'F':
-                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.Aqua;
-                    break;
-                case 'R':
-                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.Blue;
-                    break;
-                case 'W':
-                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.Bisque;
-                    break;
-                case 'A':
-                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.Pink;
-                    break;
-                case 'H':
-                    this.dataGridView1.Rows[row].Cells[col].Style.BackColor = Color.CornflowerBlue;
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        private void dataGridView1_CellValuePushed(object sender,
-            System.Windows.Forms.DataGridViewCellValueEventArgs e)
-        {
-            StoreMapRow smrTmp = new StoreMapRow(0);
-
-            //// Store a reference to the Customer object for the row being edited.
-            //if (e.RowIndex < this.customers.Count)
-            //{
-            //    // If the user is editing a new row, create a new Customer object.
-            //    this.smrInEdit = new StoreMapRow(0);
-            //    smrTmp = this.smrInEdit;
-            //    this.rowInEdit = e.RowIndex;
-            //}
-            //else
-            //{
-            //    smrTmp = this.smrInEdit;
-            //}
-
-            //// Set the appropriate Customer property to the cell value entered.
-            //String newValue = e.Value as String;
-            //// set property name by reflection
-            //smrTmp[this.dataGridView1.Columns[e.ColumnIndex].Name] = newValue;
+            PaintCell((DataGridView)sender, e.RowIndex, e.ColumnIndex, smrTmp.Descriptor[e.ColumnIndex]);
         }
 
         private void dataGridView1_NewRowNeeded(object sender,
@@ -172,36 +176,8 @@ namespace Tracer
         {
             // Create a new Customer object when the user edits
             // the row for new records.
-            this.smrInEdit = new StoreMapRow(0);
-            this.rowInEdit = this.dataGridView1.Rows.Count - 1;
-        }
-
-        private void dataGridView1_RowValidated(object sender,
-            System.Windows.Forms.DataGridViewCellEventArgs e)
-        {
-            // Save row changes if any were made and release the edited
-            // Customer object if there is one.
-            //if (e.RowIndex >= this.customers.Count &&
-            //    e.RowIndex != this.dataGridView1.Rows.Count - 1)
-            //{
-            //    // Add the new Customer object to the data store.
-            //    this.customers.Add(this.customerInEdit);
-            //    this.customerInEdit = null;
-            //    this.rowInEdit = -1;
-            //}
-            //else if (this.customerInEdit != null &&
-            //    e.RowIndex < this.customers.Count)
-            //{
-            //    // Save the modified Customer object in the data store.
-            //    this.customers[e.RowIndex] = this.customerInEdit;
-            //    this.customerInEdit = null;
-            //    this.rowInEdit = -1;
-            //}
-            //else if (this.dataGridView1.ContainsFocus)
-            //{
-            //    this.customerInEdit = null;
-            //    this.rowInEdit = -1;
-            //}
+            this.memSMRInEdit = new StoreMapRow(0);
+            this.memRowInEdit = this.dataGridView1.Rows.Count - 1;
         }
 
         private void dataGridView1_RowDirtyStateNeeded(object sender,
@@ -214,44 +190,54 @@ namespace Tracer
                 e.Response = this.dataGridView1.IsCurrentCellDirty;
             }
         }
+#endregion
 
-        private void dataGridView1_CancelRowEdit(object sender,
+        #region IO grid event handlers
+        private void dataGridView2_CellValueNeeded(object sender,
+            System.Windows.Forms.DataGridViewCellValueEventArgs e)
+        {
+            // If this is the row for new records, no values are needed.
+            if (e.RowIndex == this.dataGridView2.RowCount - 1) return;
+
+            StoreMapRow smrTmp = new StoreMapRow(0);
+
+            // Store a reference to the Customer object for the row being painted.
+            if (e.RowIndex == ioRowInEdit)
+            {
+                smrTmp = this.ioSMRInEdit;
+            }
+            else
+            {
+                smrTmp = ioMap.GetStoreMapRow(e.RowIndex << 4);
+            }
+
+            // Set the cell value to paint using the Customer object retrieved.
+            // get property name by reflection
+            e.Value = (string)smrTmp[this.dataGridView2.Columns[e.ColumnIndex].Name];
+            PaintCell((DataGridView)sender, e.RowIndex, e.ColumnIndex, smrTmp.Descriptor[e.ColumnIndex]);
+        }
+
+        private void dataGridView2_NewRowNeeded(object sender,
+            System.Windows.Forms.DataGridViewRowEventArgs e)
+        {
+            // Create a new Customer object when the user edits
+            // the row for new records.
+            this.ioSMRInEdit = new StoreMapRow(0);
+            this.ioRowInEdit = this.dataGridView2.Rows.Count - 1;
+        }
+
+        private void dataGridView2_RowDirtyStateNeeded(object sender,
             System.Windows.Forms.QuestionEventArgs e)
         {
-            //if (this.rowInEdit == this.dataGridView1.Rows.Count - 2 &&
-            //    this.rowInEdit == this.customers.Count)
-            //{
-            //    // If the user has canceled the edit of a newly created row,
-            //    // replace the corresponding Customer object with a new, empty one.
-            //    this.smrInEdit = new StoreMapRow(0);
-            //}
-            //else
-            //{
-            //    // If the user has canceled the edit of an existing row,
-            //    // release the corresponding Customer object.
-            //    this.smrInEdit = new StoreMapRow(0);
-            //    this.rowInEdit = -1;
-            //}
+            if (!rowScopeCommit)
+            {
+                // In cell-level commit scope, indicate whether the value
+                // of the current cell has been modified.
+                e.Response = this.dataGridView2.IsCurrentCellDirty;
+            }
         }
+        #endregion
 
-        private void dataGridView1_UserDeletingRow(object sender,
-            System.Windows.Forms.DataGridViewRowCancelEventArgs e)
-        {
-            //if (e.Row.Index < this.customers.Count)
-            //{
-            //    // If the user has deleted an existing row, remove the
-            //    // corresponding Customer object from the data store.
-            //    this.customers.RemoveAt(e.Row.Index);
-            //}
-
-            //if (e.Row.Index == this.rowInEdit)
-            //{
-            //    // If the user has deleted a newly created row, release
-            //    // the corresponding Customer object.
-            //    this.rowInEdit = -1;
-            //    this.smrInEdit = new StoreMapRow(0);
-            //}
-        }
     }
 }
 

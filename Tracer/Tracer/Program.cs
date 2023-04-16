@@ -124,7 +124,7 @@ namespace Tracer
 
             string comInfo = $"{comPort.PortName} ({comPort.BaudRate},{comPort.DataBits},{comPort.Parity},{comPort.StopBits})";
             Console.WriteLine($"Waiting for trace on {comInfo}");
-            Console.WriteLine($"(Press 'x' to exit, 'i' to show inspector, <spacebar> to flip RTS pin)");
+            Console.WriteLine($"(Press 'x' to exit, 'c|m|i' to show inspector, <spacebar> to flip RTS pin)");
             comPort.DataReceived += Port_DataReceived;
             comPort.Handshake = Handshake.None;
             comPort.RtsEnable = true;
@@ -146,6 +146,10 @@ namespace Tracer
                     case ' ':
                         comPort.RtsEnable = !comPort.RtsEnable;
                         break;
+                    case 'c':
+                    case 'C':
+                    case 'm':
+                    case 'M':
                     case 'i':
                     case 'I':
                         if (inspector == null)
@@ -159,6 +163,7 @@ namespace Tracer
                         {
                             inspector.BringToFront();
                         }
+                        inspector.SelectTab(key.KeyChar);
                         break;
                     case 'x':
                     case 'X':
@@ -240,7 +245,7 @@ namespace Tracer
                             if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data))
                             {
                                 // TODO: coerce 16-bit address to 8-bit??
-                                ioMap.UpdateRead(address, data);
+                                ioMap.UpdateRead(address & 0xFF, data);
                             }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
@@ -249,7 +254,7 @@ namespace Tracer
                             if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data))
                             {
                                 // TODO: coerce 16-bit address to 8-bit??
-                                ioMap.UpdateWrite(address, data);
+                                ioMap.UpdateWrite(address & 0xFF, data);
                             }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
