@@ -142,7 +142,7 @@ signal rts1_delay, rts1_pulse, continue: std_logic;
 
 -- clock
 signal freq1Hz, freq64Hz, freq128Hz: std_logic; 
-signal debounce_clk, cpu_clk: std_logic;
+signal debounce_clk, cpu_clk, trace_clk: std_logic;
 
 signal baudrate: std_logic_vector(11 downto 0);
 alias baud_153600: std_logic is baudrate(0);
@@ -163,8 +163,8 @@ begin
    
 	 Reset <= '0' when (reset_delay = "0000") else '1';
 	 
-	 led_bus <= (cpu_clk & "00" & freq1Hz 			& cpu_debug_bus) when (sw_display_bus = '0') else 
-					(cpu_clk & Ready & continue & m1 & sys_debug_bus);
+	 led_bus <= (trace_clk & "00" & freq1Hz 			& cpu_debug_bus) when (sw_display_bus = '0') else 
+					(trace_clk & Ready & continue & m1 & sys_debug_bus);
 	 sys_debug_bus <= (control_bus(3 downto 0) xor "1111") & address_bus(7 downto 0) & data_bus;
  
 	 -- flash 7seg when stopped due to READY low
@@ -318,6 +318,10 @@ acia0: entity work.uart Port map (
 			  nSelect => nRamEnable
 		);
 		
+-- tracer stops the CPU by holding clock low
+-- this happens right after the high to low clock transition to avoid glitches		
+	trace_clk <= ready and cpu_clk;
+	
 -- CPU (Intel 8080 compatible)
 	Hold <= '0';	-- Not used
 	IntReq <= '0';	-- Not used
@@ -333,10 +337,10 @@ acia0: entity work.uart Port map (
            nMEMW => nMemWrite,
            HLDA => HoldAck,
 			  INTE => IntE,
-           CLK => cpu_clk,
+           CLK => trace_clk,
            nRESET => not Reset,
 			  INT => IntReq,
-			  READY => Ready,
+			  READY => '1',
 			  HOLD => Hold, 
 			  M1 => m1,
 			  -- debug port, not part of actual processor
@@ -358,7 +362,7 @@ acia0: entity work.uart Port map (
 			txd => PMOD_RXD1,			-- output trace (to any TTY of special tracer running on the host
 			load => btn_traceload,	-- load mask register if high
 			sel => sw_tracesel,		-- set mask register: M1 & IOR & IOW & MEMR & MEMW;
-			nM1 => not m1,
+			M1 => m1,
 			nIOR => nIORead,
 			nIOW => nIOWrite,
 			nMEMR => nMemRead,

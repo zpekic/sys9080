@@ -38,7 +38,7 @@ entity debugtracer is
            txd : out STD_LOGIC;
 			  load : in STD_LOGIC;							-- load trigger selection
 			  sel : in STD_LOGIC_VECTOR(4 downto 0);	-- 1 for signal that will trigger trace
-           nM1 : in  STD_LOGIC;
+           M1 : in  STD_LOGIC;
            nIOR : in  STD_LOGIC;
            nIOW : in  STD_LOGIC;
            nMEMR : in  STD_LOGIC;
@@ -79,8 +79,8 @@ constant hex_lookup: rom16x8 :=
    STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('F'), 8))
 );	
 
-signal trace_start, trace_done, trace_clk, trace, trace_enable: std_logic;
-signal reg_match, cbus, isel: std_logic_vector(4 downto 0);
+signal trace, trace_enable, tr_clk, tr_on, tr_off: std_logic;
+signal reg_sel, cbus: std_logic_vector(4 downto 0);
 signal counter: std_logic_vector(7 downto 0);
 alias chrSel: std_logic_vector(3 downto 0) is counter(7 downto 4);
 alias bitSel: std_logic_vector(3 downto 0) is counter(3 downto 0);
@@ -91,37 +91,41 @@ signal hex: std_logic_vector(3 downto 0);
 begin
 
 ready <= not trace;
-cbus <= nM1 & nIOR & nIOW & nMEMR & nMEMW;
-isel <= sel xor "11111";
+cbus <= M1 & nIOR & nIOW & nMEMR & nMEMW;
 
-on_cpu_clk: process(reset, cpu_clk, ABUS, cbus, char)
+on_cpu_clk: process(reset, cpu_clk, ABUS, sel, nIOW)
 begin
 	if (reset = '1') then 
-		trace <= '0';
-		trace_enable <= '0';
-		reg_match <= isel;
+		trace_enable <= '1';
+		reg_sel <= sel;
 	else
 		if (rising_edge(cpu_clk)) then
 			-- update trace enable FF 
 			-- responds to OUT 0x00 (trace off) to OUT 0x01 (trace on)
 			if (load = '1') then
-				reg_match <= isel;
+				reg_sel <= sel;
 				trace_enable <= '1';
 			end if;
-			if ((ABUS(7 downto 1) = "0000000") and (cbus(2) = '0')) then
+			if ((ABUS(7 downto 1) = "0000000") and (nIOW = '0')) then
 				trace_enable <= ABUS(0);
 			end if;
 		end if;
 		if (falling_edge(cpu_clk)) then
-			if (trace = '0') then 
-			-- check if needs to be turned on
-				if ((reg_match or cbus) /= "11111") then
-					trace <= trace_enable;
+			if (trace = '0') then
+				if (trace_enable = '1') then
+					trace <= (reg_sel(4) and M1) or 
+								(reg_sel(3) and (not nIOR)) or 
+								(reg_sel(2) and (not nIOW)) or 
+								(reg_sel(1) and (not nMEMR)) or 
+								(reg_sel(0) and (not nMEMW));
+				else
+					trace <= '0';
 				end if;
 			else
-			-- check if needs to be turned off
 				if (char = X"00") then
-					trace <= not continue;
+					trace <= continue;
+				else 
+					trace <= '1';
 				end if;
 			end if;
 		end if;
@@ -144,20 +148,20 @@ end process;
 
 -- character generation
 with cbus select char_1 <=
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "01101",
 	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "11101",
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "11110",
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "10111",
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "11011",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "01101",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('M'), 8)) when "01110",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "00111",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('I'), 8)) when "01011",
 	"010" & cbus when others;
 	--STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
 with cbus select char_2 <=
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('1'), 8)) when "01101",
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)) when "11101",
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "11110",
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)) when "10111",
-	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "11011",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('1'), 8)) when "11101",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)) when "01101",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "01110",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('R'), 8)) when "00111",
+	STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('W'), 8)) when "01011",
 	"010" & cbus when others;
 	--STD_LOGIC_VECTOR(TO_UNSIGNED(CHARACTER'POS('?'), 8)) when others;
 
@@ -167,7 +171,7 @@ with chrSel select hex <=
 	ABUS(7 downto 4) when X"5",	-- A
 	ABUS(3 downto 0) when X"6",	-- A
 	DBUS(7 downto 4) when X"8",	-- D
-	DBUS(3 downto 0) when others; 	-- D
+	DBUS(3 downto 0) when others; -- D
 
 char_hex <= hex_lookup(to_integer(unsigned(hex)));
 

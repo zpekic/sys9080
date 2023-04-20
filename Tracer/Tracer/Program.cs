@@ -11,6 +11,7 @@ namespace Tracer
     class Program : IDisposable
     {
         const char LF = (char)10;
+        const char CR = (char)13;
         static StringBuilder sbTraceRecord = new StringBuilder();
         static SerialPort comPort;
         static System.IO.StreamReader sourceFile;
@@ -131,7 +132,8 @@ namespace Tracer
             comPort.Open();
 
             // create maps for memory and I/O
-            memoryMap = new StoreMap<StoreMapRow>(1 << 16, true);
+            memoryMap = new StoreMap<StoreMapRow>(1 << 12, true);   // TODO: make it a parameter
+            //memoryMap = new StoreMap<StoreMapRow>(1 << 16, true); // TODO: limiting to 4k is a speed-up experiment 
             ioMap = new StoreMap<StoreMapRow>(1 << 8, false);
 
             ConsoleKeyInfo key;
@@ -187,28 +189,45 @@ namespace Tracer
             return 0;
         }
 
+        internal static void Assert(bool condition, string exceptionMessage)
+        {
+            if (!condition)
+            {
+                Console.ResetColor();
+                throw new ApplicationException(exceptionMessage, null);
+            }
+        }
+
         static void Port_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
         {
             int address;
             byte data;
             string received = comPort.ReadExisting();
+            bool pause;
 
             foreach (char c in received)
             {
                 if (c == LF)
                 {
                     // leave out the previous CR (TODO - check assumption it was a CR...)
-                    string traceRecord = sbTraceRecord.ToString(0, sbTraceRecord.Length - 1);
+                    string traceRecord = sbTraceRecord.ToString();// 0, sbTraceRecord.Length - 1);
                     string[] traceValuePair = traceRecord.Split(',');
+                    if (traceValuePair.Length != 2)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{traceRecord} - BAD RECORD, IGNORED!");
+                        return;
+                    }
                     string recordType = traceValuePair[0].ToUpperInvariant();
                     string recordValue = traceValuePair[1].ToUpperInvariant();
+                    pause = false;
                     switch (recordType)
                     {
                         // see https://github.com/zpekic/sys9080/blob/master/debugtracer.vhd
                         case "M1":  // instruction fetch
                             if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data))
                             {
-                                memoryMap.UpdateFetch(address, data);
+                                CheckLimit(memoryMap.UpdateFetch(address, data, ref pause), traceRecord);
                             }
                             if (traceDictionary.ContainsKey(recordValue))
                             {
@@ -228,7 +247,7 @@ namespace Tracer
                         case "MR":  // read memory (except M1)
                             if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data))
                             {
-                                memoryMap.UpdateRead(address, data);
+                                CheckLimit(memoryMap.UpdateRead(address, data, ref pause), traceRecord);
                             }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
@@ -236,7 +255,7 @@ namespace Tracer
                         case "MW":  // write memory
                             if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data))
                             {
-                                memoryMap.UpdateWrite(address, data);
+                                CheckLimit(memoryMap.UpdateWrite(address, data, ref pause), traceRecord);
                             }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
@@ -245,7 +264,7 @@ namespace Tracer
                             if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data))
                             {
                                 // TODO: coerce 16-bit address to 8-bit??
-                                ioMap.UpdateRead(address & 0xFF, data);
+                                CheckLimit(ioMap.UpdateRead(address & 0xFF, data, ref pause), traceRecord);
                             }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
@@ -254,7 +273,7 @@ namespace Tracer
                             if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data))
                             {
                                 // TODO: coerce 16-bit address to 8-bit??
-                                ioMap.UpdateWrite(address & 0xFF, data);
+                                CheckLimit(ioMap.UpdateWrite(address & 0xFF, data, ref pause), traceRecord);
                             }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);
@@ -266,14 +285,31 @@ namespace Tracer
                     }
                     Console.ResetColor();
                     sbTraceRecord.Clear();
+                    // pause code execution to inspect memory!
+                    if (pause)
+                    {
+                        SendKeys.SendWait(" ");
+                    }
                 }
                 else
                 {
-                    sbTraceRecord.Append(c);
+                    if (c != CR)
+                    {
+                        sbTraceRecord.Append(c);
+                    }
                 }
             }
         }
 
+        private static void CheckLimit(bool ok, string traceRecord)
+        {
+            if (!ok)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.BackgroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"{traceRecord} - IGNORED, OUT OF BOUNDS!");
+            }
+        }
 
         private static bool CheckRecipientAndRecord(StoreMap<StoreMapRow> sm, string[] addressDataPair, out int address, out byte data)
         {
@@ -438,13 +474,6 @@ namespace Tracer
             }
         }
 
-        private static void Assert(bool condition, string exceptionMessage)
-        {
-            if (!condition)
-            {
-                throw new ApplicationException(exceptionMessage, null);
-            }
-        }
 
         #region IDisposable Support
         private bool disposedValue = false; // To detect redundant calls

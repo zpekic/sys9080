@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace Tracer
 {
@@ -90,7 +91,7 @@ namespace Tracer
         public readonly bool ShowAscii = false;
 
         public event EventHandler<StoreUpdatedEventArgs> StoreUpdatedEvent;
-        
+
         private List<StoreMapColumn> columns = new List<StoreMapColumn>();
         // these track the "imagined" external memory / IO space as seen by the CPU
         private Dictionary<int, byte> readDictionary = new Dictionary<int, byte>();
@@ -224,48 +225,78 @@ namespace Tracer
             return smr;
         }
 
-        public void UpdateFetch(int address, byte data)
+        private void ReportMemoryIssue(bool fatal, string message)
         {
-            if (readDictionary.ContainsKey(address))
-            {
-                // TODO: are we executing data?
-                readDictionary.Remove(address);
-            }
-            if (writeDictionary.ContainsKey(address))
-            {
-                // TODO: are we executing self-modified code?
-                writeDictionary.Remove(address);
-            }
-            AddOrUpdateEntry(fetchDictionary, address, data, 'F');
+            //Program.Assert(!fatal, message);
+
+            Console.Beep();
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.BackgroundColor = ConsoleColor.Red;
+            Console.WriteLine($"MEMORY ISSUE: {message}");
+            Console.ResetColor();
         }
 
-        public void UpdateRead(int address, byte data)
+        public bool UpdateFetch(int address, byte data, ref bool pause)
         {
-            if (fetchDictionary.ContainsKey(address))
+            if (address < this.Size)
             {
-                // TODO: are we reading code?
-                fetchDictionary.Remove(address);
+                if (readDictionary.ContainsKey(address))
+                {
+                    ReportMemoryIssue(false, $"Executing data at {address:X4}");
+                    readDictionary.Remove(address);
+                }
+                if (writeDictionary.ContainsKey(address))
+                {
+                    ReportMemoryIssue(false, $"Executing self-modifying at {address:X4}");
+                    writeDictionary.Remove(address);
+                }
+                AddOrUpdateEntry(fetchDictionary, address, data, 'F');
+                return true;
             }
-            if (writeDictionary.ContainsKey(address))
-            {
-                // TODO: check if same, warning otherwise
-                writeDictionary.Remove(address);
-            }
-            AddOrUpdateEntry(readDictionary, address, data, 'R');
+            return false;
         }
 
-        public void UpdateWrite(int address, byte data)
+        public bool UpdateRead(int address, byte data, ref bool pause)
         {
-            if (readDictionary.ContainsKey(address))
+            if (address < this.Size)
             {
-                readDictionary.Remove(address);
+                if (fetchDictionary.ContainsKey(address))
+                {
+                    ReportMemoryIssue(false, $"Reading (not executing) code at {address:X4}");
+                    fetchDictionary.Remove(address);
+                }
+                if (writeDictionary.ContainsKey(address))
+                {
+                    if (data != writeDictionary[address])
+                    {
+                        ReportMemoryIssue(false, $"Reading {data:X2} from {address:X4}, expected {writeDictionary[address]:X2}");
+                        pause = true;
+                    }
+                    writeDictionary.Remove(address);
+                }
+                AddOrUpdateEntry(readDictionary, address, data, 'R');
+                return true;
             }
-            if (fetchDictionary.ContainsKey(address))
+            return false;
+        }
+
+        public bool UpdateWrite(int address, byte data, ref bool pause)
+        {
+            if (address < this.Size)
             {
-                // TODO: are we updating code?
-                fetchDictionary.Remove(address);
+                if (readDictionary.ContainsKey(address))
+                {
+                    readDictionary.Remove(address);
+                }
+                if (fetchDictionary.ContainsKey(address))
+                {
+                    ReportMemoryIssue(false, $"Writing code at {address:X4}");
+                    fetchDictionary.Remove(address);
+                }
+                AddOrUpdateEntry(writeDictionary, address, data, 'W');
+                return true;
             }
-            AddOrUpdateEntry(writeDictionary, address, data, 'W');
+            return false;
         }
 
         private void AddOrUpdateEntry(Dictionary<int, byte> dict, int address, byte data, char descriptor)
