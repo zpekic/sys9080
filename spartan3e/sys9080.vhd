@@ -36,6 +36,8 @@ entity sys9080 is
 				CLK_50MHZ: in std_logic;
 				-- Push of rotary button
 				ROT_CENTER: in std_logic; 
+				ROT_A: in std_logic;
+				ROT_B: in std_logic;
 				-- Switches on baseboard
 				-- SW(7 downto 3) ... load trace register at RESET or BTN(3) press
 				-- SW(7) ... M1
@@ -73,6 +75,15 @@ end sys9080;
 
 architecture Structural of sys9080 is
 
+COMPONENT quad
+PORT(
+	clk : IN std_logic;
+	quadA : IN std_logic;
+	quadB : IN std_logic;          
+	count : OUT std_logic_vector(7 downto 0)
+	);
+END COMPONENT;
+	
 -- Connect to PmodUSBUART 
 -- https://digilent.com/reference/pmod/pmodusbuart/reference-manual
 alias PMOD_RTS0: std_logic is J1(0);	
@@ -117,6 +128,11 @@ signal button: std_logic_vector(7 downto 0);
 alias btn_traceload: std_logic is button(3);
 alias btn_clk: std_logic is button(0);
 
+alias rot: std_logic_vector(1 downto 0) is button(7 downto 6);
+signal rot_delayed: std_logic_vector(1 downto 0);
+signal rot_cnt, rot_add: std_logic_vector(7 downto 0);
+signal rot_changed: std_logic;
+
 signal inport: std_logic_vector(7 downto 0);
 signal led_bus: std_logic_vector(23 downto 0);
 signal cpu_debug_bus, sys_debug_bus: std_logic_vector(19 downto 0);
@@ -160,22 +176,9 @@ begin
 	 --AUDIO_OUT_R <= audio_out;
 
 	 -- DISPLAY
-	 LED <= led_bus(23 downto 16);
+	 LED <= rot_cnt; --led_bus(23 downto 16);
 	 
---    led4x7: entity work.fourdigitsevensegled port map ( 
---			  -- inputs
---			  data => led_bus(15 downto 0),
---           digsel(1) => freq64Hz,
---			  digsel(0) => freq128Hz,
---			  showdigit => "1111",
---           showdot => led_bus(19 downto 16),
---           showsegments => showsegments,
---			  -- outputs
---           anode => AN,
---           segment(6 downto 0) => A_TO_G(6 downto 0),
---			  segment(7) => DOT
---			 );
-
+	
 -- FREQUENCY GENERATOR
 clocks: entity work.clockgen Port map ( 
 		CLK => CLK_50MHZ, 				-- 50MHz on board
@@ -193,10 +196,52 @@ clocks: entity work.clockgen Port map (
 		freq1Hz => freq1Hz
 		);
 
--- debouncers removed due to lack of FPGA space :-(
-	switch <= SW & "0111";
-	button <= "0000" & BTN_SOUTH & BTN_WEST & BTN_NORTH & BTN_EAST;
+-- debouncers for switches and buttons
+	debounce_sw: entity work.debouncer8channel port map (
+		clock => debounce_clk,
+		reset => reset,
+		signal_raw(7 downto 4) => SW,
+		signal_raw(3 downto 0) => "0111",
+		signal_debounced => switch
+		);
 
+	debounce_btn: entity work.debouncer8channel port map (
+		clock => debounce_clk,
+		reset => reset,
+		signal_raw(7) => ROT_A,
+		signal_raw(6) => ROT_B,
+		signal_raw(5) => '0',
+		signal_raw(4) => '0',
+		signal_raw(3) => BTN_SOUTH,
+		signal_raw(2) => BTN_WEST,
+		signal_raw(1) => BTN_NORTH,
+		signal_raw(0) => BTN_EAST,
+		signal_debounced => button
+		);
+
+-- ROTARY ENCODER
+--rotary: quad port map (
+--		clk => freq64Hz, 
+--		quadA => button(7),
+--		quadB => button(6),
+--		count => rot_cnt
+--		);
+
+	with rot select rot_add <= 
+		X"01" when "01",
+		X"FF" when "10",
+		X"00" when others;
+		
+	rot_changed <=  rot(1) xor rot(0);
+
+	on_rot_changed: process(rot_changed)
+	begin
+		if (rising_edge(rot_changed)) then
+			-- drive rotary counter
+			rot_cnt <= std_logic_vector(unsigned(rot_cnt) + 1);
+		end if;
+	end process;
+			
 	-- delay to generate nReset 4 cycles after reset
 	generate_Reset: process (cpu_clk, ROT_CENTER)
 	begin
@@ -206,6 +251,7 @@ clocks: entity work.clockgen Port map (
 			if (rising_edge(cpu_clk)) then
 				reset_delay <= reset_delay(2 downto 0) & ROT_CENTER;
 				rts1_delay <= PMOD_RTS1;
+				rot_delayed <= rot;
 			end if;
 		end if;
 	end process;

@@ -1,0 +1,1 @@
+vhdtdtfi -lang verilog -prj spartan3e -o C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/quad.vhi -lib work C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e//quad.v -module quad -template C:/Xilinx/14.7/ISE_DS/ISE//data/vhdlinst.tft -deleteonerror 

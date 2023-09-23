@@ -98,7 +98,8 @@ begin
 end process;
 -------------------------------------------------------
 	
-debounce_clk <= freq_25M(8);	-- 25MHz/256 = 97.65625 kHz
+--debounce_clk <= freq_25M(12);	-- 25MHz/4096 = 6.1 kHz
+debounce_clk <= freq_2048(0);	-- 2048Hz
 vga_clk <= freq_25M(0);			-- 25MHz/1 = 25MHz
 freq128Hz <= freq_2048(4);		-- 2048/16 = 128Hz
 freq64Hz <= freq_2048(5);		-- 2048/32 = 64Hz
