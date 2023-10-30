@@ -1,0 +1,482 @@
+--------------------------------------------------------------------------------
+Release 14.7 Trace  (nt)
+Copyright (c) 1995-2013 Xilinx, Inc.  All rights reserved.
+
+C:\Xilinx\14.7\ISE_DS\ISE\bin\nt\unwrapped\trce.exe -filter
+C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/iseconfig/filter.filter
+-intstyle ise -v 3 -s 4 -n 3 -fastpaths -xml sys9080.twx sys9080.ncd -o
+sys9080.twr sys9080.pcf -ucf s3estarter.ucf
+
+Design file:              sys9080.ncd
+Physical constraint file: sys9080.pcf
+Device,package,speed:     xc3s500e,fg320,-4 (PRODUCTION 1.27 2013-10-13)
+Report level:             verbose report
+
+Environment Variable      Effect 
+--------------------      ------ 
+NONE                      No environment variables were set
+--------------------------------------------------------------------------------
+
+INFO:Timing:3412 - To improve timing, see the Timing Closure User Guide (UG612).
+INFO:Timing:2752 - To get complete path coverage, use the unconstrained paths 
+   option. All paths that are not constrained will be reported in the 
+   unconstrained paths section(s) of the report.
+INFO:Timing:3339 - The clock-to-out numbers in this timing report are based on 
+   a 50 Ohm transmission line loading model.  For the details of this model, 
+   and for more information on accounting for different loading conditions, 
+   please see the device datasheet.
+INFO:Timing:3390 - This architecture does not support a default System Jitter 
+   value, please add SYSTEM_JITTER constraint to the UCF to modify the Clock 
+   Uncertainty calculation.
+INFO:Timing:3389 - This architecture does not support 'Discrete Jitter' and 
+   'Phase Error' calculations, these terms will be zero in the Clock 
+   Uncertainty calculation.  Please make appropriate modification to 
+   SYSTEM_JITTER to account for the unsupported Discrete Jitter and Phase 
+   Error.
+
+================================================================================
+Timing constraint: NET "CLK_50MHZ_BUFGP/IBUFG" PERIOD = 20 ns HIGH 40%;
+For more information, see Period Analysis in the Timing Closure User Guide (UG612).
+
+ 833 paths analyzed, 122 endpoints analyzed, 0 failing endpoints
+ 0 timing errors detected. (0 setup errors, 0 hold errors, 0 component switching limit errors)
+ Minimum period is   6.752ns.
+--------------------------------------------------------------------------------
+
+Paths for end point clocks/freq4096 (SLICE_X44Y33.CE), 16 paths
+--------------------------------------------------------------------------------
+Slack (setup path):     13.248ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               clocks/prescale_4096_5 (FF)
+  Destination:          clocks/freq4096 (FF)
+  Requirement:          20.000ns
+  Data Path Delay:      6.715ns (Levels of Logic = 2)
+  Clock Path Skew:      -0.037ns (0.090 - 0.127)
+  Source Clock:         CLK_50MHZ_BUFGP rising at 0.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Maximum Data Path: clocks/prescale_4096_5 to clocks/freq4096
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X35Y78.YQ      Tcko                  0.587   clocks/prescale_4096<4>
+                                                       clocks/prescale_4096_5
+    SLICE_X34Y78.F1      net (fanout=2)        0.829   clocks/prescale_4096<5>
+    SLICE_X34Y78.X       Tilo                  0.759   clocks/freq4096_cmp_eq000012
+                                                       clocks/freq4096_cmp_eq000012
+    SLICE_X34Y80.F1      net (fanout=1)        0.409   clocks/freq4096_cmp_eq000012
+    SLICE_X34Y80.X       Tilo                  0.759   clocks/freq4096_not0002_inv
+                                                       clocks/freq4096_cmp_eq000076
+    SLICE_X44Y33.CE      net (fanout=9)        2.817   clocks/freq4096_not0002_inv
+    SLICE_X44Y33.CLK     Tceck                 0.555   clocks/freq4096
+                                                       clocks/freq4096
+    -------------------------------------------------  ---------------------------
+    Total                                      6.715ns (2.660ns logic, 4.055ns route)
+                                                       (39.6% logic, 60.4% route)
+
+--------------------------------------------------------------------------------
+Slack (setup path):     13.250ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               clocks/prescale_4096_13 (FF)
+  Destination:          clocks/freq4096 (FF)
+  Requirement:          20.000ns
+  Data Path Delay:      6.707ns (Levels of Logic = 2)
+  Clock Path Skew:      -0.043ns (0.090 - 0.133)
+  Source Clock:         CLK_50MHZ_BUFGP rising at 0.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Maximum Data Path: clocks/prescale_4096_13 to clocks/freq4096
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X35Y82.YQ      Tcko                  0.587   clocks/prescale_4096<12>
+                                                       clocks/prescale_4096_13
+    SLICE_X34Y82.F1      net (fanout=2)        0.869   clocks/prescale_4096<13>
+    SLICE_X34Y82.X       Tilo                  0.759   clocks/freq4096_cmp_eq000049
+                                                       clocks/freq4096_cmp_eq000049
+    SLICE_X34Y80.F2      net (fanout=1)        0.361   clocks/freq4096_cmp_eq000049
+    SLICE_X34Y80.X       Tilo                  0.759   clocks/freq4096_not0002_inv
+                                                       clocks/freq4096_cmp_eq000076
+    SLICE_X44Y33.CE      net (fanout=9)        2.817   clocks/freq4096_not0002_inv
+    SLICE_X44Y33.CLK     Tceck                 0.555   clocks/freq4096
+                                                       clocks/freq4096
+    -------------------------------------------------  ---------------------------
+    Total                                      6.707ns (2.660ns logic, 4.047ns route)
+                                                       (39.7% logic, 60.3% route)
+
+--------------------------------------------------------------------------------
+Slack (setup path):     13.314ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               clocks/prescale_4096_7 (FF)
+  Destination:          clocks/freq4096 (FF)
+  Requirement:          20.000ns
+  Data Path Delay:      6.649ns (Levels of Logic = 2)
+  Clock Path Skew:      -0.037ns (0.090 - 0.127)
+  Source Clock:         CLK_50MHZ_BUFGP rising at 0.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Maximum Data Path: clocks/prescale_4096_7 to clocks/freq4096
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X35Y79.YQ      Tcko                  0.587   clocks/prescale_4096<6>
+                                                       clocks/prescale_4096_7
+    SLICE_X34Y78.F2      net (fanout=2)        0.763   clocks/prescale_4096<7>
+    SLICE_X34Y78.X       Tilo                  0.759   clocks/freq4096_cmp_eq000012
+                                                       clocks/freq4096_cmp_eq000012
+    SLICE_X34Y80.F1      net (fanout=1)        0.409   clocks/freq4096_cmp_eq000012
+    SLICE_X34Y80.X       Tilo                  0.759   clocks/freq4096_not0002_inv
+                                                       clocks/freq4096_cmp_eq000076
+    SLICE_X44Y33.CE      net (fanout=9)        2.817   clocks/freq4096_not0002_inv
+    SLICE_X44Y33.CLK     Tceck                 0.555   clocks/freq4096
+                                                       clocks/freq4096
+    -------------------------------------------------  ---------------------------
+    Total                                      6.649ns (2.660ns logic, 3.989ns route)
+                                                       (40.0% logic, 60.0% route)
+
+--------------------------------------------------------------------------------
+
+Paths for end point clocks/baudrate_x8 (SLICE_X26Y76.CE), 16 paths
+--------------------------------------------------------------------------------
+Slack (setup path):     14.292ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               clocks/prescale_baud_4 (FF)
+  Destination:          clocks/baudrate_x8 (FF)
+  Requirement:          20.000ns
+  Data Path Delay:      5.700ns (Levels of Logic = 2)
+  Clock Path Skew:      -0.008ns (0.032 - 0.040)
+  Source Clock:         CLK_50MHZ_BUFGP rising at 0.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Maximum Data Path: clocks/prescale_baud_4 to clocks/baudrate_x8
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X25Y86.XQ      Tcko                  0.591   clocks/prescale_baud<4>
+                                                       clocks/prescale_baud_4
+    SLICE_X24Y87.F3      net (fanout=2)        1.166   clocks/prescale_baud<4>
+    SLICE_X24Y87.X       Tilo                  0.759   clocks/baudrate_x8_cmp_eq000012
+                                                       clocks/baudrate_x8_cmp_eq000012
+    SLICE_X24Y88.F1      net (fanout=1)        0.409   clocks/baudrate_x8_cmp_eq000012
+    SLICE_X24Y88.X       Tilo                  0.759   clocks/baudrate_x8_not0002_inv
+                                                       clocks/baudrate_x8_cmp_eq000076
+    SLICE_X26Y76.CE      net (fanout=9)        1.461   clocks/baudrate_x8_not0002_inv
+    SLICE_X26Y76.CLK     Tceck                 0.555   clocks/baudrate_x8
+                                                       clocks/baudrate_x8
+    -------------------------------------------------  ---------------------------
+    Total                                      5.700ns (2.664ns logic, 3.036ns route)
+                                                       (46.7% logic, 53.3% route)
+
+--------------------------------------------------------------------------------
+Slack (setup path):     14.477ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               clocks/prescale_baud_5 (FF)
+  Destination:          clocks/baudrate_x8 (FF)
+  Requirement:          20.000ns
+  Data Path Delay:      5.515ns (Levels of Logic = 2)
+  Clock Path Skew:      -0.008ns (0.032 - 0.040)
+  Source Clock:         CLK_50MHZ_BUFGP rising at 0.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Maximum Data Path: clocks/prescale_baud_5 to clocks/baudrate_x8
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X25Y86.YQ      Tcko                  0.587   clocks/prescale_baud<4>
+                                                       clocks/prescale_baud_5
+    SLICE_X24Y87.F2      net (fanout=2)        0.985   clocks/prescale_baud<5>
+    SLICE_X24Y87.X       Tilo                  0.759   clocks/baudrate_x8_cmp_eq000012
+                                                       clocks/baudrate_x8_cmp_eq000012
+    SLICE_X24Y88.F1      net (fanout=1)        0.409   clocks/baudrate_x8_cmp_eq000012
+    SLICE_X24Y88.X       Tilo                  0.759   clocks/baudrate_x8_not0002_inv
+                                                       clocks/baudrate_x8_cmp_eq000076
+    SLICE_X26Y76.CE      net (fanout=9)        1.461   clocks/baudrate_x8_not0002_inv
+    SLICE_X26Y76.CLK     Tceck                 0.555   clocks/baudrate_x8
+                                                       clocks/baudrate_x8
+    -------------------------------------------------  ---------------------------
+    Total                                      5.515ns (2.660ns logic, 2.855ns route)
+                                                       (48.2% logic, 51.8% route)
+
+--------------------------------------------------------------------------------
+Slack (setup path):     14.624ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               clocks/prescale_baud_6 (FF)
+  Destination:          clocks/baudrate_x8 (FF)
+  Requirement:          20.000ns
+  Data Path Delay:      5.368ns (Levels of Logic = 2)
+  Clock Path Skew:      -0.008ns (0.032 - 0.040)
+  Source Clock:         CLK_50MHZ_BUFGP rising at 0.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Maximum Data Path: clocks/prescale_baud_6 to clocks/baudrate_x8
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X25Y87.XQ      Tcko                  0.591   clocks/prescale_baud<6>
+                                                       clocks/prescale_baud_6
+    SLICE_X24Y87.F1      net (fanout=2)        0.834   clocks/prescale_baud<6>
+    SLICE_X24Y87.X       Tilo                  0.759   clocks/baudrate_x8_cmp_eq000012
+                                                       clocks/baudrate_x8_cmp_eq000012
+    SLICE_X24Y88.F1      net (fanout=1)        0.409   clocks/baudrate_x8_cmp_eq000012
+    SLICE_X24Y88.X       Tilo                  0.759   clocks/baudrate_x8_not0002_inv
+                                                       clocks/baudrate_x8_cmp_eq000076
+    SLICE_X26Y76.CE      net (fanout=9)        1.461   clocks/baudrate_x8_not0002_inv
+    SLICE_X26Y76.CLK     Tceck                 0.555   clocks/baudrate_x8
+                                                       clocks/baudrate_x8
+    -------------------------------------------------  ---------------------------
+    Total                                      5.368ns (2.664ns logic, 2.704ns route)
+                                                       (49.6% logic, 50.4% route)
+
+--------------------------------------------------------------------------------
+
+Paths for end point clocks/prescale_4096_8 (SLICE_X35Y80.SR), 16 paths
+--------------------------------------------------------------------------------
+Slack (setup path):     14.596ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               clocks/prescale_4096_5 (FF)
+  Destination:          clocks/prescale_4096_8 (FF)
+  Requirement:          20.000ns
+  Data Path Delay:      5.404ns (Levels of Logic = 2)
+  Clock Path Skew:      0.000ns
+  Source Clock:         CLK_50MHZ_BUFGP rising at 0.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Maximum Data Path: clocks/prescale_4096_5 to clocks/prescale_4096_8
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X35Y78.YQ      Tcko                  0.587   clocks/prescale_4096<4>
+                                                       clocks/prescale_4096_5
+    SLICE_X34Y78.F1      net (fanout=2)        0.829   clocks/prescale_4096<5>
+    SLICE_X34Y78.X       Tilo                  0.759   clocks/freq4096_cmp_eq000012
+                                                       clocks/freq4096_cmp_eq000012
+    SLICE_X34Y80.F1      net (fanout=1)        0.409   clocks/freq4096_cmp_eq000012
+    SLICE_X34Y80.X       Tilo                  0.759   clocks/freq4096_not0002_inv
+                                                       clocks/freq4096_cmp_eq000076
+    SLICE_X35Y80.SR      net (fanout=9)        1.151   clocks/freq4096_not0002_inv
+    SLICE_X35Y80.CLK     Tsrck                 0.910   clocks/prescale_4096<8>
+                                                       clocks/prescale_4096_8
+    -------------------------------------------------  ---------------------------
+    Total                                      5.404ns (3.015ns logic, 2.389ns route)
+                                                       (55.8% logic, 44.2% route)
+
+--------------------------------------------------------------------------------
+Slack (setup path):     14.600ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               clocks/prescale_4096_13 (FF)
+  Destination:          clocks/prescale_4096_8 (FF)
+  Requirement:          20.000ns
+  Data Path Delay:      5.396ns (Levels of Logic = 2)
+  Clock Path Skew:      -0.004ns (0.004 - 0.008)
+  Source Clock:         CLK_50MHZ_BUFGP rising at 0.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Maximum Data Path: clocks/prescale_4096_13 to clocks/prescale_4096_8
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X35Y82.YQ      Tcko                  0.587   clocks/prescale_4096<12>
+                                                       clocks/prescale_4096_13
+    SLICE_X34Y82.F1      net (fanout=2)        0.869   clocks/prescale_4096<13>
+    SLICE_X34Y82.X       Tilo                  0.759   clocks/freq4096_cmp_eq000049
+                                                       clocks/freq4096_cmp_eq000049
+    SLICE_X34Y80.F2      net (fanout=1)        0.361   clocks/freq4096_cmp_eq000049
+    SLICE_X34Y80.X       Tilo                  0.759   clocks/freq4096_not0002_inv
+                                                       clocks/freq4096_cmp_eq000076
+    SLICE_X35Y80.SR      net (fanout=9)        1.151   clocks/freq4096_not0002_inv
+    SLICE_X35Y80.CLK     Tsrck                 0.910   clocks/prescale_4096<8>
+                                                       clocks/prescale_4096_8
+    -------------------------------------------------  ---------------------------
+    Total                                      5.396ns (3.015ns logic, 2.381ns route)
+                                                       (55.9% logic, 44.1% route)
+
+--------------------------------------------------------------------------------
+Slack (setup path):     14.662ns (requirement - (data path - clock path skew + uncertainty))
+  Source:               clocks/prescale_4096_7 (FF)
+  Destination:          clocks/prescale_4096_8 (FF)
+  Requirement:          20.000ns
+  Data Path Delay:      5.338ns (Levels of Logic = 2)
+  Clock Path Skew:      0.000ns
+  Source Clock:         CLK_50MHZ_BUFGP rising at 0.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Maximum Data Path: clocks/prescale_4096_7 to clocks/prescale_4096_8
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X35Y79.YQ      Tcko                  0.587   clocks/prescale_4096<6>
+                                                       clocks/prescale_4096_7
+    SLICE_X34Y78.F2      net (fanout=2)        0.763   clocks/prescale_4096<7>
+    SLICE_X34Y78.X       Tilo                  0.759   clocks/freq4096_cmp_eq000012
+                                                       clocks/freq4096_cmp_eq000012
+    SLICE_X34Y80.F1      net (fanout=1)        0.409   clocks/freq4096_cmp_eq000012
+    SLICE_X34Y80.X       Tilo                  0.759   clocks/freq4096_not0002_inv
+                                                       clocks/freq4096_cmp_eq000076
+    SLICE_X35Y80.SR      net (fanout=9)        1.151   clocks/freq4096_not0002_inv
+    SLICE_X35Y80.CLK     Tsrck                 0.910   clocks/prescale_4096<8>
+                                                       clocks/prescale_4096_8
+    -------------------------------------------------  ---------------------------
+    Total                                      5.338ns (3.015ns logic, 2.323ns route)
+                                                       (56.5% logic, 43.5% route)
+
+--------------------------------------------------------------------------------
+
+Hold Paths: NET "CLK_50MHZ_BUFGP/IBUFG" PERIOD = 20 ns HIGH 40%;
+--------------------------------------------------------------------------------
+
+Paths for end point clocks/baudrate_x8 (SLICE_X26Y76.BY), 1 path
+--------------------------------------------------------------------------------
+Slack (hold path):      1.094ns (requirement - (clock path skew + uncertainty - data path))
+  Source:               clocks/baudrate_x8 (FF)
+  Destination:          clocks/baudrate_x8 (FF)
+  Requirement:          0.000ns
+  Data Path Delay:      1.094ns (Levels of Logic = 0)
+  Clock Path Skew:      0.000ns
+  Source Clock:         CLK_50MHZ_BUFGP rising at 20.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Minimum Data Path: clocks/baudrate_x8 to clocks/baudrate_x8
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X26Y76.YQ      Tcko                  0.522   clocks/baudrate_x8
+                                                       clocks/baudrate_x8
+    SLICE_X26Y76.BY      net (fanout=3)        0.420   clocks/baudrate_x8
+    SLICE_X26Y76.CLK     Tckdi       (-Th)    -0.152   clocks/baudrate_x8
+                                                       clocks/baudrate_x8
+    -------------------------------------------------  ---------------------------
+    Total                                      1.094ns (0.674ns logic, 0.420ns route)
+                                                       (61.6% logic, 38.4% route)
+
+--------------------------------------------------------------------------------
+
+Paths for end point clocks/freq4096 (SLICE_X44Y33.BY), 1 path
+--------------------------------------------------------------------------------
+Slack (hold path):      1.136ns (requirement - (clock path skew + uncertainty - data path))
+  Source:               clocks/freq4096 (FF)
+  Destination:          clocks/freq4096 (FF)
+  Requirement:          0.000ns
+  Data Path Delay:      1.136ns (Levels of Logic = 0)
+  Clock Path Skew:      0.000ns
+  Source Clock:         CLK_50MHZ_BUFGP rising at 20.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Minimum Data Path: clocks/freq4096 to clocks/freq4096
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X44Y33.YQ      Tcko                  0.522   clocks/freq4096
+                                                       clocks/freq4096
+    SLICE_X44Y33.BY      net (fanout=7)        0.462   clocks/freq4096
+    SLICE_X44Y33.CLK     Tckdi       (-Th)    -0.152   clocks/freq4096
+                                                       clocks/freq4096
+    -------------------------------------------------  ---------------------------
+    Total                                      1.136ns (0.674ns logic, 0.462ns route)
+                                                       (59.3% logic, 40.7% route)
+
+--------------------------------------------------------------------------------
+
+Paths for end point clocks/prescale_4096_10 (SLICE_X35Y81.F4), 1 path
+--------------------------------------------------------------------------------
+Slack (hold path):      1.614ns (requirement - (clock path skew + uncertainty - data path))
+  Source:               clocks/prescale_4096_10 (FF)
+  Destination:          clocks/prescale_4096_10 (FF)
+  Requirement:          0.000ns
+  Data Path Delay:      1.614ns (Levels of Logic = 1)
+  Clock Path Skew:      0.000ns
+  Source Clock:         CLK_50MHZ_BUFGP rising at 20.000ns
+  Destination Clock:    CLK_50MHZ_BUFGP rising at 20.000ns
+  Clock Uncertainty:    0.000ns
+
+  Minimum Data Path: clocks/prescale_4096_10 to clocks/prescale_4096_10
+    Location             Delay type         Delay(ns)  Physical Resource
+                                                       Logical Resource(s)
+    -------------------------------------------------  -------------------
+    SLICE_X35Y81.XQ      Tcko                  0.473   clocks/prescale_4096<10>
+                                                       clocks/prescale_4096_10
+    SLICE_X35Y81.F4      net (fanout=2)        0.340   clocks/prescale_4096<10>
+    SLICE_X35Y81.CLK     Tckf        (-Th)    -0.801   clocks/prescale_4096<10>
+                                                       clocks/Mcount_prescale_4096_lut<10>_INV_0
+                                                       clocks/Mcount_prescale_4096_xor<10>
+                                                       clocks/prescale_4096_10
+    -------------------------------------------------  ---------------------------
+    Total                                      1.614ns (1.274ns logic, 0.340ns route)
+                                                       (78.9% logic, 21.1% route)
+
+--------------------------------------------------------------------------------
+
+Component Switching Limit Checks: NET "CLK_50MHZ_BUFGP/IBUFG" PERIOD = 20 ns HIGH 40%;
+--------------------------------------------------------------------------------
+Slack: 17.935ns (period - (min high pulse limit / (high pulse / period)))
+  Period: 20.000ns
+  High pulse: 8.000ns
+  High pulse limit: 0.826ns (Tch)
+  Physical resource: clocks/baudrate_x8/CLK
+  Logical resource: clocks/baudrate_x8/CK
+  Location pin: SLICE_X26Y76.CLK
+  Clock network: CLK_50MHZ_BUFGP
+--------------------------------------------------------------------------------
+Slack: 17.935ns (period - (min high pulse limit / (high pulse / period)))
+  Period: 20.000ns
+  High pulse: 8.000ns
+  High pulse limit: 0.826ns (Tch)
+  Physical resource: clocks/freq4096/CLK
+  Logical resource: clocks/freq4096/CK
+  Location pin: SLICE_X44Y33.CLK
+  Clock network: CLK_50MHZ_BUFGP
+--------------------------------------------------------------------------------
+Slack: 18.005ns (period - (min high pulse limit / (high pulse / period)))
+  Period: 20.000ns
+  High pulse: 8.000ns
+  High pulse limit: 0.798ns (Tch)
+  Physical resource: clocks/prescale_4096<0>/CLK
+  Logical resource: clocks/prescale_4096_0/CK
+  Location pin: SLICE_X35Y76.CLK
+  Clock network: CLK_50MHZ_BUFGP
+--------------------------------------------------------------------------------
+
+
+All constraints were met.
+
+
+Data Sheet report:
+-----------------
+All values displayed in nanoseconds (ns)
+
+Clock to Setup on destination clock CLK_50MHZ
+---------------+---------+---------+---------+---------+
+               | Src:Rise| Src:Fall| Src:Rise| Src:Fall|
+Source Clock   |Dest:Rise|Dest:Rise|Dest:Fall|Dest:Fall|
+---------------+---------+---------+---------+---------+
+CLK_50MHZ      |    6.752|         |         |    3.282|
+---------------+---------+---------+---------+---------+
+
+
+Timing summary:
+---------------
+
+Timing errors: 0  Score: 0  (Setup/Max: 0, Hold: 0)
+
+Constraints cover 833 paths, 0 nets, and 135 connections
+
+Design statistics:
+   Minimum period:   6.752ns{1}   (Maximum frequency: 148.104MHz)
+
+
+------------------------------------Footnotes-----------------------------------
+1)  The minimum period statistic assumes all single cycle delays.
+
+Analysis completed Mon Oct 09 17:24:30 2023 
+--------------------------------------------------------------------------------
+
+Trace Settings:
+-------------------------
+Trace Settings 
+
+Peak Memory Usage: 169 MB
+
+
+

@@ -1,0 +1,244 @@
+Release 14.7 par P.20131013 (nt)
+Copyright (c) 1995-2013 Xilinx, Inc.  All rights reserved.
+
+ZOLTANP4::  Mon Oct 09 17:23:44 2023
+
+par -filter
+C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/iseconfig/filter.filter -w
+-intstyle ise -ol high -t 1 sys9080_map.ncd sys9080.ncd sys9080.pcf 
+
+
+Constraints file: sys9080.pcf.
+Loading device for application Rf_Device from file '3s500e.nph' in environment C:\Xilinx\14.7\ISE_DS\ISE\.
+   "sys9080" is an NCD, version 3.2, device xc3s500e, package fg320, speed -4
+
+Initializing temperature to 85.000 Celsius. (default - Range: -40.000 to 100.000 Celsius)
+Initializing voltage to 1.140 Volts. (default - Range: 1.140 to 1.320 Volts)
+
+
+Device speed data version:  "PRODUCTION 1.27 2013-10-13".
+
+
+Design Summary Report:
+
+ Number of External IOBs                          28 out of 232    12%
+
+   Number of External Input IOBs                 18
+
+      Number of External Input IBUFs             18
+        Number of LOCed External Input IBUFs     18 out of 18    100%
+
+
+   Number of External Output IOBs                10
+
+      Number of External Output IOBs             10
+        Number of LOCed External Output IOBs     10 out of 10    100%
+
+
+   Number of External Bidir IOBs                  0
+
+
+   Number of BUFGMUXs                        4 out of 24     16%
+   Number of RAMB16s                         2 out of 20     10%
+   Number of Slices                       2099 out of 4656   45%
+      Number of SLICEMs                    180 out of 2328    7%
+
+
+
+Overall effort level (-ol):   High 
+Placer effort level (-pl):    High 
+Placer cost table entry (-t): 1
+Router effort level (-rl):    High 
+
+Starting initial Timing Analysis.  REAL time: 3 secs 
+Finished initial Timing Analysis.  REAL time: 3 secs 
+
+WARNING:Par:288 - The signal J1<0>_IBUF has no load.  PAR will not attempt to route this signal.
+WARNING:Par:288 - The signal J1<3>_IBUF has no load.  PAR will not attempt to route this signal.
+WARNING:Par:288 - The signal J2<2>_IBUF has no load.  PAR will not attempt to route this signal.
+WARNING:Par:288 - The signal J2<3>_IBUF has no load.  PAR will not attempt to route this signal.
+
+Starting Placer
+Total REAL time at the beginning of Placer: 4 secs 
+Total CPU  time at the beginning of Placer: 3 secs 
+
+Phase 1.1  Initial Placement Analysis
+Phase 1.1  Initial Placement Analysis (Checksum:7166a327) REAL time: 6 secs 
+
+Phase 2.7  Design Feasibility Check
+Phase 2.7  Design Feasibility Check (Checksum:7166a327) REAL time: 6 secs 
+
+Phase 3.31  Local Placement Optimization
+Phase 3.31  Local Placement Optimization (Checksum:7166a327) REAL time: 6 secs 
+
+Phase 4.2  Initial Clock and IO Placement
+
+Phase 4.2  Initial Clock and IO Placement (Checksum:1f266e3e) REAL time: 8 secs 
+
+Phase 5.30  Global Clock Region Assignment
+Phase 5.30  Global Clock Region Assignment (Checksum:1f266e3e) REAL time: 8 secs 
+
+Phase 6.36  Local Placement Optimization
+Phase 6.36  Local Placement Optimization (Checksum:1f266e3e) REAL time: 8 secs 
+
+Phase 7.8  Global Placement
+..................
+.......................................................................................................................
+.....................................
+.......
+Phase 7.8  Global Placement (Checksum:820d1fe8) REAL time: 10 secs 
+
+Phase 8.5  Local Placement Optimization
+Phase 8.5  Local Placement Optimization (Checksum:820d1fe8) REAL time: 10 secs 
+
+Phase 9.18  Placement Optimization
+Phase 9.18  Placement Optimization (Checksum:9b37e4ac) REAL time: 11 secs 
+
+Phase 10.5  Local Placement Optimization
+Phase 10.5  Local Placement Optimization (Checksum:9b37e4ac) REAL time: 11 secs 
+
+Total REAL time to Placer completion: 11 secs 
+Total CPU  time to Placer completion: 8 secs 
+Writing design to file sys9080.ncd
+
+
+
+Starting Router
+
+
+Phase  1  : 14819 unrouted;      REAL time: 16 secs 
+
+Phase  2  : 14470 unrouted;      REAL time: 26 secs 
+
+Phase  3  : 5328 unrouted;      REAL time: 27 secs 
+
+Phase  4  : 5328 unrouted; (Setup:0, Hold:0, Component Switching Limit:0)     REAL time: 28 secs 
+
+Phase  5  : 0 unrouted; (Setup:0, Hold:0, Component Switching Limit:0)     REAL time: 35 secs 
+
+Updating file: sys9080.ncd with current fully routed design.
+
+Phase  6  : 0 unrouted; (Setup:0, Hold:0, Component Switching Limit:0)     REAL time: 36 secs 
+
+Phase  7  : 0 unrouted; (Setup:0, Hold:0, Component Switching Limit:0)     REAL time: 36 secs 
+
+Phase  8  : 0 unrouted; (Setup:0, Hold:0, Component Switching Limit:0)     REAL time: 36 secs 
+WARNING:Route:455 - CLK Net:clocks/baudgen/cnt<2> may have excessive skew because 
+      0 CLK pins and 3 NON_CLK pins failed to route using a CLK template.
+WARNING:Route:455 - CLK Net:clocks/baudgen/cnt<0> may have excessive skew because 
+      0 CLK pins and 2 NON_CLK pins failed to route using a CLK template.
+WARNING:Route:455 - CLK Net:cpu_clk may have excessive skew because 
+      1 CLK pins and 4 NON_CLK pins failed to route using a CLK template.
+WARNING:Route:455 - CLK Net:acia0/receiver/ready may have excessive skew because 
+      1 CLK pins and 0 NON_CLK pins failed to route using a CLK template.
+WARNING:Route:455 - CLK Net:clocks/ss_clk may have excessive skew because 
+      3 CLK pins and 0 NON_CLK pins failed to route using a CLK template.
+WARNING:Route:455 - CLK Net:clocks/baudrate_x8 may have excessive skew because 
+      2 CLK pins and 1 NON_CLK pins failed to route using a CLK template.
+WARNING:Route:455 - CLK Net:clocks/freq4096 may have excessive skew because 
+      2 CLK pins and 1 NON_CLK pins failed to route using a CLK template.
+
+Total REAL time to Router completion: 36 secs 
+Total CPU time to Router completion: 33 secs 
+
+Partition Implementation Status
+-------------------------------
+
+  No Partitions were found in this design.
+
+-------------------------------
+
+Generating "PAR" statistics.
+
+**************************
+Generating Clock Report
+**************************
+
++---------------------+--------------+------+------+------------+-------------+
+|        Clock Net    |   Resource   |Locked|Fanout|Net Skew(ns)|Max Delay(ns)|
++---------------------+--------------+------+------+------------+-------------+
+|           trace_clk | BUFGMUX_X1Y10| No   |  164 |  0.069     |  0.187      |
++---------------------+--------------+------+------+------------+-------------+
+|     CLK_50MHZ_BUFGP | BUFGMUX_X1Y11| No   |   21 |  0.043     |  0.176      |
++---------------------+--------------+------+------+------------+-------------+
+|    acia0/int_rxdclk | BUFGMUX_X2Y11| No   |   23 |  0.018     |  0.174      |
++---------------------+--------------+------+------+------------+-------------+
+|clocks/powergen/cnt< |              |      |      |            |             |
+|                  0> |  BUFGMUX_X1Y0| No   |   44 |  0.073     |  0.190      |
++---------------------+--------------+------+------+------------+-------------+
+|     clocks/freq4096 |         Local|      |    7 |  0.481     |  1.265      |
++---------------------+--------------+------+------+------------+-------------+
+|clocks/baudgen/cnt<2 |              |      |      |            |             |
+|                   > |         Local|      |   12 |  0.059     |  1.690      |
++---------------------+--------------+------+------+------------+-------------+
+|  clocks/baudrate_x8 |         Local|      |    3 |  0.000     |  1.501      |
++---------------------+--------------+------+------+------------+-------------+
+|clocks/baudgen/cnt<0 |              |      |      |            |             |
+|                   > |         Local|      |    7 |  0.220     |  2.308      |
++---------------------+--------------+------+------+------------+-------------+
+|         rot_changed |         Local|      |    4 |  0.003     |  1.203      |
++---------------------+--------------+------+------+------------+-------------+
+|             cpu_clk |         Local|      |   17 |  0.696     |  2.594      |
++---------------------+--------------+------+------+------------+-------------+
+|acia0/receiver/ready |              |      |      |            |             |
+|                     |         Local|      |    3 |  0.823     |  1.713      |
++---------------------+--------------+------+------+------------+-------------+
+| acia0/sender/bitClk |         Local|      |    7 |  0.089     |  1.971      |
++---------------------+--------------+------+------+------------+-------------+
+|acia0/receiver/frame |              |      |      |            |             |
+|              _valid |         Local|      |    6 |  0.082     |  1.817      |
++---------------------+--------------+------+------+------------+-------------+
+|       clocks/ss_clk |         Local|      |    3 |  0.538     |  1.101      |
++---------------------+--------------+------+------+------------+-------------+
+|          rts1_pulse |         Local|      |    1 |  0.000     |  1.322      |
++---------------------+--------------+------+------+------------+-------------+
+
+* Net Skew is the difference between the minimum and maximum routing
+only delays for the net. Note this is different from Clock Skew which
+is reported in TRCE timing report. Clock Skew is the difference between
+the minimum and maximum path delays which includes logic delays.
+
+* The fanout is the number of component pins not the individual BEL loads,
+for example SLICE loads not FF loads.
+
+Timing Score: 0 (Setup: 0, Hold: 0, Component Switching Limit: 0)
+
+Asterisk (*) preceding a constraint indicates it was not met.
+   This may be due to a setup or hold violation.
+
+----------------------------------------------------------------------------------------------------------
+  Constraint                                |    Check    | Worst Case |  Best Case | Timing |   Timing   
+                                            |             |    Slack   | Achievable | Errors |    Score   
+----------------------------------------------------------------------------------------------------------
+  NET "CLK_50MHZ_BUFGP/IBUFG" PERIOD = 20 n | SETUP       |    13.248ns|     6.752ns|       0|           0
+  s HIGH 40%                                | HOLD        |     1.094ns|            |       0|           0
+----------------------------------------------------------------------------------------------------------
+
+
+All constraints were met.
+
+
+Generating Pad Report.
+
+All signals are completely routed.
+
+WARNING:Par:283 - There are 4 loadless signals in this design. This design will cause Bitgen to issue DRC warnings.
+
+Total REAL time to PAR completion: 38 secs 
+Total CPU time to PAR completion: 34 secs 
+
+Peak Memory Usage:  279 MB
+
+Placement: Completed - No errors found.
+Routing: Completed - No errors found.
+Timing: Completed - No errors found.
+
+Number of error messages: 0
+Number of warning messages: 13
+Number of info messages: 0
+
+Writing design to file sys9080.ncd
+
+
+
+PAR done!

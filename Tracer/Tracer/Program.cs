@@ -19,6 +19,7 @@ namespace Tracer
         static Dictionary<string, int> profilerDictionary = new Dictionary<string, int>();
         static StoreMap<StoreMapRow> memoryMap, ioMap;
         static InspectorForm inspector = null;
+        static int dataWidth = -1;  // uninitialized
 
         // these track the "imagined" external memory space as updated and read by the CPU
         //private Dictionary<int, byte> ioReadDictionary = new Dictionary<int, byte>();
@@ -29,8 +30,8 @@ namespace Tracer
         static int Main(string[] args)
         {
             string sourceFileName;
-            string comPortName = "COM5";
-            string rawLine;
+            string comPortName = "COM6";
+            int comPortBaudrate = 57600;
             int dummy;
             
             PrintBanner();
@@ -39,7 +40,7 @@ namespace Tracer
             switch (args.Length)
             {
                 case 0:
-                    sourceFileName = GetInteractiveFile(@"C:\Users\zoltanp\Documents\HexCalc\sys9080\prog\zout");
+                    sourceFileName = GetInteractiveFile(@"C:\Users\zoltanp\Documents\HexCalc\sys_sifp\prog");
                     break;
                 case 1:
                     sourceFileName = args[0];
@@ -70,7 +71,240 @@ namespace Tracer
                 }
             }
             sourceFile = new System.IO.StreamReader(sourceFileName);
- 
+            // lame way to try to support both 8080 and SIFC
+            if (sourceFileName.EndsWith(".vhd"))
+            {
+                dataWidth = 16;
+                IngestMCCVhdFile();
+            }
+            else
+            {
+                dataWidth = 8;
+                IngestZMACLstFile();
+            }
+            sourceFile.Close();
+
+            Console.WriteLine($"{traceDictionary.Count} lines added from {sourceFileName}");
+
+            comPort = new SerialPort(comPortName, comPortBaudrate, Parity.None, 8, StopBits.One);
+            if (comPort.IsOpen)
+            {
+                comPort.Close();
+            }
+
+            string comInfo = $"{comPort.PortName} ({comPort.BaudRate},{comPort.DataBits},{comPort.Parity},{comPort.StopBits})";
+            Console.WriteLine($"Waiting for trace on {comInfo}");
+            Console.WriteLine($"(Press 'x' to exit, 'c|m|i' to show inspector, <spacebar> to flip RTS pin)");
+            comPort.DataReceived += Port_DataReceived;
+            comPort.Handshake = Handshake.None;
+            comPort.RtsEnable = true;
+            comPort.Open();
+
+            // create maps for memory and I/O
+            //memoryMap = new StoreMap<StoreMapRow>(1 << 12, true);   // TODO: make it a parameter
+            memoryMap = new StoreMap<StoreMapRow>(1 << 16, true); // TODO: limiting to 4k is a speed-up experiment 
+            ioMap = new StoreMap<StoreMapRow>(1 << 8, false);
+
+            ConsoleKeyInfo key;
+            bool exit = false;
+
+            while (!exit)
+            {
+                key = Console.ReadKey();
+                switch (key.KeyChar)
+                {
+                    // TODO: clear instruction counter on some key
+                    case ' ':
+                        comPort.RtsEnable = !comPort.RtsEnable;
+                        break;
+                    case 'c':   // code
+                    case 'C':
+                    case 'm':   // memory
+                    case 'M':
+                    case 'i':   // i/o
+                    case 'I':
+                    case 'r':   // registers
+                    case 'R':
+                        if (inspector == null)
+                        {
+                            inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap);
+
+                            System.Threading.Thread formShower = new System.Threading.Thread(ShowForm);
+                            formShower.Start(inspector);
+                        }
+                        else
+                        {
+                            inspector.BringToFront();
+                        }
+                        inspector.SelectTab(key.KeyChar);
+                        break;
+                    case 'x':
+                    case 'X':
+                        // leave it in enabled state 
+                         exit = true;
+                        comPort.RtsEnable = true;
+                        GenerateProfilerReport();
+                        break;
+                    default:
+                        break;
+                }
+            }
+            comPort.Close();
+
+            if (inspector != null)
+            {
+                inspector.Dispose();
+                inspector = null;
+            }
+
+            return 0;
+        }
+
+        internal static void Assert(bool condition, string exceptionMessage)
+        {
+            if (!condition)
+            {
+                Console.ResetColor();
+                throw new ApplicationException(exceptionMessage, null);
+            }
+        }
+
+        static void Port_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
+        {
+            int address;
+            object data;
+            string received = comPort.ReadExisting();
+            bool pause;
+
+            foreach (char c in received)
+            {
+                if (c == LF)
+                {
+                    // leave out the previous CR (TODO - check assumption it was a CR...)
+                    string traceRecord = sbTraceRecord.ToString();// 0, sbTraceRecord.Length - 1);
+                    string[] traceValuePair = traceRecord.Split(',');
+                    if (traceValuePair.Length != 2)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"{traceRecord} - BAD RECORD, IGNORED!");
+                        return;
+                    }
+                    string recordType = traceValuePair[0].Trim().ToUpperInvariant();
+                    string recordValue = traceValuePair[1].Trim().ToUpperInvariant();
+                    pause = false;
+                    switch (recordType)
+                    {
+                        // see https://github.com/zpekic/sys9080/blob/master/debugtracer.vhd
+                        case "M1":  // instruction fetch
+                        case "IF":
+                            if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data, dataWidth))
+                            {
+                                CheckLimit(memoryMap.UpdateFetch(address, data, ref pause), traceRecord);
+                            }
+                            if (traceDictionary.ContainsKey(recordValue))
+                            {
+                                Console.WriteLine(traceDictionary[recordValue]);
+                            }
+                            else
+                            { 
+                                Console.ForegroundColor = ConsoleColor.Yellow;  // YELLOW for unmatched record
+                                Console.WriteLine(traceRecord);
+                            }
+                            if (profilerDictionary.ContainsKey(recordValue))
+                            {   
+                                // increment hit count
+                                profilerDictionary[recordValue]++;
+                            }
+                            break;
+                        case "MR":  // read memory (except M1)
+                            if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data, dataWidth))
+                            {
+                                CheckLimit(memoryMap.UpdateRead(address, data, ref pause), traceRecord);
+                            }
+                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
+                            Console.WriteLine(traceRecord);
+                            break;
+                        case "MW":  // write memory
+                            if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data, dataWidth))
+                            {
+                                CheckLimit(memoryMap.UpdateWrite(address, data, ref pause), traceRecord);
+                            }
+                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
+                            Console.WriteLine(traceRecord);
+                            break;
+                        case "IR":  // read port
+                            if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data, dataWidth))
+                            {
+                                // TODO: coerce 16-bit address to 8-bit??
+                                CheckLimit(ioMap.UpdateRead(address & 0xFF, data, ref pause), traceRecord);
+                            }
+                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
+                            Console.WriteLine(traceRecord);
+                            break;
+                        case "IW":  // write port
+                            if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data, dataWidth))
+                            {
+                                // TODO: coerce 16-bit address to 8-bit??
+                                CheckLimit(ioMap.UpdateWrite(address & 0xFF, data, ref pause), traceRecord);
+                            }
+                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
+                            Console.WriteLine(traceRecord);
+                            break;
+                        default:    
+                            Console.ForegroundColor = ConsoleColor.Red;     // RED for unrecognized trace record type
+                            Console.WriteLine(traceRecord);
+                            break;
+                    }
+                    Console.ResetColor();
+                    sbTraceRecord.Clear();
+                    // pause code execution to inspect memory!
+                    if (pause)
+                    {
+                        SendKeys.SendWait(" ");
+                    }
+                }
+                else
+                {
+                    if (c != CR)
+                    {
+                        sbTraceRecord.Append(c);
+                    }
+                }
+            }
+        }
+
+        private static void IngestMCCVhdFile()
+        {
+            string rawLine;
+
+            while ((rawLine = sourceFile.ReadLine()) != null)
+            {
+                string trimmedLine = rawLine.Trim();
+
+                if (trimmedLine.StartsWith("-- L") && (trimmedLine[18] == '.'))
+                {
+                    // extract source line number and memory hex address
+                    string[] decHex = trimmedLine.Split('@');
+                    if (decHex.Length > 1)
+                    {
+                        string sourceLineNumber = decHex[0].Substring(4);
+                        string m1key = decHex[1].Substring(0, decHex[1].IndexOf('.'));
+                        string m1Value = $"[{sourceLineNumber}]{decHex[1].Substring(decHex[1].IndexOf('.') + 1)}";
+                        traceDictionary.Add(m1key, m1Value);
+                        // if this is a label, also add to the "profiler"
+                        if (trimmedLine.IndexOf(":") > 0)
+                        {
+                            profilerDictionary.Add(m1key, 0);
+                        }
+                    }
+                }
+            }
+        }
+
+        private static void IngestZMACLstFile()
+        {
+            string rawLine;
+
             while ((rawLine = sourceFile.ReadLine()) != null)
             {
                 string trimmedLine = rawLine.Trim();
@@ -113,192 +347,6 @@ namespace Tracer
                     }
                 }
             }
-            sourceFile.Close();
-
-            Console.WriteLine($"{traceDictionary.Count} lines added from {sourceFileName}");
-
-            comPort = new SerialPort(comPortName, 38400, Parity.None, 8, StopBits.One);
-            if (comPort.IsOpen)
-            {
-                comPort.Close();
-            }
-
-            string comInfo = $"{comPort.PortName} ({comPort.BaudRate},{comPort.DataBits},{comPort.Parity},{comPort.StopBits})";
-            Console.WriteLine($"Waiting for trace on {comInfo}");
-            Console.WriteLine($"(Press 'x' to exit, 'c|m|i' to show inspector, <spacebar> to flip RTS pin)");
-            comPort.DataReceived += Port_DataReceived;
-            comPort.Handshake = Handshake.None;
-            comPort.RtsEnable = true;
-            comPort.Open();
-
-            // create maps for memory and I/O
-            memoryMap = new StoreMap<StoreMapRow>(1 << 12, true);   // TODO: make it a parameter
-            //memoryMap = new StoreMap<StoreMapRow>(1 << 16, true); // TODO: limiting to 4k is a speed-up experiment 
-            ioMap = new StoreMap<StoreMapRow>(1 << 8, false);
-
-            ConsoleKeyInfo key;
-            bool exit = false;
-
-            while (!exit)
-            {
-                key = Console.ReadKey();
-                switch (key.KeyChar)
-                {
-                    // TODO: clear instruction counter on some key
-                    case ' ':
-                        comPort.RtsEnable = !comPort.RtsEnable;
-                        break;
-                    case 'c':
-                    case 'C':
-                    case 'm':
-                    case 'M':
-                    case 'i':
-                    case 'I':
-                        if (inspector == null)
-                        {
-                            inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap);
-
-                            System.Threading.Thread formShower = new System.Threading.Thread(ShowForm);
-                            formShower.Start(inspector);
-                        }
-                        else
-                        {
-                            inspector.BringToFront();
-                        }
-                        inspector.SelectTab(key.KeyChar);
-                        break;
-                    case 'x':
-                    case 'X':
-                        // leave it in enabled state 
-                        exit = true;
-                        comPort.RtsEnable = true;
-                        GenerateProfilerReport();
-                        break;
-                    default:
-                        break;
-                }
-            }
-            comPort.Close();
-
-            if (inspector != null)
-            {
-                inspector.Dispose();
-                inspector = null;
-            }
-
-            return 0;
-        }
-
-        internal static void Assert(bool condition, string exceptionMessage)
-        {
-            if (!condition)
-            {
-                Console.ResetColor();
-                throw new ApplicationException(exceptionMessage, null);
-            }
-        }
-
-        static void Port_DataReceived(object sender, System.IO.Ports.SerialDataReceivedEventArgs e)
-        {
-            int address;
-            byte data;
-            string received = comPort.ReadExisting();
-            bool pause;
-
-            foreach (char c in received)
-            {
-                if (c == LF)
-                {
-                    // leave out the previous CR (TODO - check assumption it was a CR...)
-                    string traceRecord = sbTraceRecord.ToString();// 0, sbTraceRecord.Length - 1);
-                    string[] traceValuePair = traceRecord.Split(',');
-                    if (traceValuePair.Length != 2)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.WriteLine($"{traceRecord} - BAD RECORD, IGNORED!");
-                        return;
-                    }
-                    string recordType = traceValuePair[0].ToUpperInvariant();
-                    string recordValue = traceValuePair[1].ToUpperInvariant();
-                    pause = false;
-                    switch (recordType)
-                    {
-                        // see https://github.com/zpekic/sys9080/blob/master/debugtracer.vhd
-                        case "M1":  // instruction fetch
-                            if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data))
-                            {
-                                CheckLimit(memoryMap.UpdateFetch(address, data, ref pause), traceRecord);
-                            }
-                            if (traceDictionary.ContainsKey(recordValue))
-                            {
-                                Console.WriteLine(traceDictionary[recordValue]);
-                            }
-                            else
-                            { 
-                                Console.ForegroundColor = ConsoleColor.Yellow;  // YELLOW for unmatched record
-                                Console.WriteLine(traceRecord);
-                            }
-                            if (profilerDictionary.ContainsKey(recordValue))
-                            {   
-                                // increment hit count
-                                profilerDictionary[recordValue]++;
-                            }
-                            break;
-                        case "MR":  // read memory (except M1)
-                            if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data))
-                            {
-                                CheckLimit(memoryMap.UpdateRead(address, data, ref pause), traceRecord);
-                            }
-                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
-                            Console.WriteLine(traceRecord);
-                            break;
-                        case "MW":  // write memory
-                            if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data))
-                            {
-                                CheckLimit(memoryMap.UpdateWrite(address, data, ref pause), traceRecord);
-                            }
-                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
-                            Console.WriteLine(traceRecord);
-                            break;
-                        case "IR":  // read port
-                            if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data))
-                            {
-                                // TODO: coerce 16-bit address to 8-bit??
-                                CheckLimit(ioMap.UpdateRead(address & 0xFF, data, ref pause), traceRecord);
-                            }
-                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
-                            Console.WriteLine(traceRecord);
-                            break;
-                        case "IW":  // write port
-                            if (CheckRecipientAndRecord(ioMap, recordValue.Split(' '), out address, out data))
-                            {
-                                // TODO: coerce 16-bit address to 8-bit??
-                                CheckLimit(ioMap.UpdateWrite(address & 0xFF, data, ref pause), traceRecord);
-                            }
-                            Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
-                            Console.WriteLine(traceRecord);
-                            break;
-                        default:    
-                            Console.ForegroundColor = ConsoleColor.Red;     // RED for unrecognized trace record type
-                            Console.WriteLine(traceRecord);
-                            break;
-                    }
-                    Console.ResetColor();
-                    sbTraceRecord.Clear();
-                    // pause code execution to inspect memory!
-                    if (pause)
-                    {
-                        SendKeys.SendWait(" ");
-                    }
-                }
-                else
-                {
-                    if (c != CR)
-                    {
-                        sbTraceRecord.Append(c);
-                    }
-                }
-            }
         }
 
         private static void CheckLimit(bool ok, string traceRecord)
@@ -311,7 +359,7 @@ namespace Tracer
             }
         }
 
-        private static bool CheckRecipientAndRecord(StoreMap<StoreMapRow> sm, string[] addressDataPair, out int address, out byte data)
+        private static bool CheckRecipientAndRecord(StoreMap<StoreMapRow> sm, string[] addressDataPair, out int address, out object data, int dataWidth)
         {
             address = 0;
             data = 0;
@@ -328,9 +376,22 @@ namespace Tracer
                     {
                         int d;
 
-                        if (int.TryParse(addressDataPair[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out d) && (d >= 0) && (d < (1 << 8)))
+                        if (int.TryParse(addressDataPair[1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out d) && (d >= 0) && (d < (1 << dataWidth)))
                         {
-                            data = (byte)d;
+                            switch(dataWidth)
+                            {
+                                case 8:
+                                    data = (byte)d;
+                                    break;
+                                case 16:
+                                    data = (UInt16)d;
+                                    break;
+                                case 32:
+                                    data = (UInt32)d;
+                                    break;
+                                default:
+                                    throw new InvalidDataException($"Data Width value of {dataWidth} is not supported.");
+                            }
                             return true;
                         }
                         else
@@ -408,14 +469,14 @@ namespace Tracer
                 openFileDialog.InitialDirectory = string.IsNullOrEmpty(initialDirectory) ? Directory.GetCurrentDirectory() : initialDirectory;
                 openFileDialog.Title = "Select assembly listing file for trace matching";
                 //openFileDialog.FileName = fileName;
-                openFileDialog.Filter = "LST files (*.lst)|*.lst|All files (*.*)|*.*";
+                openFileDialog.Filter = "VHD files (*.vhd)|*.vhd|LST files (*.lst)|*.lst|All files (*.*)|*.*";
                 openFileDialog.FilterIndex = 0;
                 openFileDialog.RestoreDirectory = true;
 
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
                     //Get the path of specified file
-                    return openFileDialog.FileName;
+                    return openFileDialog.FileName.ToLowerInvariant();
                 }
             }
 

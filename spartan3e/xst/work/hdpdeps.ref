@@ -1,0 +1,210 @@
+V3 114
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25139.vhd 2023/03/14.22:18:29 P.20131013
+EN work/Am25139 1696897219 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25139.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/Am25139/Behavioral 1696897220 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25139.vhd \
+      EN work/Am25139 1696897219
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS153.vhd 2023/03/14.21:35:56 P.20131013
+EN work/Am25LS153 1696897207 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS153.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/Am25LS153/Behavioral 1696897208 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS153.vhd \
+      EN work/Am25LS153 1696897207
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS157.vhd 2023/03/14.21:49:16 P.20131013
+EN work/Am25LS157 1696897205 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS157.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/Am25LS157/Behavioral 1696897206 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS157.vhd \
+      EN work/Am25LS157 1696897205
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS257.vhd 2018/01/08.21:47:25 P.20131013
+EN work/Am25LS257 1696897211 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS257.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/Am25LS257/Behavioral 1696897212 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS257.vhd \
+      EN work/Am25LS257 1696897211
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS374.vhd 2017/10/28.14:19:32 P.20131013
+EN work/Am25LS374 1696897203 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS374.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/Am25LS374/Behavioral 1696897204 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS374.vhd \
+      EN work/Am25LS374 1696897203
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS377.vhd 2019/03/05.22:48:35 P.20131013
+EN work/Am25LS377 1696897191 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS377.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/Am25LS377/Behavioral 1696897192 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am25LS377.vhd \
+      EN work/Am25LS377 1696897191
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2901c.vhd 2023/03/19.15:40:10 P.20131013
+EN work/Am2901c 1696897209 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2901c.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/Am2901c/Behavioral 1696897210 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2901c.vhd \
+      EN work/Am2901c 1696897209
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/am2909-12.vhd 2018/01/21.17:05:09 P.20131013
+EN work/am2909x12 1696897195 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/am2909-12.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/am2909x12/RTL 1696897196 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/am2909-12.vhd \
+      EN work/am2909x12 1696897195
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2918.vhd 2018/01/08.21:47:25 P.20131013
+EN work/Am2918 1696897217 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2918.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/Am2918/Behavioral 1696897218 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2918.vhd \
+      EN work/Am2918 1696897217
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2920.vhd 2023/02/02.22:59:03 P.20131013
+EN work/Am2920 1696897215 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2920.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/Am2920/Behavioral 1696897216 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2920.vhd \
+      EN work/Am2920 1696897215
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2922.vhd 2023/03/19.11:29:15 P.20131013
+EN work/Am2922 1696897197 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2922.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/Am2922/Behavioral 1696897198 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am29XX/Am2922.vhd \
+      EN work/Am2922 1696897197
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am82S62.vhd 2018/01/08.21:47:25 P.20131013
+EN work/Am82S62 1696897213 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am82S62.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/Am82S62/Behavioral 1696897214 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am82S62.vhd \
+      EN work/Am82S62 1696897213
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am9080a.vhd 2023/04/10.22:08:02 P.20131013
+EN work/Am9080a 1696897241 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am9080a.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/Am9080a/structural 1696897242 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/Am9080a.vhd \
+      EN work/Am9080a 1696897241 CP am25ls377 CP rom256x12 CP am2909x12 CP am2922 \
+      CP rom32x8 CP rom512x56 CP Am25LS374 CP Am25LS157 CP Am25LS153 CP Am2901c \
+      CP Am25LS257 CP Am82S62 CP Am2920 CP Am2918 CP Am25139
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/rom256x12.vhd 2023/03/14.19:21:44 P.20131013
+EN work/rom256x12 1696897193 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/rom256x12.vhd \
+      PB ieee/std_logic_1164 1381692176 PB std/TEXTIO 1381692176 \
+      PB ieee/NUMERIC_STD 1381692181 PB work/sys9080_package 1696897190
+AR work/rom256x12/Behavioral 1696897194 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/rom256x12.vhd \
+      EN work/rom256x12 1696897193
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/rom32x8.vhd 2019/11/05.23:55:34 P.20131013
+EN work/rom32x8 1696897199 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/rom32x8.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/rom32x8/Behavioral 1696897200 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/rom32x8.vhd \
+      EN work/rom32x8 1696897199
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/rom512x56.vhd 2023/04/02.17:55:57 P.20131013
+EN work/rom512x56 1696897201 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/rom512x56.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/STD_LOGIC_TEXTIO 1381692180 \
+      PB std/TEXTIO 1381692176 PB ieee/NUMERIC_STD 1381692181 \
+      PB work/sys9080_package 1696897190
+AR work/rom512x56/Behavioral 1696897202 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/Am9080/rom512x56.vhd \
+      EN work/rom512x56 1696897201
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/clockgen.vhd 2023/07/27.13:43:25 P.20131013
+EN work/clockgen 1696897231 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/clockgen.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/clockgen/Behavioral 1696897232 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/clockgen.vhd EN work/clockgen 1696897231 \
+      CP work/sn74hc4040
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/debouncer.vhd 2023/03/14.20:53:18 P.20131013
+EN work/debouncer 1696897227 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/debouncer.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/debouncer/Behavioral 1696897228 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/debouncer.vhd \
+      EN work/debouncer 1696897227
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/debouncer8channel.vhd 2019/04/13.19:10:48 P.20131013
+EN work/debouncer8channel 1696897233 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/debouncer8channel.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/debouncer8channel/Behavioral 1696897234 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/debouncer8channel.vhd \
+      EN work/debouncer8channel 1696897233 CP debouncer
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/debugtracer.vhd 2023/04/19.21:49:47 P.20131013
+EN work/debugtracer 1696897243 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/debugtracer.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/debugtracer/Behavioral 1696897244 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/debugtracer.vhd \
+      EN work/debugtracer 1696897243
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/rom1k.vhd 2023/03/14.23:47:24 P.20131013
+EN work/rom1k 1696897237 FL C:/Users/zoltanp/Documents/HexCalc/sys9080/rom1k.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181 \
+      PB work/sys9080_package 1696897190
+AR work/rom1k/Behavioral 1696897238 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/rom1k.vhd EN work/rom1k 1696897237
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/simpleram.vhd 2023/03/16.00:24:33 P.20131013
+EN work/simpleram 1696897239 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/simpleram.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/simpleram/structural 1696897240 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/simpleram.vhd \
+      EN work/simpleram 1696897239 CP ram1k
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/sn74hc4040.vhd 2021/07/30.17:55:08 P.20131013
+EN work/sn74hc4040 1696897229 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/sn74hc4040.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/sn74hc4040/Behavioral 1696897230 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/sn74hc4040.vhd \
+      EN work/sn74hc4040 1696897229
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/ipcore_dir/ram1k.vhd 2023/05/23.19:08:00 P.20131013
+EN work/ram1k 1696897221 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/ipcore_dir/ram1k.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/ram1k/ram1k_a 1696897222 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/ipcore_dir/ram1k.vhd \
+      EN work/ram1k 1696897221
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/sys9080.vhd 2023/07/26.13:29:04 P.20131013
+EN work/sys9080 1696897245 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/sys9080.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/sys9080/Structural 1696897246 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/sys9080.vhd \
+      EN work/sys9080 1696897245 CP work/clockgen CP work/debouncer8channel \
+      CP work/uart CP work/rom1k CP work/simpleram CP work/Am9080a \
+      CP work/debugtracer
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/sys9080_package.vhd 2023/03/12.21:55:23 P.20131013
+PH work/sys9080_package 1696897189 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/sys9080_package.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181 \
+      PB std/TEXTIO 1381692176 PB ieee/STD_LOGIC_TEXTIO 1381692180
+PB work/sys9080_package 1696897190 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/sys9080_package.vhd \
+      PH work/sys9080_package 1696897189
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/uart.vhd 2023/03/19.21:44:08 P.20131013
+EN work/uart 1696897235 FL C:/Users/zoltanp/Documents/HexCalc/sys9080/uart.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/uart/Behavioral 1696897236 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/uart.vhd EN work/uart 1696897235 \
+      CP uart_par2ser CP uart_ser2par
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/uart_par2ser.vhd 2021/09/19.13:54:27 P.20131013
+EN work/uart_par2ser 1696897223 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/uart_par2ser.vhd \
+      PB ieee/std_logic_1164 1381692176 PB ieee/NUMERIC_STD 1381692181
+AR work/uart_par2ser/Behavioral 1696897224 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/uart_par2ser.vhd \
+      EN work/uart_par2ser 1696897223
+FL C:/Users/zoltanp/Documents/HexCalc/sys9080/uart_ser2par.vhd 2021/09/19.13:54:27 P.20131013
+EN work/uart_ser2par 1696897225 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/uart_ser2par.vhd \
+      PB ieee/std_logic_1164 1381692176
+AR work/uart_ser2par/Behavioral 1696897226 \
+      FL C:/Users/zoltanp/Documents/HexCalc/sys9080/uart_ser2par.vhd \
+      EN work/uart_ser2par 1696897225

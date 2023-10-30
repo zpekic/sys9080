@@ -74,10 +74,10 @@ namespace Tracer
     public class StoreUpdatedEventArgs : EventArgs
     {
         public int Address;
-        public byte Data;
+        public object Data;
         public char Descriptor;
 
-        public StoreUpdatedEventArgs(int address, byte data, char descriptor)
+        public StoreUpdatedEventArgs(int address, object data, char descriptor)
         {
             this.Address = address;
             this.Data = data;
@@ -94,9 +94,10 @@ namespace Tracer
 
         private List<StoreMapColumn> columns = new List<StoreMapColumn>();
         // these track the "imagined" external memory / IO space as seen by the CPU
-        private Dictionary<int, byte> readDictionary = new Dictionary<int, byte>();
-        private Dictionary<int, byte> writeDictionary = new Dictionary<int, byte>();
-        private Dictionary<int, byte> fetchDictionary = new Dictionary<int, byte>();
+        private Dictionary<int, object> readDictionary = new Dictionary<int, object>();
+        private Dictionary<int, object> writeDictionary = new Dictionary<int, object>();
+        private Dictionary<int, object> fetchDictionary = new Dictionary<int, object>();
+        private Dictionary<int, object> registerDictionary = new Dictionary<int, object>();
 
         // Declare an array to store the data elements.
         private Dictionary<int, StoreMapRow> rowDictionary = new Dictionary<int, StoreMapRow>();
@@ -142,8 +143,8 @@ namespace Tracer
         public StoreMapRow GetStoreMapRow(int address)
         {
             StoreMapRow smr = new StoreMapRow(address);
-            string bytePropName, bytePropValue;
-            char asciiChar;
+            string bytePropValue;
+            string ascii;
             char descriptorChar;
             StringBuilder sbAscii = new StringBuilder();
             StringBuilder sbDescriptor = new StringBuilder("A");    // have a description for address column too
@@ -152,14 +153,14 @@ namespace Tracer
             {
                 //bytePropName = "x" + "0123456789ABCDEF"[i];
 
-                if (!GetDataFromDictionary(fetchDictionary, address + i, 'F', out bytePropValue, out asciiChar, out descriptorChar))
+                if (!GetDataFromDictionary(fetchDictionary, address + i, 'F', out bytePropValue, out ascii, out descriptorChar))
                 {
-                    if (!GetDataFromDictionary(readDictionary, address + i, 'R', out bytePropValue, out asciiChar, out descriptorChar))
+                    if (!GetDataFromDictionary(readDictionary, address + i, 'R', out bytePropValue, out ascii, out descriptorChar))
                     {
-                        GetDataFromDictionary(writeDictionary, address + i, 'W', out bytePropValue, out asciiChar, out descriptorChar);
+                        GetDataFromDictionary(writeDictionary, address + i, 'W', out bytePropValue, out ascii, out descriptorChar);
                     }
                 }
-                sbAscii.Append(asciiChar);
+                sbAscii.Append(ascii);
                 sbDescriptor.Append(descriptorChar);
                 //smr[bytePropName] = bytePropValue;
                 switch (i)
@@ -236,7 +237,7 @@ namespace Tracer
             Console.ResetColor();
         }
 
-        public bool UpdateFetch(int address, byte data, ref bool pause)
+        public bool UpdateFetch(int address, object data, ref bool pause)
         {
             if (address < this.Size)
             {
@@ -256,7 +257,7 @@ namespace Tracer
             return false;
         }
 
-        public bool UpdateRead(int address, byte data, ref bool pause)
+        public bool UpdateRead(int address, object data, ref bool pause)
         {
             if (address < this.Size)
             {
@@ -267,9 +268,25 @@ namespace Tracer
                 }
                 if (writeDictionary.ContainsKey(address))
                 {
-                    if (data != writeDictionary[address])
+                    string readData = data.ToString();
+                    string writeData = writeDictionary[address].ToString();
+                    if (!readData.Equals(writeData, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        ReportMemoryIssue(false, $"Reading {data:X2} from {address:X4}, expected {writeDictionary[address]:X2}");
+                        if (data is Byte)
+                        {
+                            ReportMemoryIssue(false, $"Reading {data:X2} from {address:X4}, expected {writeDictionary[address]:X2}");
+                        }
+                        else
+                        {
+                            if (data is UInt16)
+                            {
+                                ReportMemoryIssue(false, $"Reading {data:X4} from {address:X4}, expected {writeDictionary[address]:X4}");
+                            }
+                            else
+                            {
+                                ReportMemoryIssue(false, $"Reading {readData} from {address:X4}, expected {writeData}");
+                            }
+                        }
                         pause = true;
                     }
                     writeDictionary.Remove(address);
@@ -280,7 +297,7 @@ namespace Tracer
             return false;
         }
 
-        public bool UpdateWrite(int address, byte data, ref bool pause)
+        public bool UpdateWrite(int address, object data, ref bool pause)
         {
             if (address < this.Size)
             {
@@ -299,7 +316,7 @@ namespace Tracer
             return false;
         }
 
-        private void AddOrUpdateEntry(Dictionary<int, byte> dict, int address, byte data, char descriptor)
+        private void AddOrUpdateEntry(Dictionary<int, object> dict, int address, object data, char descriptor)
         {
             EventHandler<StoreUpdatedEventArgs> raiseEvent = StoreUpdatedEvent;
             StoreUpdatedEventArgs eventArgs = null;
@@ -325,22 +342,39 @@ namespace Tracer
             }
         }
 
-        private bool GetDataFromDictionary(Dictionary<int, byte> dict, int address, char descriptor, out string byteValue, out char asciiChar, out char descriptorChar)
+        private char GetPrintableChar(byte b, char placeholder)
         {
-            byteValue = "??";
-            asciiChar = '.';
+            if ((b > 31) && (b < 127))
+            {
+                return Convert.ToChar(b);
+            }
+            return placeholder;
+        }
+
+        private bool GetDataFromDictionary(Dictionary<int, object> dict, int address, char descriptor, out string dataValue, out string ascii, out char descriptorChar)
+        {
+            dataValue = "??";
+            ascii = "?";
             descriptorChar = '?';
 
             if (dict.ContainsKey(address))
             {
                 descriptorChar = descriptor;
-                byte data = dict[address];
-                if ((data > 31) && (data < 127))
+                object data = dict[address];
+                if (data is byte)
                 {
-                    asciiChar = Convert.ToChar(data);
+                    byte b = (byte)data;
+                    ascii = GetPrintableChar(b, '.').ToString();
+                    dataValue = b.ToString("X2");
+                    return true;
                 }
-                byteValue = data.ToString("X2");
-                return true;
+                if (data is UInt16)
+                {
+                    UInt16 w = (UInt16)data;
+                    ascii = GetPrintableChar((byte) (w >> 8), '.').ToString() + GetPrintableChar((byte) (w & 255), '.').ToString();
+                    dataValue = w.ToString("X4");
+                    return true;
+                }
             }
             return false;
         }

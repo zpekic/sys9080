@@ -1,0 +1,6 @@
+xst -intstyle ise -filter "C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/iseconfig/filter.filter" -ifn "C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/sys9080.xst" -ofn "C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/sys9080.syr" 
+ngdbuild -filter "iseconfig/filter.filter" -intstyle ise -dd _ngo -sd ipcore_dir -aul -nt timestamp -uc s3estarter.ucf -p xc3s500e-fg320-4 sys9080.ngc sys9080.ngd  
+map -filter "C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/iseconfig/filter.filter" -intstyle ise -p xc3s500e-fg320-4 -cm area -ir off -pr off -c 100 -o sys9080_map.ncd sys9080.ngd sys9080.pcf 
+par -filter "C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/iseconfig/filter.filter" -w -intstyle ise -ol high -t 1 sys9080_map.ncd sys9080.ncd sys9080.pcf 
+trce -filter C:/Users/zoltanp/Documents/HexCalc/sys9080/spartan3e/iseconfig/filter.filter -intstyle ise -v 3 -s 4 -n 3 -fastpaths -xml sys9080.twx sys9080.ncd -o sys9080.twr sys9080.pcf -ucf s3estarter.ucf 
+bitgen -filter "iseconfig/filter.filter" -intstyle ise -f sys9080.ut sys9080.ncd 
