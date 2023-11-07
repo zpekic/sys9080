@@ -30,7 +30,7 @@
         {
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPageCode = new System.Windows.Forms.TabPage();
-            this.textBox1 = new System.Windows.Forms.TextBox();
+            this.textBox1 = new System.Windows.Forms.RichTextBox();
             this.tabPageMem = new System.Windows.Forms.TabPage();
             this.tabPageIO = new System.Windows.Forms.TabPage();
             this.tabControl1.SuspendLayout();
@@ -44,6 +44,7 @@
             this.tabControl1.Controls.Add(this.tabPageIO);
             this.tabControl1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.tabControl1.Location = new System.Drawing.Point(0, 0);
+            this.tabControl1.Margin = new System.Windows.Forms.Padding(3, 3, 3, 30);
             this.tabControl1.Name = "tabControl1";
             this.tabControl1.SelectedIndex = 0;
             this.tabControl1.Size = new System.Drawing.Size(800, 450);
@@ -51,8 +52,8 @@
             // 
             // tabPageCode
             // 
-            this.tabPageCode.Font = new System.Drawing.Font("Lucida Console", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tabPageCode.Controls.Add(this.textBox1);
+            this.tabPageCode.Font = new System.Drawing.Font("Lucida Console", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tabPageCode.Location = new System.Drawing.Point(4, 22);
             this.tabPageCode.Name = "tabPageCode";
             this.tabPageCode.Size = new System.Drawing.Size(792, 424);
@@ -66,12 +67,11 @@
             // 
             this.textBox1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.textBox1.Location = new System.Drawing.Point(0, 0);
-            this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
             this.textBox1.ReadOnly = true;
-            this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Both;
             this.textBox1.Size = new System.Drawing.Size(792, 424);
             this.textBox1.TabIndex = 0;
+            this.textBox1.Text = "";
             // 
             // tabPageMem
             // 
@@ -109,7 +109,6 @@
             this.Text = "InspectorForm";
             this.tabControl1.ResumeLayout(false);
             this.tabPageCode.ResumeLayout(false);
-            this.tabPageCode.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -120,6 +119,6 @@
         private System.Windows.Forms.TabPage tabPageMem;
         private System.Windows.Forms.TabPage tabPageIO;
         private System.Windows.Forms.TabPage tabPageCode;
-        private System.Windows.Forms.TextBox textBox1;
+        private System.Windows.Forms.RichTextBox textBox1;
     }
 }

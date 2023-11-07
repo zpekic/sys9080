@@ -18,6 +18,7 @@ namespace Tracer
         static Dictionary<string, string> traceDictionary = new Dictionary<string, string>();
         static Dictionary<string, int> profilerDictionary = new Dictionary<string, int>();
         static StoreMap<StoreMapRow> memoryMap, ioMap;
+        static CpuBroker cpuBroker; 
         static InspectorForm inspector = null;
         static int dataWidth = -1;  // uninitialized
 
@@ -104,13 +105,16 @@ namespace Tracer
             //memoryMap = new StoreMap<StoreMapRow>(1 << 12, true);   // TODO: make it a parameter
             memoryMap = new StoreMap<StoreMapRow>(1 << 16, true); // TODO: limiting to 4k is a speed-up experiment 
             ioMap = new StoreMap<StoreMapRow>(1 << 8, false);
-
+            cpuBroker = new CpuBroker(dataWidth);
+            
             ConsoleKeyInfo key;
             bool exit = false;
+            string title = Console.Title;
 
             while (!exit)
             {
                 key = Console.ReadKey();
+                Console.Title = title + (comPort.RtsEnable ? " RtsEnable = true" : " RtsEnable = false");
                 switch (key.KeyChar)
                 {
                     // TODO: clear instruction counter on some key
@@ -127,7 +131,7 @@ namespace Tracer
                     case 'R':
                         if (inspector == null)
                         {
-                            inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap);
+                            inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap, cpuBroker);
 
                             System.Threading.Thread formShower = new System.Threading.Thread(ShowForm);
                             formShower.Start(inspector);
@@ -141,7 +145,7 @@ namespace Tracer
                     case 'x':
                     case 'X':
                         // leave it in enabled state 
-                         exit = true;
+                        exit = true;
                         comPort.RtsEnable = true;
                         GenerateProfilerReport();
                         break;
@@ -204,6 +208,11 @@ namespace Tracer
                             if (traceDictionary.ContainsKey(recordValue))
                             {
                                 Console.WriteLine(traceDictionary[recordValue]);
+                                if (inspector != null)
+                                {
+                                    //cpuBroker.InstructionFetch(recordValue);
+                                    inspector.Invoke(inspector.codeHighlightDelegate, new Object[] { recordValue, true });
+                                }
                             }
                             else
                             { 
@@ -216,10 +225,26 @@ namespace Tracer
                                 profilerDictionary[recordValue]++;
                             }
                             break;
+                        case "RV":  // register value
+                            cpuBroker.UpdateRegister(recordValue);
+                            if (inspector != null)
+                            {
+                                inspector.Invoke(inspector.registerValueDelegate, new Object[] { cpuBroker.GetRegisterState(), false });
+                            }
+                            else
+                            {
+                                Console.ForegroundColor = ConsoleColor.Red;     // RED for unrecognized trace record type
+                                Console.WriteLine(traceRecord);
+                            }
+                            break;
                         case "MR":  // read memory (except M1)
                             if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data, dataWidth))
                             {
                                 CheckLimit(memoryMap.UpdateRead(address, data, ref pause), traceRecord);
+                            }
+                            if (inspector != null)
+                            {
+                                //inspector.Invoke(inspector.codeHighlightDelegate, new Object[] { recordValue, false });
                             }
                             Console.ForegroundColor = ConsoleColor.Blue;    // BLUE for not implemented trace record type
                             Console.WriteLine(traceRecord);

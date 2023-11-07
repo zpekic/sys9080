@@ -1,20 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using System.Windows.Forms;
+using System.Threading;
 
 namespace Tracer
 {
     public partial class InspectorForm : Form
     {
+        public delegate void HighlightCode(string instructionKey, bool fetch);
+        public HighlightCode codeHighlightDelegate;
+        public delegate void RegisterValue(string registerValue, bool dummy);
+        public RegisterValue registerValueDelegate;
+
         private StoreMap<StoreMapRow> memoryMap; 
         private StoreMap<StoreMapRow> ioMap;
+        private CpuBroker cpuBroker;
         private string codeFile = string.Empty;
         private DataGridView dataGridView1 = new DataGridView();
         private DataGridView dataGridView2 = new DataGridView();
@@ -30,8 +32,9 @@ namespace Tracer
         // Declare a variable to indicate the commit scope.
         // Set this value to false to use cell-level commit scope.
         private bool rowScopeCommit = true;
+        private int stepCount = 0;
 
-        internal InspectorForm(string codeFile, string caption, StoreMap<StoreMapRow> memoryMap, StoreMap<StoreMapRow> ioMap)
+        internal InspectorForm(string codeFile, string caption, StoreMap<StoreMapRow> memoryMap, StoreMap<StoreMapRow> ioMap, CpuBroker cpuBroker)
         {
             InitializeComponent();
 
@@ -42,8 +45,58 @@ namespace Tracer
             this.codeFile = codeFile;
             this.memoryMap = memoryMap;
             this.ioMap = ioMap;
+            this.cpuBroker = cpuBroker;
+            this.codeHighlightDelegate = new HighlightCode(HighlightCodeMethod);
+            this.registerValueDelegate = new RegisterValue(RegisterValueMethod);
         }
 
+        //private void CpuBroker_CodeSearchEvent(object sender, CodeSearchEventArgs e)
+        //{
+        //    this.Invoke(new MethodInvoker(delegate (string) {
+        //        HighlightCode(e.InstructionKey);
+        //    }));
+        //}
+
+        public void RegisterValueMethod(string registerValue, bool dummy)
+        {
+            this.Text = registerValue;
+        }
+
+        public void HighlightCodeMethod(string matchKey, bool fetch)
+        {
+            if (this.textBox1 != null)
+            {
+                this.textBox1.DeselectAll();
+                this.textBox1.Refresh();
+                //this.textBox1.ShowSelectionMargin = true;
+                //this.textBox1.Undo();
+                int foundIndex = this.textBox1.Find(matchKey, 0, RichTextBoxFinds.MatchCase | RichTextBoxFinds.WholeWord);
+                if (foundIndex < 0)
+                {
+                    // only warn for code, for memory read assume it was not in code memory
+                    if (fetch)
+                    {
+                        Console.Beep();
+                    }
+                }
+                else
+                {
+
+                    int line = this.textBox1.GetLineFromCharIndex(foundIndex);
+                    int startSelect = this.textBox1.GetFirstCharIndexFromLine(line);
+                    int endSelect = foundIndex + 8;
+                    this.textBox1.SelectionColor = fetch ? Color.Yellow : Color.White;
+                    this.textBox1.SelectionBackColor = fetch ? Color.Blue : Color.LightBlue;
+                    this.textBox1.Select(startSelect, endSelect);
+                    if ((stepCount % 8) == 0)
+                    {
+                        this.textBox1.ScrollToCaret();
+                    }
+                    stepCount++;
+                }
+            }
+        }
+        
         public void SelectTab(char tabSel)
         {
             for(int i = 0; i < this.tabControl1.TabCount; i++)
@@ -63,7 +116,7 @@ namespace Tracer
             {
                 string fileNameAndExtension = codeFile.Substring(codeFile.LastIndexOf("\\") + 1);
 
-                textBox1.Text = File.ReadAllText(codeFile);
+                textBox1.Text = File.ReadAllText(codeFile, System.Text.Encoding.UTF8);
                 textBox1.Font = new Font(FontFamily.GenericMonospace, 12.0f, FontStyle.Regular);
                 tabControl1.TabPages["tabPageCode"].Text = $"Code ({fileNameAndExtension})";
             }
@@ -85,6 +138,9 @@ namespace Tracer
             this.dataGridView2.RowDirtyStateNeeded += new QuestionEventHandler(dataGridView2_RowDirtyStateNeeded);
             // subscribe to store map changes!
             this.ioMap.StoreUpdatedEvent += IoMap_StoreUpdatedEvent;
+
+            // subscribe to CPU broker changes!
+            //this.cpuBroker.CodeSearchEvent += CpuBroker_CodeSearchEvent;
         }
 
         private void InitGridView(DataGridView dgv, StoreMap<StoreMapRow> sm)
