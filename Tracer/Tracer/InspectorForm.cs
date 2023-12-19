@@ -33,6 +33,7 @@ namespace Tracer
         // Set this value to false to use cell-level commit scope.
         private bool rowScopeCommit = true;
         private int stepCount = 0;
+        private FileSystemWatcher fsw = null;
 
         internal InspectorForm(string codeFile, string caption, StoreMap<StoreMapRow> memoryMap, StoreMap<StoreMapRow> ioMap, CpuBroker cpuBroker)
         {
@@ -66,10 +67,10 @@ namespace Tracer
         {
             if (this.textBox1 != null)
             {
+                this.textBox1.Undo();
                 this.textBox1.DeselectAll();
                 this.textBox1.Refresh();
                 //this.textBox1.ShowSelectionMargin = true;
-                //this.textBox1.Undo();
                 int foundIndex = this.textBox1.Find(matchKey, 0, RichTextBoxFinds.MatchCase | RichTextBoxFinds.WholeWord);
                 if (foundIndex < 0)
                 {
@@ -88,7 +89,7 @@ namespace Tracer
                     this.textBox1.SelectionColor = fetch ? Color.Yellow : Color.White;
                     this.textBox1.SelectionBackColor = fetch ? Color.Blue : Color.LightBlue;
                     this.textBox1.Select(startSelect, endSelect);
-                    if ((stepCount % 8) == 0)
+                    if ((stepCount % 4) == 0)
                     {
                         this.textBox1.ScrollToCaret();
                     }
@@ -119,6 +120,7 @@ namespace Tracer
                 textBox1.Text = File.ReadAllText(codeFile, System.Text.Encoding.UTF8);
                 textBox1.Font = new Font(FontFamily.GenericMonospace, 12.0f, FontStyle.Regular);
                 tabControl1.TabPages["tabPageCode"].Text = $"Code ({fileNameAndExtension})";
+                //fsw = new FileSystemWatcher(codeFile);
             }
 
             // 2nd tab contains Memory data grid

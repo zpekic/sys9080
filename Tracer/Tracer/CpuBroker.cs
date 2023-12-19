@@ -66,26 +66,31 @@ namespace Tracer
             }
         }
 
-        public void UpdateRegister(string recordValue)
+        public bool UpdateRegister(string recordValue)
         {
             string[] nameValuePair = recordValue.Split('=');
-            string name = nameValuePair[0].Trim().ToUpper();
-            string value = nameValuePair[1].Trim().ToUpper();
-
-            if (name.Equals("F"))
+            if (nameValuePair.Length == 2)
             {
-                value = Hex2Bin[value[0]] + Hex2Bin[value[1]] + Hex2Bin[value[2]] + Hex2Bin[value[3]];
-            }
+                string name = nameValuePair[0].Trim().ToUpper();
+                string value = nameValuePair[1].Trim().ToUpper();
 
-            if (RegValDictionary.ContainsKey(name))
-            {
-                RegValDictionary[name] = value;
-            }
-            else
-            {
-                throw new InvalidOperationException($"Register key {name} is unknown");
-            }
+                if (name.Equals("F"))
+                {
+                    value = Hex2Bin[value[0]] + Hex2Bin[value[1]] + Hex2Bin[value[2]] + Hex2Bin[value[3]];
+                }
 
+                if (RegValDictionary.ContainsKey(name))
+                {
+                    RegValDictionary[name] = value;
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Register key {name} is unknown");
+                }
+
+                return true;
+            }
+            return false;
         }
 
         public string GetRegisterState()

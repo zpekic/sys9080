@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Ports;
 using System.Globalization;
 using System.Windows.Forms;
+using System.Reflection;
 
 namespace Tracer
 {
@@ -226,15 +227,18 @@ namespace Tracer
                             }
                             break;
                         case "RV":  // register value
-                            cpuBroker.UpdateRegister(recordValue);
-                            if (inspector != null)
+                            if (cpuBroker.UpdateRegister(recordValue))
                             {
-                                inspector.Invoke(inspector.registerValueDelegate, new Object[] { cpuBroker.GetRegisterState(), false });
+                                Console.ForegroundColor = ConsoleColor.Green;     // GREEN for register values
                             }
                             else
                             {
                                 Console.ForegroundColor = ConsoleColor.Red;     // RED for unrecognized trace record type
-                                Console.WriteLine(traceRecord);
+                            }
+                            Console.WriteLine(traceRecord);
+                            if (inspector != null)
+                            {
+                                inspector.Invoke(inspector.registerValueDelegate, new Object[] { cpuBroker.GetRegisterState(), false });
                             }
                             break;
                         case "MR":  // read memory (except M1)
@@ -536,8 +540,11 @@ namespace Tracer
 
         static void PrintBanner()
         {
+            Version version = Assembly.GetEntryAssembly().GetName().Version;
             Console.WriteLine($"----------------------------------------------------------------");
-            Console.WriteLine($" i8080 compatible symbolic tracer utility (c) zpekic@hotmail.com");
+            Console.WriteLine($" Symbolic tracer utility V{version.ToString()} (c) zpekic@hotmail.com supports:");
+            Console.WriteLine($" SIFC-16: load *.vhd file for SIFC-16 (mcc microcode compiler)");
+            Console.WriteLine($" i8080  : load *.lst file i8080 (ZMAC assembler)");
             Console.WriteLine($"----------------------------------------------------------------");
             Console.WriteLine($" https://hackaday.io/project/190239-from-bit-slice-to-basic-and-symbolic-tracing");
             Console.WriteLine($" Sources: https://github.com/zpekic/sys9080");
