@@ -18,6 +18,10 @@ namespace Tracer
 
     class CpuBroker
     {
+        // TODO: don't be lazy, make it private and access through helper methods
+        public Dictionary<string, int> breakpointDictionary = new Dictionary<string, int>();
+        public bool InspectorReady = false;
+
         // HACKHACK - this should go to a separate CodeMap class but too lazy
         public event EventHandler<CodeSearchEventArgs> CodeSearchEvent;
         private Dictionary<string, string> RegValDictionary = new Dictionary<string, string>();

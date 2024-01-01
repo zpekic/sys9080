@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.IO;
 using System.Windows.Forms;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace Tracer
@@ -20,6 +21,8 @@ namespace Tracer
         private string codeFile = string.Empty;
         private DataGridView dataGridView1 = new DataGridView();
         private DataGridView dataGridView2 = new DataGridView();
+        private List<int> breakPointLineList = new List<int>();
+        private string previousMatch = string.Empty;
 
         // Declare store map rows to store data for a row being edited (not used!)
         private StoreMapRow memSMRInEdit, ioSMRInEdit;
@@ -33,7 +36,7 @@ namespace Tracer
         // Set this value to false to use cell-level commit scope.
         private bool rowScopeCommit = true;
         private int stepCount = 0;
-        private FileSystemWatcher fsw = null;
+        //private FileSystemWatcher fsw = null;
 
         internal InspectorForm(string codeFile, string caption, StoreMap<StoreMapRow> memoryMap, StoreMap<StoreMapRow> ioMap, CpuBroker cpuBroker)
         {
@@ -67,10 +70,12 @@ namespace Tracer
         {
             if (this.textBox1 != null)
             {
-                this.textBox1.Undo();
-                this.textBox1.DeselectAll();
-                this.textBox1.Refresh();
-                //this.textBox1.ShowSelectionMargin = true;
+                if (!string.IsNullOrEmpty(previousMatch))
+                {
+                    textBox1.Find(previousMatch, 0, RichTextBoxFinds.MatchCase | RichTextBoxFinds.WholeWord);
+                    this.textBox1.SelectionColor = this.textBox1.ForeColor;
+                    this.textBox1.SelectionBackColor = this.textBox1.BackColor;
+                }
                 int foundIndex = this.textBox1.Find(matchKey, 0, RichTextBoxFinds.MatchCase | RichTextBoxFinds.WholeWord);
                 if (foundIndex < 0)
                 {
@@ -78,22 +83,22 @@ namespace Tracer
                     if (fetch)
                     {
                         Console.Beep();
+                        previousMatch = string.Empty;
                     }
                 }
                 else
                 {
 
-                    int line = this.textBox1.GetLineFromCharIndex(foundIndex);
-                    int startSelect = this.textBox1.GetFirstCharIndexFromLine(line);
-                    int endSelect = foundIndex + 8;
+                    //int line = this.textBox1.GetLineFromCharIndex(foundIndex);
+                    //int startSelect = this.textBox1.GetFirstCharIndexFromLine(line);
+                    //int endSelect = foundIndex + 8;
                     this.textBox1.SelectionColor = fetch ? Color.Yellow : Color.White;
                     this.textBox1.SelectionBackColor = fetch ? Color.Blue : Color.LightBlue;
-                    this.textBox1.Select(startSelect, endSelect);
-                    if ((stepCount % 4) == 0)
-                    {
-                        this.textBox1.ScrollToCaret();
-                    }
+                    //this.textBox1.Select(startSelect, endSelect);
+                    //this.textBox1.ScrollToCaret();
                     stepCount++;
+                    previousMatch = matchKey;
+                    //this.textBox1.Refresh();
                 }
             }
         }
@@ -120,6 +125,10 @@ namespace Tracer
                 textBox1.Text = File.ReadAllText(codeFile, System.Text.Encoding.UTF8);
                 textBox1.Font = new Font(FontFamily.GenericMonospace, 12.0f, FontStyle.Regular);
                 tabControl1.TabPages["tabPageCode"].Text = $"Code ({fileNameAndExtension})";
+
+                textBox1.KeyDown += TextBox1_KeyDown;
+                this.textBox1.ShowSelectionMargin = true;
+
                 //fsw = new FileSystemWatcher(codeFile);
             }
 
@@ -143,6 +152,66 @@ namespace Tracer
 
             // subscribe to CPU broker changes!
             //this.cpuBroker.CodeSearchEvent += CpuBroker_CodeSearchEvent;
+            cpuBroker.InspectorReady = true;
+        }
+
+        private void TextBox1_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.F9)
+            {
+                int ficl = this.textBox1.GetFirstCharIndexOfCurrentLine();
+                int li = this.textBox1.GetLineFromCharIndex(ficl);
+                if (li >= 0)
+                {
+                    bool foundCodeLine = false;
+                    while (!foundCodeLine)
+                    {
+                        //--L0048@001B 000A.CPY, M[POP];
+                        //--r_p = 0000, r_a = 000, r_x = 000, r_y = 001, r_s = 010;
+                        //27 => X"0" & O"0" & O"0" & O"1" & O"2",
+                        string line = this.textBox1.Lines[li];
+                        if (line.StartsWith("-- L") && (line[18] == '.'))
+                        {
+                            string breakpointKey = line.Substring(9, 9); // TODO: make this less rigid?
+                            foundCodeLine = true;
+                            this.textBox1.Enabled = true;
+
+                            //ficl = this.textBox1.GetFirstCharIndexFromLine(li);
+                            if (cpuBroker.breakpointDictionary.ContainsValue(li))
+                            {
+                                cpuBroker.breakpointDictionary.Remove(breakpointKey);
+
+                                this.textBox1.Find(line);
+                                this.textBox1.SelectionColor = this.textBox1.ForeColor;
+                                this.textBox1.SelectionBackColor = this.textBox1.BackColor;
+                            }
+                            else
+                            {
+                                cpuBroker.breakpointDictionary.Add(breakpointKey, li);
+
+                                this.textBox1.Find(line);
+                                this.textBox1.SelectionColor = Color.White;
+                                this.textBox1.SelectionBackColor = Color.Red;
+                            }
+                        }
+                        else
+                        {
+                            if (li == this.textBox1.Lines.Length)
+                            {
+                                Console.Beep();
+                            }
+                            else
+                            {
+                                li++;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Console.Beep();
+                }
+            }
         }
 
         private void InitGridView(DataGridView dgv, StoreMap<StoreMapRow> sm)

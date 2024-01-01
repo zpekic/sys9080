@@ -134,6 +134,8 @@ namespace Tracer
                         {
                             inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap, cpuBroker);
 
+                            // RTS low should stop the target CPU and allow putting breakpoints in the inspector window
+                            comPort.RtsEnable = false;
                             System.Threading.Thread formShower = new System.Threading.Thread(ShowForm);
                             formShower.Start(inspector);
                         }
@@ -202,6 +204,11 @@ namespace Tracer
                         // see https://github.com/zpekic/sys9080/blob/master/debugtracer.vhd
                         case "M1":  // instruction fetch
                         case "IF":
+                            // if found in breakpoint list, first try to stop the target CPU, then do anything else
+                            if (cpuBroker.breakpointDictionary.ContainsKey(recordValue))
+                            {
+                                comPort.RtsEnable = false;
+                            }
                             if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data, dataWidth))
                             {
                                 CheckLimit(memoryMap.UpdateFetch(address, data, ref pause), traceRecord);
@@ -209,7 +216,7 @@ namespace Tracer
                             if (traceDictionary.ContainsKey(recordValue))
                             {
                                 Console.WriteLine(traceDictionary[recordValue]);
-                                if (inspector != null)
+                                if (inspector != null && cpuBroker.InspectorReady)
                                 {
                                     //cpuBroker.InstructionFetch(recordValue);
                                     inspector.Invoke(inspector.codeHighlightDelegate, new Object[] { recordValue, true });
@@ -236,7 +243,7 @@ namespace Tracer
                                 Console.ForegroundColor = ConsoleColor.Red;     // RED for unrecognized trace record type
                             }
                             Console.WriteLine(traceRecord);
-                            if (inspector != null)
+                            if (inspector != null && cpuBroker.InspectorReady)
                             {
                                 inspector.Invoke(inspector.registerValueDelegate, new Object[] { cpuBroker.GetRegisterState(), false });
                             }
