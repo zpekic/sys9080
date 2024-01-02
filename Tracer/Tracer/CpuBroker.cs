@@ -111,6 +111,25 @@ namespace Tracer
             return sb.ToString();
         }
 
+        public bool IsMatchingCodeLine(string selectedLine, string line, out string breakpointKey)
+        {
+            //--L0048@001B 000A.CPY, M[POP];
+            //--r_p = 0000, r_a = 000, r_x = 000, r_y = 001, r_s = 010;
+            //27 => X"0" & O"0" & O"0" & O"1" & O"2",
+
+            breakpointKey = string.Empty;
+            if (line.StartsWith("-- L") && (line[18] == '.'))
+            {
+                if (selectedLine.Equals(line))
+                {
+                    breakpointKey = line.Substring(9, 9); // TODO: make this less rigid?
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public void InstructionFetch(string instructionKey)
         {
             EventHandler<CodeSearchEventArgs> raiseEvent = CodeSearchEvent;

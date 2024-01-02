@@ -159,57 +159,54 @@ namespace Tracer
         {
             if (e.KeyCode == Keys.F9)
             {
-                int ficl = this.textBox1.GetFirstCharIndexOfCurrentLine();
-                int li = this.textBox1.GetLineFromCharIndex(ficl);
-                if (li >= 0)
+                string selectedLine = this.textBox1.SelectedText;
+                string breakpointKey;
+
+                if (string.IsNullOrEmpty(selectedLine))
                 {
-                    bool foundCodeLine = false;
-                    while (!foundCodeLine)
-                    {
-                        //--L0048@001B 000A.CPY, M[POP];
-                        //--r_p = 0000, r_a = 000, r_x = 000, r_y = 001, r_s = 010;
-                        //27 => X"0" & O"0" & O"0" & O"1" & O"2",
-                        string line = this.textBox1.Lines[li];
-                        if (line.StartsWith("-- L") && (line[18] == '.'))
-                        {
-                            string breakpointKey = line.Substring(9, 9); // TODO: make this less rigid?
-                            foundCodeLine = true;
-                            this.textBox1.Enabled = true;
-
-                            //ficl = this.textBox1.GetFirstCharIndexFromLine(li);
-                            if (cpuBroker.breakpointDictionary.ContainsValue(li))
-                            {
-                                cpuBroker.breakpointDictionary.Remove(breakpointKey);
-
-                                this.textBox1.Find(line);
-                                this.textBox1.SelectionColor = this.textBox1.ForeColor;
-                                this.textBox1.SelectionBackColor = this.textBox1.BackColor;
-                            }
-                            else
-                            {
-                                cpuBroker.breakpointDictionary.Add(breakpointKey, li);
-
-                                this.textBox1.Find(line);
-                                this.textBox1.SelectionColor = Color.White;
-                                this.textBox1.SelectionBackColor = Color.Red;
-                            }
-                        }
-                        else
-                        {
-                            if (li == this.textBox1.Lines.Length)
-                            {
-                                Console.Beep();
-                            }
-                            else
-                            {
-                                li++;
-                            }
-                        }
-                    }
+                    MessageBox.Show(this, "Error setting or clearing breakpoint.\nSelect line in code window by clicking to the left margin space", "Tracer", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 else
                 {
-                    Console.Beep();
+                    selectedLine = selectedLine.TrimEnd(new char[] { '\r', '\n'});
+                    int ficl = this.textBox1.Find(selectedLine);
+                    //int li = this.textBox1.GetLineFromCharIndex(ficl);
+                    if (ficl >= 0)
+                    {
+                        for (int li = 0; li < this.textBox1.Lines.Length; li++)
+                        {
+                            string line = this.textBox1.Lines[li];
+
+                            if (cpuBroker.IsMatchingCodeLine(selectedLine, line, out breakpointKey))
+                            { 
+                                this.textBox1.Enabled = true;
+
+                                if (cpuBroker.breakpointDictionary.ContainsValue(li))
+                                {
+                                    cpuBroker.breakpointDictionary.Remove(breakpointKey);
+
+                                    this.textBox1.Find(line);
+                                    this.textBox1.SelectionColor = this.textBox1.ForeColor;
+                                    this.textBox1.SelectionBackColor = this.textBox1.BackColor;
+                                }
+                                else
+                                {
+                                    cpuBroker.breakpointDictionary.Add(breakpointKey, li);
+
+                                    this.textBox1.Find(line);
+                                    this.textBox1.SelectionColor = Color.White;
+                                    this.textBox1.SelectionBackColor = Color.Red;
+                                }
+
+                                // bail because breakpoint has been set or removed
+                                return;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Console.Beep();
+                    }
                 }
             }
         }
