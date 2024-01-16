@@ -155,6 +155,73 @@ namespace Tracer
             cpuBroker.InspectorReady = true;
         }
 
+        public string GetCodeLine(int line)
+        {
+            EnsureInspectorIsReady();
+
+            return this.textBox1.Lines[line];
+        }
+
+        public bool ToggleBreakpoint(string instructionKey)
+        {
+            string line = string.Empty;
+            int lineIndex = FindLineByKey(instructionKey, out line);
+
+            if (lineIndex >= 0)
+            {
+                if (cpuBroker.breakpointDictionary.ContainsKey(instructionKey))
+                {
+                    cpuBroker.breakpointDictionary.Remove(instructionKey);
+
+                    this.textBox1.Find(line);
+                    this.textBox1.SelectionColor = this.textBox1.ForeColor;
+                    this.textBox1.SelectionBackColor = this.textBox1.BackColor;
+                    //MessageBox.Show(this, $"Removed from '{line}'", "Breakpoint", MessageBoxButtons.OK);
+                }
+                else
+                {
+                    cpuBroker.breakpointDictionary.Add(instructionKey, lineIndex);
+
+                    this.textBox1.Find(line);
+                    this.textBox1.SelectionColor = Color.White;
+                    this.textBox1.SelectionBackColor = Color.Red;
+                    //MessageBox.Show(this, $"Added at '{line}'", "Breakpoint", MessageBoxButtons.OK);
+                }
+
+                return true;
+            }
+            else
+            {
+                //MessageBox.Show(this, $"Cannot find line with instruction '{instructionKey}'", "Breakpoint", MessageBoxButtons.OK );
+            }
+            return false;
+        }
+
+        private void EnsureInspectorIsReady()
+        {
+            while (!cpuBroker.InspectorReady)
+            {
+                Thread.Sleep(100);
+            }
+        }
+
+        private int FindLineByKey(string key, out string line)
+        {
+            line = string.Empty;
+
+            EnsureInspectorIsReady();
+            for (int li = 0; li < this.textBox1.Lines.Length; li++)
+            {
+                line = this.textBox1.Lines[li];
+                if (line.Contains(key))
+                {
+                    return li;
+                }
+            }
+
+            return -1; // not found
+        }
+
         private void TextBox1_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.F9)

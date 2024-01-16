@@ -6,6 +6,8 @@ using System.IO.Ports;
 using System.Globalization;
 using System.Windows.Forms;
 using System.Reflection;
+using System.Linq;
+//using System.Linq;
 
 namespace Tracer
 {
@@ -22,6 +24,7 @@ namespace Tracer
         static CpuBroker cpuBroker; 
         static InspectorForm inspector = null;
         static int dataWidth = -1;  // uninitialized
+        static string lastInstructionRecord = string.Empty;
 
         // these track the "imagined" external memory space as updated and read by the CPU
         //private Dictionary<int, byte> ioReadDictionary = new Dictionary<int, byte>();
@@ -114,13 +117,45 @@ namespace Tracer
 
             while (!exit)
             {
-                key = Console.ReadKey();
                 Console.Title = title + (comPort.RtsEnable ? " RtsEnable = true" : " RtsEnable = false");
+
+                key = Console.ReadKey();
+
                 switch (key.KeyChar)
                 {
                     // TODO: clear instruction counter on some key
                     case ' ':
-                        comPort.RtsEnable = !comPort.RtsEnable;
+                        if (comPort.RtsEnable)
+                        {
+                            comPort.RtsEnable = false;
+                            Console.WriteLine($"[stop at '{lastInstructionRecord}']");
+                        }
+                        else
+                        {
+                            comPort.RtsEnable = true;
+                            Console.WriteLine("[continue]");
+                        }
+                        break;
+                    case 'b':
+                    case 'B':
+                        Console.WriteLine("[reakpoints]");
+                        // dump all breakpoints
+                        Console.WriteLine("----------------------------");
+                        Console.WriteLine("Instruction\tLine");
+                        Console.WriteLine("----------------------------");
+                        if (cpuBroker.breakpointDictionary.Count > 0)
+                        {
+                            foreach(string instruction in cpuBroker.breakpointDictionary.Keys)
+                            {
+                                int line = cpuBroker.breakpointDictionary[instruction];
+                                Console.WriteLine($"{instruction}\t{line} {inspector.GetCodeLine(line)}");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("(None - use F9 in console or inspector window to set/remove)");
+                        }
+                        Console.WriteLine("----------------------------");
                         break;
                     case 'c':   // code
                     case 'C':
@@ -130,29 +165,27 @@ namespace Tracer
                     case 'I':
                     case 'r':   // registers
                     case 'R':
-                        if (inspector == null)
-                        {
-                            inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap, cpuBroker);
-
-                            // RTS low should stop the target CPU and allow putting breakpoints in the inspector window
-                            comPort.RtsEnable = false;
-                            System.Threading.Thread formShower = new System.Threading.Thread(ShowForm);
-                            formShower.Start(inspector);
-                        }
-                        else
-                        {
-                            inspector.BringToFront();
-                        }
+                        Console.WriteLine("[spector]");
+                        EnsureInspector(true, sourceFileName, comInfo);
                         inspector.SelectTab(key.KeyChar);
                         break;
                     case 'x':
                     case 'X':
                         // leave it in enabled state 
+                        Console.WriteLine("[it]");
                         exit = true;
                         comPort.RtsEnable = true;
                         GenerateProfilerReport();
                         break;
                     default:
+                        if (key.Key == ConsoleKey.F9)
+                        {
+                            EnsureInspector(false, sourceFileName, comInfo);
+                            if (!inspector.ToggleBreakpoint(lastInstructionRecord))
+                            {
+                                MessageBox.Show($"Cannot find line with instruction '{lastInstructionRecord}'", "Breakpoint", MessageBoxButtons.OK );
+                            }
+                        }
                         break;
                 }
             }
@@ -165,6 +198,26 @@ namespace Tracer
             }
 
             return 0;
+        }
+
+        internal static void EnsureInspector(bool bringToFront, string sourceFileName, string comInfo)
+        {
+            if (inspector == null)
+            {
+                inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap, cpuBroker);
+
+                // RTS low should stop the target CPU and allow putting breakpoints in the inspector window
+                comPort.RtsEnable = false;
+                System.Threading.Thread formShower = new System.Threading.Thread(ShowForm);
+                formShower.Start(inspector);
+            }
+            else
+            {
+                if (bringToFront)
+                {
+                    inspector.BringToFront();
+                }
+            }
         }
 
         internal static void Assert(bool condition, string exceptionMessage)
@@ -204,6 +257,8 @@ namespace Tracer
                         // see https://github.com/zpekic/sys9080/blob/master/debugtracer.vhd
                         case "M1":  // instruction fetch
                         case "IF":
+                            // need to mark it in case breakpoint set / clear is attempted
+                            lastInstructionRecord = recordValue;
                             // if found in breakpoint list, first try to stop the target CPU, then do anything else
                             if (cpuBroker.breakpointDictionary.ContainsKey(recordValue))
                             {
@@ -213,6 +268,18 @@ namespace Tracer
                             {
                                 CheckLimit(memoryMap.UpdateFetch(address, data, ref pause), traceRecord);
                             }
+                            // track hits for "profiling"
+                            if (profilerDictionary.ContainsKey(recordValue))
+                            {
+                                // increment hit count
+                                profilerDictionary[recordValue]++;
+                            }
+                            else
+                            {
+                                // mark first hit
+                                profilerDictionary.Add(recordValue, 1);
+                            }
+                            // display on console
                             if (traceDictionary.ContainsKey(recordValue))
                             {
                                 Console.WriteLine(traceDictionary[recordValue]);
@@ -226,11 +293,6 @@ namespace Tracer
                             { 
                                 Console.ForegroundColor = ConsoleColor.Yellow;  // YELLOW for unmatched record
                                 Console.WriteLine(traceRecord);
-                            }
-                            if (profilerDictionary.ContainsKey(recordValue))
-                            {   
-                                // increment hit count
-                                profilerDictionary[recordValue]++;
                             }
                             break;
                         case "RV":  // register value
@@ -328,10 +390,10 @@ namespace Tracer
                         string m1Value = $"[{sourceLineNumber}]{decHex[1].Substring(decHex[1].IndexOf('.') + 1)}";
                         traceDictionary.Add(m1key, m1Value);
                         // if this is a label, also add to the "profiler"
-                        if (trimmedLine.IndexOf(":") > 0)
-                        {
-                            profilerDictionary.Add(m1key, 0);
-                        }
+                        //if (trimmedLine.IndexOf(":") > 0)
+                        //{
+                        //    profilerDictionary.Add(m1key, 0);
+                        //}
                     }
                 }
             }
@@ -374,10 +436,10 @@ namespace Tracer
                             string keyValue = rawLine.Substring(keyIndex);
                             traceDictionary.Add(m1key, keyValue);
                             // if this is a label, also add to the "profiler"
-                            if (keyValue.IndexOf(":") > 0)
-                            {
-                                profilerDictionary.Add(m1key, 0);
-                            }
+                            //if (keyValue.IndexOf(":") > 0)
+                            //{
+                            //    profilerDictionary.Add(m1key, 0);
+                            //}
                             found = true;
                         }
                     }
@@ -456,38 +518,33 @@ namespace Tracer
         private static void GenerateProfilerReport()
         {
             int totalHits = 0;
-            List<string> topHitsList = new List<string>();
+            List<KeyValuePair<string, int>> orderedProfilerList = new List<KeyValuePair<string, int>>();
 
             // get total number of label hits
             foreach (string key in profilerDictionary.Keys)
             {
                 totalHits += profilerDictionary[key];
             }
+            orderedProfilerList = profilerDictionary.ToList();
+            orderedProfilerList.Sort((pair1, pair2) => pair2.Value.CompareTo(pair1.Value));
 
             if (totalHits > 0)
             {
                 Console.WriteLine($"------------------------------------------------");
                 //Console.WriteLine($"123 1234567890 123 -----------------------------");
-                Console.WriteLine($"  # Hit  count   % Label");
+                Console.WriteLine($"Hits\tHit%\tCumulative%\tInstruction");
                 Console.WriteLine($"------------------------------------------------");
 
-                // Find and print top ten hitters (TODO: make it command line parameter)
-                for (int i = 1; i <= 10; i++)
+                // Find and print top 80% of hitters (TODO: make it command line parameter)
+                float cumulativePercentage = 0.0F;
+                foreach(var kvp in orderedProfilerList)
                 {
-                    int topHits = 0;
-                    string topKey = string.Empty;
-
-                    foreach (string key in profilerDictionary.Keys)
+                    float hit = (100.0F * kvp.Value) / totalHits;
+                    cumulativePercentage += hit;
+                    if (cumulativePercentage <= 80.0F)
                     {
-                        if (!topHitsList.Contains(key) && (profilerDictionary[key] >= topHits))
-                        {
-                            topHits = profilerDictionary[key];
-                            topKey = key;
-                        }
+                        Console.WriteLine($"{kvp.Value}\t{hit:N2}\t{cumulativePercentage:N2}\t{kvp.Key}\t{traceDictionary[kvp.Key]}");
                     }
-
-                    topHitsList.Add(topKey);
-                    Console.WriteLine($"{i,3} {topHits,10} {(100 * topHits) / totalHits,3}% {traceDictionary[topKey]}");
                 }
 
                 Console.WriteLine($"---Total hits: {totalHits} --------------------------------------");
