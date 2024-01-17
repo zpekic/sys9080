@@ -30,9 +30,13 @@
         {
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPageCode = new System.Windows.Forms.TabPage();
-            this.textBox1 = new System.Windows.Forms.RichTextBox();
+            this.label1 = new System.Windows.Forms.Label();
+            this.comboBoxLabel = new System.Windows.Forms.ComboBox();
+            this.textBoxCode = new System.Windows.Forms.RichTextBox();
             this.tabPageMem = new System.Windows.Forms.TabPage();
             this.tabPageIO = new System.Windows.Forms.TabPage();
+            this.label2 = new System.Windows.Forms.Label();
+            this.comboBoxBreakpoint = new System.Windows.Forms.ComboBox();
             this.tabControl1.SuspendLayout();
             this.tabPageCode.SuspendLayout();
             this.SuspendLayout();
@@ -52,7 +56,11 @@
             // 
             // tabPageCode
             // 
-            this.tabPageCode.Controls.Add(this.textBox1);
+            this.tabPageCode.Controls.Add(this.comboBoxBreakpoint);
+            this.tabPageCode.Controls.Add(this.label2);
+            this.tabPageCode.Controls.Add(this.label1);
+            this.tabPageCode.Controls.Add(this.comboBoxLabel);
+            this.tabPageCode.Controls.Add(this.textBoxCode);
             this.tabPageCode.Font = new System.Drawing.Font("Lucida Console", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.tabPageCode.Location = new System.Drawing.Point(4, 22);
             this.tabPageCode.Name = "tabPageCode";
@@ -63,15 +71,36 @@
             this.tabPageCode.ToolTipText = "Assembler listing file for execution tracing";
             this.tabPageCode.UseVisualStyleBackColor = true;
             // 
-            // textBox1
+            // label1
             // 
-            this.textBox1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.textBox1.Location = new System.Drawing.Point(0, 0);
-            this.textBox1.Name = "textBox1";
-            this.textBox1.ReadOnly = true;
-            this.textBox1.Size = new System.Drawing.Size(792, 424);
-            this.textBox1.TabIndex = 0;
-            this.textBox1.Text = "";
+            this.label1.AutoSize = true;
+            this.label1.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.Location = new System.Drawing.Point(8, 6);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(128, 16);
+            this.label1.TabIndex = 1;
+            this.label1.Text = "Go to label:";
+            // 
+            // comboBoxLabel
+            // 
+            this.comboBoxLabel.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBoxLabel.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.comboBoxLabel.ItemHeight = 16;
+            this.comboBoxLabel.Location = new System.Drawing.Point(154, 3);
+            this.comboBoxLabel.Name = "comboBoxLabel";
+            this.comboBoxLabel.Size = new System.Drawing.Size(190, 24);
+            this.comboBoxLabel.Sorted = true;
+            this.comboBoxLabel.TabIndex = 0;
+            // 
+            // textBoxCode
+            // 
+            this.textBoxCode.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.textBoxCode.Location = new System.Drawing.Point(0, 33);
+            this.textBoxCode.Name = "textBoxCode";
+            this.textBoxCode.ReadOnly = true;
+            this.textBoxCode.Size = new System.Drawing.Size(792, 391);
+            this.textBoxCode.TabIndex = 0;
+            this.textBoxCode.Text = "";
             // 
             // tabPageMem
             // 
@@ -99,6 +128,27 @@
             this.tabPageIO.ToolTipText = "Display traced I/O locations";
             this.tabPageIO.UseVisualStyleBackColor = true;
             // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label2.Location = new System.Drawing.Point(361, 6);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(178, 16);
+            this.label2.TabIndex = 2;
+            this.label2.Text = "Go to breakpoint:";
+            // 
+            // comboBoxBreakpoint
+            // 
+            this.comboBoxBreakpoint.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBoxBreakpoint.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.comboBoxBreakpoint.ItemHeight = 16;
+            this.comboBoxBreakpoint.Location = new System.Drawing.Point(561, 3);
+            this.comboBoxBreakpoint.Name = "comboBoxBreakpoint";
+            this.comboBoxBreakpoint.Size = new System.Drawing.Size(194, 24);
+            this.comboBoxBreakpoint.Sorted = true;
+            this.comboBoxBreakpoint.TabIndex = 3;
+            // 
             // InspectorForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -109,6 +159,7 @@
             this.Text = "InspectorForm";
             this.tabControl1.ResumeLayout(false);
             this.tabPageCode.ResumeLayout(false);
+            this.tabPageCode.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -119,6 +170,10 @@
         private System.Windows.Forms.TabPage tabPageMem;
         private System.Windows.Forms.TabPage tabPageIO;
         private System.Windows.Forms.TabPage tabPageCode;
-        private System.Windows.Forms.RichTextBox textBox1;
+        private System.Windows.Forms.RichTextBox textBoxCode;
+        private System.Windows.Forms.ComboBox comboBoxLabel;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.ComboBox comboBoxBreakpoint;
+        private System.Windows.Forms.Label label2;
     }
 }

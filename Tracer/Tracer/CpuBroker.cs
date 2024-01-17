@@ -111,8 +111,52 @@ namespace Tracer
             return sb.ToString();
         }
 
+        public bool DecomposeInstructionLine(string line, out string lineNumber, out string key, out string label, out string code)
+        {
+            // Example:
+            //--L0087@01BA 0000.VGA_Print:  NOP;
+            //--r_p = 0000, r_a = 000, r_x = 000, r_y = 000, r_s = 000;
+            //442 => X"0" & O"0" & O"0" & O"0" & O"0",
+
+            lineNumber = string.Empty;
+            key = string.Empty;
+            label = string.Empty;
+            code = string.Empty;
+
+            if (line.StartsWith("-- L") && (line[18] == '.'))
+            {
+                string[] byDot = line.Split('.');
+                if (byDot.Length > 1)
+                {
+                    string[] byAt = byDot[0].Split('@');
+                    if (byAt.Length > 1)
+                    {
+                        lineNumber = byAt[0];
+                        key = byAt[1];
+                    }
+
+                    string[] byColon = byDot[1].Split(':');
+                    if (byColon.Length > 1)
+                    {
+                        label = byColon[0];
+                        code = byColon[1];
+                    }
+                    else
+                    {
+                        code = byColon[0];
+                    }
+
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+
         public bool IsMatchingCodeLine(string selectedLine, string line, out string breakpointKey)
         {
+            // Example:
             //--L0048@001B 000A.CPY, M[POP];
             //--r_p = 0000, r_a = 000, r_x = 000, r_y = 001, r_s = 010;
             //27 => X"0" & O"0" & O"0" & O"1" & O"2",

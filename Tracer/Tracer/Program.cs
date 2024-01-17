@@ -7,7 +7,6 @@ using System.Globalization;
 using System.Windows.Forms;
 using System.Reflection;
 using System.Linq;
-//using System.Linq;
 
 namespace Tracer
 {
@@ -20,6 +19,7 @@ namespace Tracer
         static System.IO.StreamReader sourceFile;
         static Dictionary<string, string> traceDictionary = new Dictionary<string, string>();
         static Dictionary<string, int> profilerDictionary = new Dictionary<string, int>();
+        static List<string> labelList = new List<string>();
         static StoreMap<StoreMapRow> memoryMap, ioMap;
         static CpuBroker cpuBroker; 
         static InspectorForm inspector = null;
@@ -204,7 +204,7 @@ namespace Tracer
         {
             if (inspector == null)
             {
-                inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap, cpuBroker);
+                inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap, cpuBroker, labelList);
 
                 // RTS low should stop the target CPU and allow putting breakpoints in the inspector window
                 comPort.RtsEnable = false;
@@ -387,13 +387,14 @@ namespace Tracer
                     {
                         string sourceLineNumber = decHex[0].Substring(4);
                         string m1key = decHex[1].Substring(0, decHex[1].IndexOf('.'));
-                        string m1Value = $"[{sourceLineNumber}]{decHex[1].Substring(decHex[1].IndexOf('.') + 1)}";
-                        traceDictionary.Add(m1key, m1Value);
-                        // if this is a label, also add to the "profiler"
-                        //if (trimmedLine.IndexOf(":") > 0)
-                        //{
-                        //    profilerDictionary.Add(m1key, 0);
-                        //}
+                        string m1Value = decHex[1].Substring(decHex[1].IndexOf('.') + 1);
+                        traceDictionary.Add(m1key, $"[{sourceLineNumber}]{m1Value}");
+
+                        string[] instruction = m1Value.Split(':');
+                        if (instruction.Length > 1)
+                        {
+                            labelList.Add(instruction[0]);
+                        }
                     }
                 }
             }
