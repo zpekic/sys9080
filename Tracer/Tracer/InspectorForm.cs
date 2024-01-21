@@ -134,7 +134,7 @@ namespace Tracer
                 //fsw = new FileSystemWatcher(codeFile);
             }
 
-            // label combobox
+            // label combobox and button to add them to breakpoint list
             comboBoxLabel.Font = new Font(FontFamily.GenericMonospace, 12.0f, FontStyle.Regular);
             if (labelList.Count > 0)
             {
@@ -144,16 +144,21 @@ namespace Tracer
                 }
                 comboBoxLabel.SelectedValueChanged += ComboBoxLabel_SelectedValueChanged;
                 comboBoxLabel.Enabled = true;
+                btnAddBP.Enabled = true;
+                btnAddBP.Click += BtnAddBP_Click;
             }
             else
             {
                 comboBoxLabel.Enabled = false;
+                btnAddBP.Enabled = false;
             }
 
-            // breakpoint combobox
+            // breakpoint combobox and button to remove them
             comboBoxBreakpoint.Font = new Font(FontFamily.GenericMonospace, 12.0f, FontStyle.Regular);
             comboBoxBreakpoint.SelectedValueChanged += ComboBoxBreakpoint_SelectedValueChanged;
             comboBoxBreakpoint.Enabled = false;
+            btnDelBP.Enabled = false;
+            btnDelBP.Click += BtnDelBP_Click;
 
             // 2nd tab contains Memory data grid
             InitGridView(this.dataGridView1, memoryMap);
@@ -176,6 +181,34 @@ namespace Tracer
             // subscribe to CPU broker changes!
             //this.cpuBroker.CodeSearchEvent += CpuBroker_CodeSearchEvent;
             cpuBroker.InspectorReady = true;
+        }
+
+        private void BtnDelBP_Click(object sender, EventArgs e)
+        {
+            string selectedBreakpoint = $"{this.comboBoxBreakpoint.SelectedItem}";
+
+            if (string.IsNullOrEmpty(selectedBreakpoint))
+            {
+                MessageBox.Show(this, "Select breakpoint from the dropdown to remove it", "Tracer - breakpoints", MessageBoxButtons.OK);
+            }
+            else
+            {
+                ToggleBreakpoint(selectedBreakpoint);
+            }
+        }
+
+        private void BtnAddBP_Click(object sender, EventArgs e)
+        {
+            string selectedLabel = $"{this.comboBoxLabel.SelectedItem}";
+
+            if (string.IsNullOrEmpty(selectedLabel))
+            {
+                MessageBox.Show(this, "Select label from the dropdown to add to breakpoint list", "Tracer - breakpoints", MessageBoxButtons.OK);
+            }
+            else
+            {
+                ToggleBreakpoint(selectedLabel + ":");
+            }
         }
 
         private void ComboBoxBreakpoint_SelectedValueChanged(object sender, EventArgs e)
@@ -220,6 +253,7 @@ namespace Tracer
                 }
             }
             comboBoxBreakpoint.Enabled = (comboBoxBreakpoint.Items.Count > 0);
+            btnDelBP.Enabled = (comboBoxBreakpoint.Items.Count > 0);
         }
 
         public bool ToggleBreakpoint(string instructionKey)
@@ -271,74 +305,81 @@ namespace Tracer
         {
             line = string.Empty;
 
-            EnsureInspectorIsReady();
-            for (int li = 0; li < this.textBoxCode.Lines.Length; li++)
+            if (!string.IsNullOrEmpty(key))
             {
-                line = this.textBoxCode.Lines[li];
-                if (line.Contains(key))
+                EnsureInspectorIsReady();
+                for (int li = 0; li < this.textBoxCode.Lines.Length; li++)
                 {
-                    return li;
+                    line = this.textBoxCode.Lines[li];
+                    if (line.Contains(key))
+                    {
+                        return li;
+                    }
                 }
             }
 
             return -1; // not found
         }
 
+        private void ToggleBreakpointBySelectedText(string selectedLine)
+        {
+            string breakpointKey;
+
+            if (string.IsNullOrEmpty(selectedLine))
+            {
+                MessageBox.Show(this, "Error setting or clearing breakpoint.\nSelect line in code window by clicking to the left margin space", "Tracer", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            else
+            {
+                selectedLine = selectedLine.TrimEnd(new char[] { '\r', '\n' });
+                int ficl = this.textBoxCode.Find(selectedLine);
+                //int li = this.textBox1.GetLineFromCharIndex(ficl);
+                if (ficl >= 0)
+                {
+                    for (int li = 0; li < this.textBoxCode.Lines.Length; li++)
+                    {
+                        string line = this.textBoxCode.Lines[li];
+
+                        if (cpuBroker.IsMatchingCodeLine(selectedLine, line, out breakpointKey))
+                        {
+                            this.textBoxCode.Enabled = true;
+
+                            if (cpuBroker.breakpointDictionary.ContainsValue(li))
+                            {
+                                cpuBroker.breakpointDictionary.Remove(breakpointKey);
+                                UpdateBreakpointComboBox(line, false);
+
+                                this.textBoxCode.Find(line);
+                                this.textBoxCode.SelectionColor = this.textBoxCode.ForeColor;
+                                this.textBoxCode.SelectionBackColor = this.textBoxCode.BackColor;
+                            }
+                            else
+                            {
+                                cpuBroker.breakpointDictionary.Add(breakpointKey, li);
+                                UpdateBreakpointComboBox(line, true);
+
+                                this.textBoxCode.Find(line);
+                                this.textBoxCode.SelectionColor = Color.White;
+                                this.textBoxCode.SelectionBackColor = Color.Red;
+                            }
+
+                            // bail because breakpoint has been set or removed
+                            return;
+                        }
+                    }
+                }
+                else
+                {
+                    Console.Beep();
+                }
+            }
+        }
+
         private void TextBox1_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.F9)
             {
-                string selectedLine = this.textBoxCode.SelectedText;
-                string breakpointKey;
-
-                if (string.IsNullOrEmpty(selectedLine))
-                {
-                    MessageBox.Show(this, "Error setting or clearing breakpoint.\nSelect line in code window by clicking to the left margin space", "Tracer", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                else
-                {
-                    selectedLine = selectedLine.TrimEnd(new char[] { '\r', '\n'});
-                    int ficl = this.textBoxCode.Find(selectedLine);
-                    //int li = this.textBox1.GetLineFromCharIndex(ficl);
-                    if (ficl >= 0)
-                    {
-                        for (int li = 0; li < this.textBoxCode.Lines.Length; li++)
-                        {
-                            string line = this.textBoxCode.Lines[li];
-
-                            if (cpuBroker.IsMatchingCodeLine(selectedLine, line, out breakpointKey))
-                            { 
-                                this.textBoxCode.Enabled = true;
-
-                                if (cpuBroker.breakpointDictionary.ContainsValue(li))
-                                {
-                                    cpuBroker.breakpointDictionary.Remove(breakpointKey);
-                                    UpdateBreakpointComboBox(line, false);
-
-                                    this.textBoxCode.Find(line);
-                                    this.textBoxCode.SelectionColor = this.textBoxCode.ForeColor;
-                                    this.textBoxCode.SelectionBackColor = this.textBoxCode.BackColor;
-                                }
-                                else
-                                {
-                                    cpuBroker.breakpointDictionary.Add(breakpointKey, li);
-                                    UpdateBreakpointComboBox(line, true);
-
-                                    this.textBoxCode.Find(line);
-                                    this.textBoxCode.SelectionColor = Color.White;
-                                    this.textBoxCode.SelectionBackColor = Color.Red;
-                                }
-
-                                // bail because breakpoint has been set or removed
-                                return;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        Console.Beep();
-                    }
-                }
+                ToggleBreakpointBySelectedText(this.textBoxCode.SelectedText);
             }
         }
 
@@ -375,7 +416,6 @@ namespace Tracer
         {
             this.dataGridView1.InvalidateRow(e.Address >> 4);
         }
-
 
         private void PaintCell(DataGridView dgv, int row, int col, char descriptor)
         { 

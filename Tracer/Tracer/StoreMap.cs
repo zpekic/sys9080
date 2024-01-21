@@ -227,7 +227,7 @@ namespace Tracer
         {
             //Program.Assert(!fatal, message);
 
-            Console.Beep();
+            //Console.Beep();
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.BackgroundColor = ConsoleColor.Red;
             Console.WriteLine($"MEMORY ISSUE: {message}");
@@ -284,7 +284,8 @@ namespace Tracer
                                 ReportMemoryIssue(false, $"Reading {readData} from {address:X4}, expected {writeData}");
                             }
                         }
-                        pause = true;
+                        //pause = true;
+                        pause = false;
                     }
                     writeDictionary.Remove(address);
                 }

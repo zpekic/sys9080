@@ -37,6 +37,8 @@
             this.tabPageIO = new System.Windows.Forms.TabPage();
             this.label2 = new System.Windows.Forms.Label();
             this.comboBoxBreakpoint = new System.Windows.Forms.ComboBox();
+            this.btnAddBP = new System.Windows.Forms.Button();
+            this.btnDelBP = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.tabPageCode.SuspendLayout();
             this.SuspendLayout();
@@ -56,6 +58,8 @@
             // 
             // tabPageCode
             // 
+            this.tabPageCode.Controls.Add(this.btnDelBP);
+            this.tabPageCode.Controls.Add(this.btnAddBP);
             this.tabPageCode.Controls.Add(this.comboBoxBreakpoint);
             this.tabPageCode.Controls.Add(this.label2);
             this.tabPageCode.Controls.Add(this.label1);
@@ -77,16 +81,16 @@
             this.label1.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label1.Location = new System.Drawing.Point(8, 6);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(128, 16);
+            this.label1.Size = new System.Drawing.Size(68, 16);
             this.label1.TabIndex = 1;
-            this.label1.Text = "Go to label:";
+            this.label1.Text = "Label:";
             // 
             // comboBoxLabel
             // 
             this.comboBoxLabel.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxLabel.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.comboBoxLabel.ItemHeight = 16;
-            this.comboBoxLabel.Location = new System.Drawing.Point(154, 3);
+            this.comboBoxLabel.Location = new System.Drawing.Point(95, 3);
             this.comboBoxLabel.Name = "comboBoxLabel";
             this.comboBoxLabel.Size = new System.Drawing.Size(190, 24);
             this.comboBoxLabel.Sorted = true;
@@ -132,22 +136,40 @@
             // 
             this.label2.AutoSize = true;
             this.label2.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(361, 6);
+            this.label2.Location = new System.Drawing.Point(385, 6);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(178, 16);
+            this.label2.Size = new System.Drawing.Size(118, 16);
             this.label2.TabIndex = 2;
-            this.label2.Text = "Go to breakpoint:";
+            this.label2.Text = "Breakpoint:";
             // 
             // comboBoxBreakpoint
             // 
             this.comboBoxBreakpoint.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBoxBreakpoint.Font = new System.Drawing.Font("Lucida Console", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.comboBoxBreakpoint.ItemHeight = 16;
-            this.comboBoxBreakpoint.Location = new System.Drawing.Point(561, 3);
+            this.comboBoxBreakpoint.Location = new System.Drawing.Point(509, 3);
             this.comboBoxBreakpoint.Name = "comboBoxBreakpoint";
             this.comboBoxBreakpoint.Size = new System.Drawing.Size(194, 24);
             this.comboBoxBreakpoint.Sorted = true;
             this.comboBoxBreakpoint.TabIndex = 3;
+            // 
+            // btnAddBP
+            // 
+            this.btnAddBP.Location = new System.Drawing.Point(291, 4);
+            this.btnAddBP.Name = "btnAddBP";
+            this.btnAddBP.Size = new System.Drawing.Size(43, 23);
+            this.btnAddBP.TabIndex = 4;
+            this.btnAddBP.Text = "+";
+            this.btnAddBP.UseVisualStyleBackColor = true;
+            // 
+            // btnDelBP
+            // 
+            this.btnDelBP.Location = new System.Drawing.Point(709, 4);
+            this.btnDelBP.Name = "btnDelBP";
+            this.btnDelBP.Size = new System.Drawing.Size(43, 23);
+            this.btnDelBP.TabIndex = 5;
+            this.btnDelBP.Text = "-";
+            this.btnDelBP.UseVisualStyleBackColor = true;
             // 
             // InspectorForm
             // 
@@ -175,5 +197,7 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.ComboBox comboBoxBreakpoint;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Button btnDelBP;
+        private System.Windows.Forms.Button btnAddBP;
     }
 }

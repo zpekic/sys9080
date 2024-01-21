@@ -25,6 +25,7 @@ namespace Tracer
         static InspectorForm inspector = null;
         static int dataWidth = -1;  // uninitialized
         static string lastInstructionRecord = string.Empty;
+        static string title;
 
         // these track the "imagined" external memory space as updated and read by the CPU
         //private Dictionary<int, byte> ioReadDictionary = new Dictionary<int, byte>();
@@ -113,7 +114,7 @@ namespace Tracer
             
             ConsoleKeyInfo key;
             bool exit = false;
-            string title = Console.Title;
+            title = Console.Title;
 
             while (!exit)
             {
@@ -263,6 +264,7 @@ namespace Tracer
                             if (cpuBroker.breakpointDictionary.ContainsKey(recordValue))
                             {
                                 comPort.RtsEnable = false;
+                                Console.Title = title + (comPort.RtsEnable ? " RtsEnable = true" : " RtsEnable = false");
                             }
                             if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data, dataWidth))
                             {
