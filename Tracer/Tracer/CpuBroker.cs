@@ -89,7 +89,8 @@ namespace Tracer
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Register key {name} is unknown");
+                    Console.WriteLine($"Error: could not update any register with record '{recordValue}'");
+                    //throw new InvalidOperationException($"Register key {name} is unknown");
                 }
 
                 return true;

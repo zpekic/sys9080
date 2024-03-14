@@ -19,7 +19,6 @@ namespace Tracer
         static System.IO.StreamReader sourceFile;
         static Dictionary<string, string> traceDictionary = new Dictionary<string, string>();
         static Dictionary<string, int> profilerDictionary = new Dictionary<string, int>();
-        static List<string> labelList = new List<string>();
         static StoreMap<StoreMapRow> memoryMap, ioMap;
         static CpuBroker cpuBroker; 
         static InspectorForm inspector = null;
@@ -182,7 +181,7 @@ namespace Tracer
                         if (key.Key == ConsoleKey.F9)
                         {
                             EnsureInspector(false, sourceFileName, comInfo);
-                            if (!inspector.ToggleBreakpoint(lastInstructionRecord))
+                            if (!inspector.ToggleBreakpointByKey(lastInstructionRecord))
                             {
                                 MessageBox.Show($"Cannot find line with instruction '{lastInstructionRecord}'", "Breakpoint", MessageBoxButtons.OK );
                             }
@@ -205,7 +204,7 @@ namespace Tracer
         {
             if (inspector == null)
             {
-                inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap, cpuBroker, labelList);
+                inspector = new InspectorForm(sourceFileName, $"Tracer inspector window for {comInfo}", memoryMap, ioMap, cpuBroker);
 
                 // RTS low should stop the target CPU and allow putting breakpoints in the inspector window
                 comPort.RtsEnable = false;
@@ -391,12 +390,6 @@ namespace Tracer
                         string m1key = decHex[1].Substring(0, decHex[1].IndexOf('.'));
                         string m1Value = decHex[1].Substring(decHex[1].IndexOf('.') + 1);
                         traceDictionary.Add(m1key, $"[{sourceLineNumber}]{m1Value}");
-
-                        string[] instruction = m1Value.Split(':');
-                        if (instruction.Length > 1)
-                        {
-                            labelList.Add(instruction[0]);
-                        }
                     }
                 }
             }

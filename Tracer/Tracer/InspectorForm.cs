@@ -23,7 +23,6 @@ namespace Tracer
         private DataGridView dataGridView2 = new DataGridView();
         private List<int> breakPointLineList = new List<int>();
         private string previousMatch = string.Empty;
-        private List<string> labelList = new List<string>();
 
         // Declare store map rows to store data for a row being edited (not used!)
         private StoreMapRow memSMRInEdit, ioSMRInEdit;
@@ -39,7 +38,12 @@ namespace Tracer
         private int stepCount = 0;
         //private FileSystemWatcher fsw = null;
 
-        internal InspectorForm(string codeFile, string caption, StoreMap<StoreMapRow> memoryMap, StoreMap<StoreMapRow> ioMap, CpuBroker cpuBroker, List<string> labelList)
+        private Dictionary<int, string> lineLabelDictionary = new Dictionary<int, string>();
+        private Dictionary<string, int> labelLineDictionary = new Dictionary<string, int>();
+        private Dictionary<int, string> lineKeyDictionary = new Dictionary<int, string>();
+        private Dictionary<string, int> keyLineDictionary = new Dictionary<string, int>();
+
+        internal InspectorForm(string codeFile, string caption, StoreMap<StoreMapRow> memoryMap, StoreMap<StoreMapRow> ioMap, CpuBroker cpuBroker)
         {
             InitializeComponent();
 
@@ -51,7 +55,6 @@ namespace Tracer
             this.memoryMap = memoryMap;
             this.ioMap = ioMap;
             this.cpuBroker = cpuBroker;
-            this.labelList = labelList;
             this.codeHighlightDelegate = new HighlightCode(HighlightCodeMethod);
             this.registerValueDelegate = new RegisterValue(RegisterValueMethod);
         }
@@ -119,10 +122,13 @@ namespace Tracer
 
         private void InspectorForm_Load(object sender, EventArgs e)
         {
+            List<string> labelList = new List<string>();
+
             // 1st tab contains code text
             if (!string.IsNullOrEmpty(codeFile))
             {
                 string fileNameAndExtension = codeFile.Substring(codeFile.LastIndexOf("\\") + 1);
+                string lineNumber, instructionKey, label, code;
 
                 textBoxCode.Text = File.ReadAllText(codeFile, System.Text.Encoding.UTF8);
                 textBoxCode.Font = new Font(FontFamily.GenericMonospace, 12.0f, FontStyle.Regular);
@@ -131,6 +137,25 @@ namespace Tracer
                 textBoxCode.KeyDown += TextBox1_KeyDown;
                 this.textBoxCode.ShowSelectionMargin = true;
 
+                // populate all dictionaries which will speed up breakpoint handling later
+                for (int line = 0; line < textBoxCode.Lines.Length; line++)
+                {
+                    if (cpuBroker.DecomposeInstructionLine(textBoxCode.Lines[line], out lineNumber, out instructionKey, out label, out code))
+                    {
+                        if (!string.IsNullOrEmpty(label))
+                        {
+                            lineLabelDictionary.Add(line, label);
+                            labelLineDictionary.Add(label, line);
+                            labelList.Add(label + ":");
+                        }
+                        if (!string.IsNullOrEmpty(instructionKey))
+                        {
+                            lineKeyDictionary.Add(line, instructionKey);
+                            keyLineDictionary.Add(instructionKey, line);
+                        }
+                    }
+                }
+                labelList.Sort();
                 //fsw = new FileSystemWatcher(codeFile);
             }
 
@@ -193,7 +218,7 @@ namespace Tracer
             }
             else
             {
-                ToggleBreakpoint(selectedBreakpoint);
+                ToggleBreakpointBySelectedText(selectedBreakpoint);
             }
         }
 
@@ -207,7 +232,8 @@ namespace Tracer
             }
             else
             {
-                ToggleBreakpoint(selectedLabel + ":");
+                int line = labelLineDictionary[selectedLabel.TrimEnd(new char[] { ':' })];
+                ToggleBreakpointBySelectedText(textBoxCode.Lines[line]);
             }
         }
 
@@ -219,7 +245,7 @@ namespace Tracer
 
         private void ComboBoxLabel_SelectedValueChanged(object sender, EventArgs e)
         {
-            this.textBoxCode.Find($"{this.comboBoxLabel.SelectedItem}:");
+            this.textBoxCode.Find($"{this.comboBoxLabel.SelectedItem}");
             this.textBoxCode.ScrollToCaret();
         }
 
@@ -230,69 +256,6 @@ namespace Tracer
             return this.textBoxCode.Lines[line];
         }
 
-        private void UpdateBreakpointComboBox(string line, bool add)
-        {
-            string lineNumber;
-            string key;
-            string label;
-            string code;
-
-            if (cpuBroker.DecomposeInstructionLine(line, out lineNumber, out key, out label, out code))
-            {
-                string item = string.IsNullOrEmpty(label) ? (key + ".") : (label + ":");
-
-                if (add)
-                {
-                    // add
-                    comboBoxBreakpoint.Items.Add(item);
-                }
-                else
-                {
-                    // remove
-                    comboBoxBreakpoint.Items.Remove(item);
-                }
-            }
-            comboBoxBreakpoint.Enabled = (comboBoxBreakpoint.Items.Count > 0);
-            btnDelBP.Enabled = (comboBoxBreakpoint.Items.Count > 0);
-        }
-
-        public bool ToggleBreakpoint(string instructionKey)
-        {
-            string line = string.Empty;
-            int lineIndex = FindLineByKey(instructionKey, out line);
-
-            if (lineIndex >= 0)
-            {
-                if (cpuBroker.breakpointDictionary.ContainsKey(instructionKey))
-                {
-                    cpuBroker.breakpointDictionary.Remove(instructionKey);
-                    UpdateBreakpointComboBox(line, false);
-
-                    this.textBoxCode.Find(line);
-                    this.textBoxCode.SelectionColor = this.textBoxCode.ForeColor;
-                    this.textBoxCode.SelectionBackColor = this.textBoxCode.BackColor;
-                    //MessageBox.Show(this, $"Removed from '{line}'", "Breakpoint", MessageBoxButtons.OK);
-                }
-                else
-                {
-                    cpuBroker.breakpointDictionary.Add(instructionKey, lineIndex);
-                    UpdateBreakpointComboBox(line, true);
-
-                    this.textBoxCode.Find(line);
-                    this.textBoxCode.SelectionColor = Color.White;
-                    this.textBoxCode.SelectionBackColor = Color.Red;
-                    //MessageBox.Show(this, $"Added at '{line}'", "Breakpoint", MessageBoxButtons.OK);
-                }
-
-                return true;
-            }
-            else
-            {
-                //MessageBox.Show(this, $"Cannot find line with instruction '{instructionKey}'", "Breakpoint", MessageBoxButtons.OK );
-            }
-            return false;
-        }
-
         private void EnsureInspectorIsReady()
         {
             while (!cpuBroker.InspectorReady)
@@ -301,30 +264,14 @@ namespace Tracer
             }
         }
 
-        private int FindLineByKey(string key, out string line)
+        public bool ToggleBreakpointByKey(string breakpointKey)
         {
-            line = string.Empty;
-
-            if (!string.IsNullOrEmpty(key))
-            {
-                EnsureInspectorIsReady();
-                for (int li = 0; li < this.textBoxCode.Lines.Length; li++)
-                {
-                    line = this.textBoxCode.Lines[li];
-                    if (line.Contains(key))
-                    {
-                        return li;
-                    }
-                }
-            }
-
-            return -1; // not found
+            int line = keyLineDictionary[breakpointKey];
+            return ToggleBreakpointBySelectedText(textBoxCode.Lines[line]);
         }
 
-        private void ToggleBreakpointBySelectedText(string selectedLine)
+        private bool ToggleBreakpointBySelectedText(string selectedLine)
         {
-            string breakpointKey;
-
             if (string.IsNullOrEmpty(selectedLine))
             {
                 MessageBox.Show(this, "Error setting or clearing breakpoint.\nSelect line in code window by clicking to the left margin space", "Tracer", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -336,35 +283,38 @@ namespace Tracer
                 //int li = this.textBox1.GetLineFromCharIndex(ficl);
                 if (ficl >= 0)
                 {
-                    for (int li = 0; li < this.textBoxCode.Lines.Length; li++)
+                    foreach(int li in lineKeyDictionary.Keys)
                     {
                         string line = this.textBoxCode.Lines[li];
+                        string breakpointKey = lineKeyDictionary[li];
 
-                        if (cpuBroker.IsMatchingCodeLine(selectedLine, line, out breakpointKey))
+                        if (selectedLine.Equals(line, StringComparison.InvariantCultureIgnoreCase))
                         {
                             this.textBoxCode.Enabled = true;
 
                             if (cpuBroker.breakpointDictionary.ContainsValue(li))
                             {
                                 cpuBroker.breakpointDictionary.Remove(breakpointKey);
-                                UpdateBreakpointComboBox(line, false);
-
-                                this.textBoxCode.Find(line);
                                 this.textBoxCode.SelectionColor = this.textBoxCode.ForeColor;
                                 this.textBoxCode.SelectionBackColor = this.textBoxCode.BackColor;
+
+                                comboBoxBreakpoint.Items.Remove(line);
                             }
                             else
                             {
                                 cpuBroker.breakpointDictionary.Add(breakpointKey, li);
-                                UpdateBreakpointComboBox(line, true);
 
                                 this.textBoxCode.Find(line);
                                 this.textBoxCode.SelectionColor = Color.White;
                                 this.textBoxCode.SelectionBackColor = Color.Red;
-                            }
 
-                            // bail because breakpoint has been set or removed
-                            return;
+                                comboBoxBreakpoint.Items.Add(line);
+                        }
+
+                        comboBoxBreakpoint.Enabled = (comboBoxBreakpoint.Items.Count > 0);
+                        btnDelBP.Enabled = (comboBoxBreakpoint.Items.Count > 0);
+                         // bail because breakpoint has been set or removed
+                        return true;
                         }
                     }
                 }
@@ -373,6 +323,7 @@ namespace Tracer
                     Console.Beep();
                 }
             }
+            return false;
         }
 
         private void TextBox1_KeyDown(object sender, KeyEventArgs e)
