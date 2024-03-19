@@ -20,6 +20,7 @@ namespace Tracer
     {
         // TODO: don't be lazy, make it private and access through helper methods
         public Dictionary<string, int> breakpointDictionary = new Dictionary<string, int>();
+        public Dictionary<string, int> returnDictionary = new Dictionary<string, int>();
         public bool InspectorReady = false;
 
         // HACKHACK - this should go to a separate CodeMap class but too lazy
@@ -112,7 +113,7 @@ namespace Tracer
             return sb.ToString();
         }
 
-        public bool DecomposeInstructionLine(string line, out string lineNumber, out string key, out string label, out string code)
+        public bool DecomposeInstructionLine(string line, out string lineNumber, out string key, out string label, out string code, out bool isReturn)
         {
             // Example:
             //--L0087@01BA 0000.VGA_Print:  NOP;
@@ -123,6 +124,7 @@ namespace Tracer
             key = string.Empty;
             label = string.Empty;
             code = string.Empty;
+            isReturn = false;
 
             if (line.StartsWith("-- L") && (line[18] == '.'))
             {
@@ -147,6 +149,15 @@ namespace Tracer
                         code = byColon[0];
                     }
 
+                    // example of RTS
+                    //--L0093@01CF 4002.r_p = LDP, r_s = M[POP];
+                    //--r_p = 0100, r_a = 000, r_x = 000, r_y = 000, r_s = 010;
+                    //463 => X"4" & O"0" & O"0" & O"0" & O"2",
+                    // instruction pattern is 0100XXXXXXXXX010, 4XX2 or 4XXA
+                    if (!string.IsNullOrEmpty(key))
+                    {
+                        isReturn = (key[5] == '4' && ((key[8] == '2') || (key[8] == 'A')));
+                    }
                 }
 
                 return true;

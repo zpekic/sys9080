@@ -129,6 +129,7 @@ namespace Tracer
             {
                 string fileNameAndExtension = codeFile.Substring(codeFile.LastIndexOf("\\") + 1);
                 string lineNumber, instructionKey, label, code;
+                bool isReturn;
 
                 textBoxCode.Text = File.ReadAllText(codeFile, System.Text.Encoding.UTF8);
                 textBoxCode.Font = new Font(FontFamily.GenericMonospace, 12.0f, FontStyle.Regular);
@@ -140,7 +141,7 @@ namespace Tracer
                 // populate all dictionaries which will speed up breakpoint handling later
                 for (int line = 0; line < textBoxCode.Lines.Length; line++)
                 {
-                    if (cpuBroker.DecomposeInstructionLine(textBoxCode.Lines[line], out lineNumber, out instructionKey, out label, out code))
+                    if (cpuBroker.DecomposeInstructionLine(textBoxCode.Lines[line], out lineNumber, out instructionKey, out label, out code, out isReturn))
                     {
                         if (!string.IsNullOrEmpty(label))
                         {
@@ -152,6 +153,10 @@ namespace Tracer
                         {
                             lineKeyDictionary.Add(line, instructionKey);
                             keyLineDictionary.Add(instructionKey, line);
+                            if (isReturn)
+                            {
+                                cpuBroker.returnDictionary.Add(instructionKey, line);
+                            }
                         }
                     }
                 }

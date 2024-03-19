@@ -25,6 +25,8 @@ namespace Tracer
         static int dataWidth = -1;  // uninitialized
         static string lastInstructionRecord = string.Empty;
         static string title;
+        static bool stopAtNextInstruction = false;
+        static bool stopAtNextReturn = false;
 
         // these track the "imagined" external memory space as updated and read by the CPU
         //private Dictionary<int, byte> ioReadDictionary = new Dictionary<int, byte>();
@@ -117,7 +119,7 @@ namespace Tracer
 
             while (!exit)
             {
-                Console.Title = title + (comPort.RtsEnable ? " RtsEnable = true" : " RtsEnable = false");
+                Console.Title = title + (comPort.RtsEnable ? " RtsEnable = 1" : " RtsEnable = 0") + (stopAtNextInstruction ? ", single step" : "") + (stopAtNextReturn ? ", run until RTS" : "");
 
                 key = Console.ReadKey();
 
@@ -178,13 +180,36 @@ namespace Tracer
                         GenerateProfilerReport();
                         break;
                     default:
-                        if (key.Key == ConsoleKey.F9)
+                        switch (key.Key)
                         {
-                            EnsureInspector(false, sourceFileName, comInfo);
-                            if (!inspector.ToggleBreakpointByKey(lastInstructionRecord))
-                            {
-                                MessageBox.Show($"Cannot find line with instruction '{lastInstructionRecord}'", "Breakpoint", MessageBoxButtons.OK );
-                            }
+                            // run until next breakpoint
+                            case ConsoleKey.F5:
+                                stopAtNextInstruction = false;
+                                stopAtNextReturn = false;
+                                comPort.RtsEnable = true;
+                                break;
+                            // set or clear breakpoint at current instruction
+                            case ConsoleKey.F9:
+                                EnsureInspector(false, sourceFileName, comInfo);
+                                if (!inspector.ToggleBreakpointByKey(lastInstructionRecord))
+                                {
+                                    MessageBox.Show($"Cannot find line with instruction '{lastInstructionRecord}'", "Breakpoint", MessageBoxButtons.OK);
+                                }
+                                break;
+                            // run to next instruction
+                            case ConsoleKey.F10:
+                                stopAtNextInstruction = true;
+                                stopAtNextReturn = false;
+                                comPort.RtsEnable = true;
+                                break;
+                            // run until next breakpoint or RTS
+                            case ConsoleKey.F12:
+                                stopAtNextInstruction = false;
+                                stopAtNextReturn = !stopAtNextReturn;
+                                comPort.RtsEnable = true;
+                                break;
+                            default:
+                                break;
                         }
                         break;
                 }
@@ -260,10 +285,13 @@ namespace Tracer
                             // need to mark it in case breakpoint set / clear is attempted
                             lastInstructionRecord = recordValue;
                             // if found in breakpoint list, first try to stop the target CPU, then do anything else
-                            if (cpuBroker.breakpointDictionary.ContainsKey(recordValue))
+                            if (cpuBroker.breakpointDictionary.ContainsKey(recordValue) || 
+                                stopAtNextInstruction ||
+                                (stopAtNextReturn && cpuBroker.returnDictionary.ContainsKey(recordValue)))
                             {
                                 comPort.RtsEnable = false;
-                                Console.Title = title + (comPort.RtsEnable ? " RtsEnable = true" : " RtsEnable = false");
+                                Console.Title = title + (comPort.RtsEnable ? " RtsEnable = 1" : " RtsEnable = 0") + (stopAtNextInstruction ? ", single step" : "") + (stopAtNextReturn ? ", run until RTS" : "");
+
                             }
                             if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data, dataWidth))
                             {
