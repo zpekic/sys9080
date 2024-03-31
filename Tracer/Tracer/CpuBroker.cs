@@ -21,6 +21,7 @@ namespace Tracer
         // TODO: don't be lazy, make it private and access through helper methods
         public Dictionary<string, int> breakpointDictionary = new Dictionary<string, int>();
         public Dictionary<string, int> returnDictionary = new Dictionary<string, int>();
+        public Dictionary<string, int> callDictionary = new Dictionary<string, int>();
         public bool InspectorReady = false;
 
         // HACKHACK - this should go to a separate CodeMap class but too lazy
@@ -113,7 +114,7 @@ namespace Tracer
             return sb.ToString();
         }
 
-        public bool DecomposeInstructionLine(string line, out string lineNumber, out string key, out string label, out string code, out bool isReturn)
+        public bool DecomposeInstructionLine(string line, out string lineNumber, out string key, out string label, out string code, out bool isReturn, out bool isCall)
         {
             // Example:
             //--L0087@01BA 0000.VGA_Print:  NOP;
@@ -125,8 +126,9 @@ namespace Tracer
             label = string.Empty;
             code = string.Empty;
             isReturn = false;
+            isCall = false;
 
-            if (line.StartsWith("-- L") && (line[18] == '.'))
+            if ((line.Length > 18) && line.StartsWith("-- L") && (line[18] == '.'))
             {
                 string[] byDot = line.Split('.');
                 if (byDot.Length > 1)
@@ -149,14 +151,20 @@ namespace Tracer
                         code = byColon[0];
                     }
 
-                    // example of RTS
-                    //--L0093@01CF 4002.r_p = LDP, r_s = M[POP];
-                    //--r_p = 0100, r_a = 000, r_x = 000, r_y = 000, r_s = 010;
-                    //463 => X"4" & O"0" & O"0" & O"0" & O"2",
-                    // instruction pattern is 0100XXXXXXXXX010, 4XX2 or 4XXA
                     if (!string.IsNullOrEmpty(key))
                     {
+                        // example of RTS
+                        //--L0093@01CF 4002.r_p = LDP, r_s = M[POP];
+                        //--r_p = 0100, r_a = 000, r_x = 000, r_y = 000, r_s = 010;
+                        //463 => X"4" & O"0" & O"0" & O"0" & O"2",
+                        // instruction pattern is 0100XXXXXXXXX010, 4XX2 or 4XXA
                         isReturn = (key[5] == '4' && ((key[8] == '2') || (key[8] == 'A')));
+
+                        //example of PUSH PC (part of jump to subroutine)
+                        //--L0035@0011 6003.r_p = STP2, r_s = M[PUSH];
+                        //--r_p = 0110, r_a = 000, r_x = 000, r_y = 000, r_s = 011;
+                        //17 => X"6" & O"0" & O"0" & O"0" & O"3",
+                        isCall = (key[5] == '5' || key[5] == '6') && (key[8] == '3' || key[8] == 'B');
                     }
                 }
 

@@ -100,10 +100,10 @@ namespace Tracer
                     this.textBoxCode.SelectionColor = fetch ? Color.Yellow : Color.White;
                     this.textBoxCode.SelectionBackColor = fetch ? Color.Blue : Color.LightBlue;
                     //this.textBox1.Select(startSelect, endSelect);
-                    //this.textBox1.ScrollToCaret();
+                    //this.textBoxCode.ScrollToCaret();
                     stepCount++;
                     previousMatch = matchKey;
-                    //this.textBox1.Refresh();
+                    this.textBoxCode.Refresh();
                 }
             }
         }
@@ -129,7 +129,7 @@ namespace Tracer
             {
                 string fileNameAndExtension = codeFile.Substring(codeFile.LastIndexOf("\\") + 1);
                 string lineNumber, instructionKey, label, code;
-                bool isReturn;
+                bool isReturn, isCall;
 
                 textBoxCode.Text = File.ReadAllText(codeFile, System.Text.Encoding.UTF8);
                 textBoxCode.Font = new Font(FontFamily.GenericMonospace, 12.0f, FontStyle.Regular);
@@ -141,7 +141,7 @@ namespace Tracer
                 // populate all dictionaries which will speed up breakpoint handling later
                 for (int line = 0; line < textBoxCode.Lines.Length; line++)
                 {
-                    if (cpuBroker.DecomposeInstructionLine(textBoxCode.Lines[line], out lineNumber, out instructionKey, out label, out code, out isReturn))
+                    if (cpuBroker.DecomposeInstructionLine(textBoxCode.Lines[line], out lineNumber, out instructionKey, out label, out code, out isReturn, out isCall))
                     {
                         if (!string.IsNullOrEmpty(label))
                         {
@@ -156,6 +156,10 @@ namespace Tracer
                             if (isReturn)
                             {
                                 cpuBroker.returnDictionary.Add(instructionKey, line);
+                            }
+                            if (isCall)
+                            {
+                                cpuBroker.callDictionary.Add(instructionKey, line);
                             }
                         }
                     }

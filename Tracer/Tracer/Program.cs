@@ -27,6 +27,8 @@ namespace Tracer
         static string title;
         static bool stopAtNextInstruction = false;
         static bool stopAtNextReturn = false;
+        static int stackLevel = 0;
+        static int stackLevelChange = 0;
 
         // these track the "imagined" external memory space as updated and read by the CPU
         //private Dictionary<int, byte> ioReadDictionary = new Dictionary<int, byte>();
@@ -102,10 +104,9 @@ namespace Tracer
             string comInfo = $"{comPort.PortName} ({comPort.BaudRate},{comPort.DataBits},{comPort.Parity},{comPort.StopBits})";
             Console.WriteLine($"Waiting for trace on {comInfo}");
             Console.WriteLine($"(Press 'x' to exit, 'c|m|i' to show inspector, <spacebar> to flip RTS pin)");
-            comPort.DataReceived += Port_DataReceived;
+            comPort.Open();
             comPort.Handshake = Handshake.None;
             comPort.RtsEnable = true;
-            comPort.Open();
 
             // create maps for memory and I/O
             //memoryMap = new StoreMap<StoreMapRow>(1 << 12, true);   // TODO: make it a parameter
@@ -116,10 +117,11 @@ namespace Tracer
             ConsoleKeyInfo key;
             bool exit = false;
             title = Console.Title;
+            comPort.DataReceived += Port_DataReceived;
 
             while (!exit)
             {
-                Console.Title = title + (comPort.RtsEnable ? " RtsEnable = 1" : " RtsEnable = 0") + (stopAtNextInstruction ? ", single step" : "") + (stopAtNextReturn ? ", run until RTS" : "");
+                Console.Title = $"{title} stack level: {stackLevel}" + (comPort.RtsEnable ? " RtsEnable = 1" : " RtsEnable = 0") + (stopAtNextInstruction ? ", single step" : "") + (stopAtNextReturn ? ", run until RTS" : "");
 
                 key = Console.ReadKey();
 
@@ -167,6 +169,7 @@ namespace Tracer
                     case 'I':
                     case 'r':   // registers
                     case 'R':
+                        comPort.RtsEnable = false;  // try to stop ongoing debugging
                         Console.WriteLine("[spector]");
                         EnsureInspector(true, sourceFileName, comInfo);
                         inspector.SelectTab(key.KeyChar);
@@ -205,7 +208,8 @@ namespace Tracer
                             // run until next breakpoint or RTS
                             case ConsoleKey.F12:
                                 stopAtNextInstruction = false;
-                                stopAtNextReturn = !stopAtNextReturn;
+                                //stopAtNextReturn = !stopAtNextReturn;
+                                stopAtNextReturn = true;
                                 comPort.RtsEnable = true;
                                 break;
                             default:
@@ -284,14 +288,27 @@ namespace Tracer
                         case "IF":
                             // need to mark it in case breakpoint set / clear is attempted
                             lastInstructionRecord = recordValue;
+                            if (stackLevelChange != 0)
+                            {
+                                stackLevel = stackLevel + stackLevelChange;
+                                stackLevelChange = 0;
+                                Console.Title = $"{title} stack level: {stackLevel}" + (comPort.RtsEnable ? " RtsEnable = 1" : " RtsEnable = 0") + (stopAtNextInstruction ? ", single step" : "") + (stopAtNextReturn ? ", run until RTS" : "");
+                            }
+                            if (cpuBroker.callDictionary.ContainsKey(recordValue))
+                            {
+                                stackLevelChange = 1;
+                            }
+                            if (cpuBroker.returnDictionary.ContainsKey(recordValue))
+                            {
+                                stackLevelChange = -1;
+                            }
                             // if found in breakpoint list, first try to stop the target CPU, then do anything else
                             if (cpuBroker.breakpointDictionary.ContainsKey(recordValue) || 
                                 stopAtNextInstruction ||
                                 (stopAtNextReturn && cpuBroker.returnDictionary.ContainsKey(recordValue)))
                             {
                                 comPort.RtsEnable = false;
-                                Console.Title = title + (comPort.RtsEnable ? " RtsEnable = 1" : " RtsEnable = 0") + (stopAtNextInstruction ? ", single step" : "") + (stopAtNextReturn ? ", run until RTS" : "");
-
+                                Console.Title = $"{title} stack level: {stackLevel}" + (comPort.RtsEnable ? " RtsEnable = 1" : " RtsEnable = 0") + (stopAtNextInstruction ? ", single step" : "") + (stopAtNextReturn ? ", run until RTS" : "");
                             }
                             if (CheckRecipientAndRecord(memoryMap, recordValue.Split(' '), out address, out data, dataWidth))
                             {
@@ -408,7 +425,7 @@ namespace Tracer
             {
                 string trimmedLine = rawLine.Trim();
 
-                if (trimmedLine.StartsWith("-- L") && (trimmedLine[18] == '.'))
+                if ((trimmedLine.Length > 18) && trimmedLine.StartsWith("-- L") && (trimmedLine[18] == '.'))
                 {
                     // extract source line number and memory hex address
                     string[] decHex = trimmedLine.Split('@');
